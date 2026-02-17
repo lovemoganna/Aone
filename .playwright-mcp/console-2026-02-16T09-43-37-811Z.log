@@ -1,0 +1,23 @@
+[    2752ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/favicon.ico:0
+[   26508ms] [ERROR] Access to fetch at 'https://api.groq.com/openai/v1/models' from origin 'http://localhost:5173' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/multi-agent:0
+[   26508ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://api.groq.com/openai/v1/models:0
+[   26509ms] [WARNING] Model fetch failed, using defaults: TypeError: Failed to fetch
+    at window.fetch (http://localhost:5173/node_modules/@sveltejs/kit/src/runtime/client/fetcher.js?v=b66aa2f2:66:10)
+    at AIBridge.fetchModels (http://localhost:5173/src/lib/services/AIBridge.ts:92:26)
+    at SettingsStore.refreshModels (http://localhost:5173/src/lib/stores/settingsStore.svelte.ts:206:59)
+    at button_2.__click (http://localhost:5173/src/routes/multi-agent/components/SettingsModal.svelte:299:43)
+    at HTMLDivElement.handle_event_propagation (http://localhost:5173/node_modules/.vite/deps/chunk-UEIJHYJF.js?v=b66aa2f2:4395:21) @ http://localhost:5173/node_modules/@sveltejs/kit/src/runtime/client/client.js?v=b66aa2f2:3208
+[  185650ms] [ERROR] Access to fetch at 'https://api.groq.com/openai/v1/chat/completions' from origin 'http://localhost:5173' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/multi-agent:0
+[  185651ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://api.groq.com/openai/v1/chat/completions:0
+[  185651ms] [ERROR] AI stream failed: TypeError: Failed to fetch
+    at window.fetch (http://localhost:5173/node_modules/@sveltejs/kit/src/runtime/client/fetcher.js?v=b66aa2f2:66:10)
+    at AIBridge.callAI (http://localhost:5173/src/lib/services/AIBridge.ts:27:28)
+    at MetaFlowService.streamAI (http://localhost:5173/src/lib/services/MetaFlowService.ts:81:22)
+    at MetaFlowService.callAI (http://localhost:5173/src/lib/services/MetaFlowService.ts:53:16)
+    at AgentStore.runMetaFlow (http://localhost:5173/src/lib/stores/agentStore.svelte.ts:546:70)
+    at HTMLButtonElement.handleStartSession [as __click] (http://localhost:5173/src/routes/agent-studio/+page.svelte?t=1771233225211:67:15)
+    at HTMLDivElement.handle_event_propagation (http://localhost:5173/node_modules/.vite/deps/chunk-UEIJHYJF.js?v=b66aa2f2:4395:21) @ http://localhost:5173/src/lib/services/MetaFlowService.ts:83
+[  186936ms] [ERROR] Failed to parse JSON from AI response SyntaxError: Unexpected token '#', "## ✅ Task "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at MetaFlowService.extractJSON (http://localhost:5173/src/lib/services/MetaFlowService.ts:28:21)
+    at AgentStore.runMetaFlow (http://localhost:5173/src/lib/stores/agentStore.svelte.ts:547:35) @ http://localhost:5173/src/lib/services/MetaFlowService.ts:32

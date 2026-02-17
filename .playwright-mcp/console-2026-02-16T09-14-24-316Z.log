@@ -1,0 +1,53 @@
+[  707197ms] [ERROR] Failed to parse JSON from AI response SyntaxError: Unexpected token '#', "## ✅ Task "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at MetaFlowService.extractJSON (http://localhost:5173/src/lib/services/MetaFlowService.ts:28:21)
+    at AgentStore.runMetaFlow (http://localhost:5173/src/lib/stores/agentStore.svelte.ts:547:35) @ http://localhost:5173/src/lib/services/MetaFlowService.ts:32
+[  711580ms] [ERROR] Failed to parse JSON from AI response SyntaxError: Unexpected token '#', "## ✅ Task "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at MetaFlowService.extractJSON (http://localhost:5173/src/lib/services/MetaFlowService.ts:28:21)
+    at AgentStore.runMetaFlow (http://localhost:5173/src/lib/stores/agentStore.svelte.ts:564:34) @ http://localhost:5173/src/lib/services/MetaFlowService.ts:32
+[  715536ms] [ERROR] Failed to parse JSON from AI response SyntaxError: Unexpected token '#', "## ✅ Task "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at MetaFlowService.extractJSON (http://localhost:5173/src/lib/services/MetaFlowService.ts:28:21)
+    at AgentStore.synthesizeStrategy (http://localhost:5173/src/lib/stores/agentStore.svelte.ts:856:37)
+    at async Module.track_reactivity_loss (http://localhost:5173/node_modules/.vite/deps/chunk-UEIJHYJF.js?v=b66aa2f2:1555:15)
+    at async AgentStore.runMetaFlow (http://localhost:5173/src/lib/stores/agentStore.svelte.ts:580:6) @ http://localhost:5173/src/lib/services/MetaFlowService.ts:32
+[  717364ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:11434/api/tags:0
+[  717364ms] [WARNING] Model fetch failed, using defaults: TypeError: Failed to fetch
+    at window.fetch (http://localhost:5173/node_modules/@sveltejs/kit/src/runtime/client/fetcher.js?v=b66aa2f2:66:10)
+    at AIBridge.fetchModels (http://localhost:5173/src/lib/services/AIBridge.ts:92:26)
+    at SettingsStore.refreshModels (http://localhost:5173/src/lib/stores/settingsStore.svelte.ts:206:59)
+    at button_2.__click (http://localhost:5173/src/routes/multi-agent/components/SettingsModal.svelte:299:43)
+    at HTMLDivElement.handle_event_propagation (http://localhost:5173/node_modules/.vite/deps/chunk-UEIJHYJF.js?v=b66aa2f2:4395:21) @ http://localhost:5173/node_modules/@sveltejs/kit/src/runtime/client/client.js?v=b66aa2f2:3208
+[  721927ms] [ERROR] Access to fetch at 'https://api.groq.com/openai/v1/models' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/multi-agent:0
+[  721927ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://api.groq.com/openai/v1/models:0
+[  721928ms] [WARNING] Model fetch failed, using defaults: TypeError: Failed to fetch
+    at window.fetch (http://localhost:5173/node_modules/@sveltejs/kit/src/runtime/client/fetcher.js?v=b66aa2f2:66:10)
+    at AIBridge.fetchModels (http://localhost:5173/src/lib/services/AIBridge.ts:92:26)
+    at SettingsStore.refreshModels (http://localhost:5173/src/lib/stores/settingsStore.svelte.ts:206:59)
+    at button_2.__click (http://localhost:5173/src/routes/multi-agent/components/SettingsModal.svelte:299:43)
+    at HTMLDivElement.handle_event_propagation (http://localhost:5173/node_modules/.vite/deps/chunk-UEIJHYJF.js?v=b66aa2f2:4395:21) @ http://localhost:5173/node_modules/@sveltejs/kit/src/runtime/client/client.js?v=b66aa2f2:3208
+[  735901ms] [ERROR] Access to fetch at 'https://api.groq.com/openai/v1/models' from origin 'http://localhost:5173' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/multi-agent:0
+[  735901ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://api.groq.com/openai/v1/models:0
+[  735902ms] [WARNING] Model fetch failed, using defaults: TypeError: Failed to fetch
+    at window.fetch (http://localhost:5173/node_modules/@sveltejs/kit/src/runtime/client/fetcher.js?v=b66aa2f2:66:10)
+    at AIBridge.fetchModels (http://localhost:5173/src/lib/services/AIBridge.ts:92:26)
+    at SettingsStore.refreshModels (http://localhost:5173/src/lib/stores/settingsStore.svelte.ts:206:59)
+    at button_2.__click (http://localhost:5173/src/routes/multi-agent/components/SettingsModal.svelte:299:43)
+    at HTMLDivElement.handle_event_propagation (http://localhost:5173/node_modules/.vite/deps/chunk-UEIJHYJF.js?v=b66aa2f2:4395:21) @ http://localhost:5173/node_modules/@sveltejs/kit/src/runtime/client/client.js?v=b66aa2f2:3208
+[  739943ms] [ERROR] Access to fetch at 'https://api.groq.com/openai/v1/models' from origin 'http://localhost:5173' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/multi-agent:0
+[  739943ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://api.groq.com/openai/v1/models:0
+[  739943ms] [WARNING] Model fetch failed, using defaults: TypeError: Failed to fetch
+    at window.fetch (http://localhost:5173/node_modules/@sveltejs/kit/src/runtime/client/fetcher.js?v=b66aa2f2:66:10)
+    at AIBridge.fetchModels (http://localhost:5173/src/lib/services/AIBridge.ts:92:26)
+    at SettingsStore.refreshModels (http://localhost:5173/src/lib/stores/settingsStore.svelte.ts:206:59)
+    at button_2.__click (http://localhost:5173/src/routes/multi-agent/components/SettingsModal.svelte:299:43)
+    at HTMLDivElement.handle_event_propagation (http://localhost:5173/node_modules/.vite/deps/chunk-UEIJHYJF.js?v=b66aa2f2:4395:21) @ http://localhost:5173/node_modules/@sveltejs/kit/src/runtime/client/client.js?v=b66aa2f2:3208
+[  740961ms] [ERROR] Access to fetch at 'https://api.groq.com/openai/v1/models' from origin 'http://localhost:5173' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/multi-agent:0
+[  740961ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://api.groq.com/openai/v1/models:0
+[  740961ms] [WARNING] Model fetch failed, using defaults: TypeError: Failed to fetch
+    at window.fetch (http://localhost:5173/node_modules/@sveltejs/kit/src/runtime/client/fetcher.js?v=b66aa2f2:66:10)
+    at AIBridge.fetchModels (http://localhost:5173/src/lib/services/AIBridge.ts:92:26)
+    at SettingsStore.refreshModels (http://localhost:5173/src/lib/stores/settingsStore.svelte.ts:206:59)
+    at button_2.__click (http://localhost:5173/src/routes/multi-agent/components/SettingsModal.svelte:299:43)
+    at HTMLDivElement.handle_event_propagation (http://localhost:5173/node_modules/.vite/deps/chunk-UEIJHYJF.js?v=b66aa2f2:4395:21) @ http://localhost:5173/node_modules/@sveltejs/kit/src/runtime/client/client.js?v=b66aa2f2:3208

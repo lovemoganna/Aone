@@ -1,0 +1,3869 @@
+<!DOCTYPE html><html lang="en"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced YAML Editor</title>
+    <!-- Import js-yaml from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+    <!-- Import TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eeeefe',
+                            100: '#d6d6fa',
+                            200: '#b0aff4',
+                            300: '#8a88ee',
+                            400: '#7370e9',
+                            500: '#5D5CDE',
+                            600: '#4b4ab2',
+                            700: '#393786',
+                            800: '#26255a',
+                            900: '#13122d',
+                        },
+                        dark: {
+                            950: '#0A0A0F',
+                            900: '#121212',
+                            800: '#181818',
+                            700: '#282828',
+                            600: '#404040',
+                            500: '#585858',
+                        },
+                        success: {
+                            500: '#22c55e',
+                        },
+                        warning: {
+                            500: '#f59e0b',
+                        },
+                        error: {
+                            500: '#ef4444',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    boxShadow: {
+                        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                        'card-dark': '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.18)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        /* Structure outline styling */
+        .outline-item {
+            padding: 4px 0;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: relative;
+        }
+        
+        .outline-item:hover {
+            background-color: rgba(93, 92, 222, 0.1);
+        }
+        
+        .dark .outline-item:hover {
+            background-color: rgba(93, 92, 222, 0.2);
+        }
+        
+        .outline-item.active {
+            background-color: rgba(93, 92, 222, 0.15);
+            font-weight: 500;
+        }
+        
+        .dark .outline-item.active {
+            background-color: rgba(93, 92, 222, 0.25);
+        }
+        
+        .outline-toggle {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            text-align: center;
+            line-height: 16px;
+            cursor: pointer;
+            color: #5D5CDE;
+            font-size: 10px;
+            transition: transform 0.2s ease;
+        }
+        
+        .outline-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+        
+        .outline-children {
+            margin-left: 16px;
+            border-left: 1px dashed rgba(93, 92, 222, 0.3);
+            padding-left: 8px;
+            overflow: hidden;
+            transition: height 0.2s ease;
+        }
+        
+        .dark .outline-children {
+            border-left-color: rgba(93, 92, 222, 0.5);
+        }
+        
+        .outline-hidden {
+            height: 0 !important;
+        }
+        
+        .outline-key {
+            color: #e36209;
+            margin-right: 4px;
+        }
+        
+        .dark .outline-key {
+            color: #e5c07b;
+        }
+        
+        .outline-value {
+            color: #22863a;
+            opacity: 0.7;
+            font-size: 0.9em;
+        }
+        
+        .dark .outline-value {
+            color: #7ec699;
+        }
+        
+        .outline-collection-info {
+            font-size: 0.8em;
+            opacity: 0.6;
+            margin-left: 4px;
+            color: #6a737d;
+        }
+        
+        .dark .outline-collection-info {
+            color: #8b949e;
+        }
+        
+        .outline-empty {
+            font-style: italic;
+            opacity: 0.5;
+            margin-left: 16px;
+        }
+        
+        /* Mobile view outline toggle */
+        @media (max-width: 1023px) {
+            .main-layout {
+                flex-direction: column !important;
+            }
+            
+            .sidebar, .editor-panel, .preview-panel {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            
+            .resize-handle {
+                display: none !important;
+            }
+            
+            #outline-content {
+                max-height: 200px;
+                transition: max-height 0.3s ease;
+                overflow-y: auto;
+            }
+            
+            #outline-content.expanded {
+                max-height: 400px;
+            }
+        }
+        
+        /* Basic CodeMirror Styling */
+        .CodeMirror {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            height: 100% !important;
+            border-radius: 0;
+            transition: all 0.2s ease;
+            border: none;
+            font-feature-settings: "liga" 1, "calt" 1; /* 启用连字 */
+            line-height: 1.6;
+        }
+        
+        .CodeMirror-gutters {
+            border-right: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+            transition: all 0.2s ease;
+        }
+        
+        /* Dark mode styling */
+        .dark .CodeMirror {
+            background-color: #1e1e2f;
+            color: #e2e8f0;
+            border-color: #3f3f5a;
+        }
+        
+        .dark .CodeMirror-gutters {
+            background-color: #181829;
+            border-color: #3f3f5a;
+        }
+        
+        .dark .CodeMirror-cursor {
+            border-left-color: #e2e8f0;
+        }
+        
+        /* Syntax highlighting colors */
+        /* Light theme */
+        .cm-s-default .cm-string {
+            color: #22863a;
+        }
+        
+        .cm-s-default .cm-number {
+            color: #005cc5;
+        }
+        
+        .cm-s-default .cm-keyword {
+            color: #d73a49;
+        }
+        
+        .cm-s-default .cm-atom {
+            color: #6f42c1;
+        }
+        
+        .cm-s-default .cm-def,
+        .cm-s-default .cm-property {
+            color: #e36209;
+        }
+        
+        .cm-s-default .cm-comment {
+            color: #6a737d;
+            font-style: italic;
+        }
+        
+        /* Dark theme */
+        .dark .cm-s-default .cm-string {
+            color: #7ec699;
+        }
+        
+        .dark .cm-s-default .cm-number {
+            color: #79b8ff;
+        }
+        
+        .dark .cm-s-default .cm-keyword {
+            color: #ff7b72;
+        }
+        
+        .dark .cm-s-default .cm-atom {
+            color: #c678dd;
+        }
+        
+        .dark .cm-s-default .cm-def,
+        .dark .cm-s-default .cm-property {
+            color: #e5c07b;
+        }
+        
+        .dark .cm-s-default .cm-comment {
+            color: #8b949e;
+            font-style: italic;
+        }
+        
+        /* 实时错误指示样式 */
+        .yaml-error-line {
+            background-color: rgba(239, 68, 68, 0.08);
+            border-bottom: 2px wavy rgba(239, 68, 68, 0.6);
+            position: relative;
+        }
+        
+        .dark .yaml-error-line {
+            background-color: rgba(239, 68, 68, 0.15);
+            border-bottom: 2px wavy rgba(239, 68, 68, 0.7);
+        }
+        
+        .yaml-error-gutter-marker {
+            color: #ef4444;
+            font-size: 18px;
+            padding-top: 2px;
+            cursor: pointer;
+        }
+        
+        .dark .yaml-error-gutter-marker {
+            color: #f87171;
+        }
+        
+        @keyframes errorPulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
+            70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        
+        .yaml-error-highlight {
+            background-color: rgba(239, 68, 68, 0.2);
+            border-radius: 3px;
+            animation: errorPulse 2s infinite;
+        }
+        
+        /* 错误提示框样式 */
+        .error-tooltip {
+            position: absolute;
+            z-index: 1000;
+            background-color: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+            padding: 6px 10px;
+            border-radius: 0 4px 4px 0;
+            font-size: 12px;
+            max-width: 300px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            pointer-events: none;
+            white-space: normal;
+            line-height: 1.4;
+        }
+        
+        .dark .error-tooltip {
+            background-color: #7f1d1d;
+            color: #fecaca;
+            border-left: 4px solid #f87171;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* CodeMirror fold styles */
+        .CodeMirror-foldmarker {
+            color: #5D5CDE;
+            text-shadow: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1;
+            padding: 0 4px;
+            border-radius: 3px;
+            background-color: rgba(93, 92, 222, 0.1);
+            cursor: pointer;
+        }
+        
+        .dark .CodeMirror-foldmarker {
+            background-color: rgba(93, 92, 222, 0.2);
+        }
+        
+        .CodeMirror-foldgutter {
+            width: 16px;
+        }
+        
+        .CodeMirror-foldgutter-open,
+        .CodeMirror-foldgutter-folded {
+            color: #5D5CDE;
+            cursor: pointer;
+        }
+        
+        .CodeMirror-foldgutter-open:after {
+            content: "\25BE";
+        }
+        
+        .CodeMirror-foldgutter-folded:after {
+            content: "\25B8";
+        }
+        
+        /* Resizable panels */
+        .resizing {
+            cursor: col-resize !important;
+            user-select: none !important;
+        }
+        
+        .resize-handle {
+            background-color: #e2e8f0;
+            width: 5px !important;
+            transition: background-color 0.2s;
+            cursor: col-resize;
+        }
+        
+        .resize-handle:hover, 
+        .resizing .resize-handle {
+            background-color: #5D5CDE;
+        }
+        
+        .dark .resize-handle {
+            background-color: #3f3f5a;
+        }
+        
+        .dark .resize-handle:hover,
+        .dark .resizing .resize-handle {
+            background-color: #5D5CDE;
+        }
+        
+        /* Custom styling for the JSON preview */
+        #jsonPreview {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            padding: 0.5rem;
+            border-radius: 0;
+            background-color: #f8fafc;
+            height: 100%;
+            overflow: auto;
+            margin: 0;
+        }
+        
+        .dark #jsonPreview {
+            background-color: #1e1e2f;
+            color: #e2e8f0;
+        }
+        
+        /* Animation for toast */
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(20px); opacity: 0; }
+        }
+        
+        .toast-enter {
+            animation: slideIn 0.3s ease forwards;
+        }
+        
+        .toast-exit {
+            animation: slideOut 0.3s ease forwards;
+        }
+        
+        /* Utility animations */
+        .pulse-once {
+            animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) 1;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Search & Replace panel */
+        .search-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            transform-origin: top right;
+            background-color: white;
+            width: 300px;
+            max-width: 90%;
+        }
+        
+        .dark .search-panel {
+            background-color: #232336;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+        
+        .search-panel.hidden {
+            transform: scale(0.95);
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .search-panel-header {
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e7eb;
+            background-color: #f9fafb;
+        }
+        
+        .dark .search-panel-header {
+            border-bottom: 1px solid #374151;
+            background-color: #1f1f32;
+        }
+        
+        .search-panel-content {
+            padding: 12px 16px;
+        }
+        
+        .search-panel-row {
+            display: flex;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+        
+        .search-input-group {
+            flex: 1;
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 8px 12px;
+            padding-right: 32px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.5;
+            transition: all 0.2s;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #5D5CDE;
+            box-shadow: 0 0 0 2px rgba(93, 92, 222, 0.2);
+        }
+        
+        .dark .search-input {
+            background-color: #303048;
+            border-color: #4b5563;
+            color: #e5e7eb;
+        }
+        
+        .dark .search-input:focus {
+            box-shadow: 0 0 0 2px rgba(93, 92, 222, 0.4);
+        }
+        
+        .search-input-icon {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        
+        .search-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .search-checkbox {
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            color: #4b5563;
+            cursor: pointer;
+        }
+        
+        .dark .search-checkbox {
+            color: #9ca3af;
+        }
+        
+        .search-checkbox input {
+            margin-right: 4px;
+        }
+        
+        .search-matches {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+        
+        .dark .search-matches {
+            color: #9ca3af;
+        }
+        
+        .search-nav-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .search-nav-button {
+            padding: 6px 8px;
+            border: none;
+            background-color: #f3f4f6;
+            color: #4b5563;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .search-nav-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .search-nav-button:hover:not(:disabled) {
+            background-color: #e5e7eb;
+        }
+        
+        .dark .search-nav-button {
+            background-color: #374151;
+            color: #d1d5db;
+        }
+        
+        .dark .search-nav-button:hover:not(:disabled) {
+            background-color: #4b5563;
+        }
+        
+        .search-mark {
+            background-color: rgba(255, 213, 86, 0.3);
+            border-radius: 2px;
+        }
+        
+        .search-mark-active {
+            background-color: rgba(255, 152, 0, 0.5);
+        }
+        
+        .dark .search-mark {
+            background-color: rgba(255, 213, 86, 0.4);
+        }
+        
+        .dark .search-mark-active {
+            background-color: rgba(255, 152, 0, 0.6);
+        }
+        
+        .search-toggle-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 99;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+            color: #5D5CDE;
+            transition: all 0.2s;
+        }
+        
+        .dark .search-toggle-button {
+            background-color: #232336;
+            border-color: #374151;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        
+        .search-toggle-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+        }
+        
+        /* Path Query Panel */
+        .path-query-panel {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            z-index: 100;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            transform-origin: bottom right;
+            background-color: white;
+            width: 380px;
+            max-width: 95%;
+        }
+        
+        .dark .path-query-panel {
+            background-color: #232336;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+        
+        .path-query-panel.hidden {
+            transform: translateY(20px) scale(0.95);
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .path-query-header {
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e7eb;
+            background-color: #f9fafb;
+        }
+        
+        .dark .path-query-header {
+            border-bottom: 1px solid #374151;
+            background-color: #1f1f32;
+        }
+        
+        .path-query-content {
+            padding: 12px 16px;
+        }
+        
+        .path-query-result {
+            margin-top: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            background-color: #f9fafb;
+        }
+        
+        .dark .path-query-result {
+            border-color: #374151;
+            background-color: #1f1f32;
+        }
+        
+        .path-query-toggle-button {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            z-index: 99;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+            color: #5D5CDE;
+            transition: all 0.2s;
+        }
+        
+        .dark .path-query-toggle-button {
+            background-color: #232336;
+            border-color: #374151;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        
+        .path-query-toggle-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+        }
+        
+        .path-result-item {
+            cursor: pointer;
+            padding: 8px 12px;
+            transition: background-color 0.2s;
+            border-bottom: 1px solid #edf2f7;
+        }
+        
+        .path-result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .path-result-item:hover {
+            background-color: rgba(93, 92, 222, 0.1);
+        }
+        
+        .dark .path-result-item {
+            border-bottom-color: #374151;
+        }
+        
+        .dark .path-result-item:hover {
+            background-color: rgba(93, 92, 222, 0.2);
+        }
+        
+        .path-result-path {
+            color: #5D5CDE;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .path-result-value {
+            color: #4b5563;
+            word-break: break-word;
+        }
+        
+        .dark .path-result-value {
+            color: #d1d5db;
+        }
+        
+        .path-query-examples {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        
+        .dark .path-query-examples {
+            color: #9ca3af;
+        }
+        
+        .path-example-item {
+            display: inline-block;
+            margin-right: 8px;
+            margin-bottom: 4px;
+            padding: 2px 6px;
+            background-color: #f3f4f6;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .path-example-item:hover {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+        
+        .dark .path-example-item {
+            background-color: #374151;
+        }
+        
+        .dark .path-example-item:hover {
+            background-color: #4b5563;
+            color: #f9fafb;
+        }
+        
+        /* Query match highlight */
+        .query-match {
+            background-color: rgba(93, 92, 222, 0.15);
+            border-bottom: 2px solid rgba(93, 92, 222, 0.6);
+            transition: all 0.3s ease;
+        }
+        
+        .dark .query-match {
+            background-color: rgba(93, 92, 222, 0.25);
+            border-bottom: 2px solid rgba(93, 92, 222, 0.7);
+        }
+        
+        .query-match-active {
+            background-color: rgba(93, 92, 222, 0.25);
+            border-bottom: 2px solid rgba(93, 92, 222, 0.8);
+            animation: queryPulse 2s infinite;
+        }
+        
+        .dark .query-match-active {
+            background-color: rgba(93, 92, 222, 0.35);
+            border-bottom: 2px solid rgba(93, 92, 222, 0.9);
+        }
+        
+        @keyframes queryPulse {
+            0% { box-shadow: 0 0 0 0 rgba(93, 92, 222, 0.3); }
+            70% { box-shadow: 0 0 0 8px rgba(93, 92, 222, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(93, 92, 222, 0); }
+        }
+        
+        /* Main layout specific styles */
+        .main-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .main-header {
+            padding: 1rem 1.5rem;
+            flex-shrink: 0;
+        }
+        
+        .main-layout {
+            flex: 1;
+            display: flex;
+            min-height: 0;  /* Critical for flexbox to work properly with overflow */
+        }
+        
+        .sidebar {
+            width: 40%;
+            min-width: 300px;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+            border-right: 1px solid #e2e8f0;
+        }
+        
+        .dark .sidebar {
+            background-color: #181818;
+            border-right-color: #333333;
+        }
+        
+        .editor-panel {
+            width: 30%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #e2e8f0;
+        }
+        
+        .dark .editor-panel {
+            border-right-color: #333333;
+        }
+        
+        .preview-panel {
+            width: 30%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Panel headers and content styling */
+        .panel-header {
+            padding: 0.75rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+            flex-shrink: 0;
+        }
+        
+        .dark .panel-header {
+            background-color: #1e1e2f;
+            border-bottom-color: #333333;
+        }
+        
+        .panel-content {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-body {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .panel-footer {
+            border-top: 1px solid #e2e8f0;
+            padding: 0.5rem 1rem;
+            background-color: #f8fafc;
+            flex-shrink: 0;
+        }
+        
+        .dark .panel-footer {
+            background-color: #1e1e2f;
+            border-top-color: #333333;
+        }
+        
+        /* Tab styles */
+        .tab-bar {
+            display: flex;
+            border-bottom: 1px solid #e2e8f0;
+            flex-shrink: 0;
+        }
+        
+        .dark .tab-bar {
+            border-bottom-color: #333333;
+        }
+        
+        .tab {
+            padding: 0.75rem 1rem;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .tab.active {
+            border-bottom-color: #5D5CDE;
+            color: #5D5CDE;
+        }
+        
+        .dark .tab.active {
+            color: #7370e9;
+        }
+        
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow: auto;
+            flex-direction: column;
+        }
+        
+        .tab-content.active {
+            display: flex;
+        }
+        
+        /* Button styles */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .btn:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(93, 92, 222, 0.3);
+        }
+        
+        .btn-primary {
+            background-color: #5D5CDE;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #4b4ab2;
+        }
+        
+        .btn-secondary {
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #e5e7eb;
+        }
+        
+        .dark .btn-secondary {
+            background-color: #374151;
+            color: #e5e7eb;
+        }
+        
+        .dark .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+        
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+        
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            border-radius: 0.25rem;
+        }
+        
+        .btn-icon {
+            padding: 0.375rem;
+            border-radius: 0.375rem;
+        }
+        
+        /* Validation panel */
+        .validation-panel {
+            max-height: 150px;
+            overflow-y: auto;
+            border-top: 1px solid #e2e8f0;
+            flex-shrink: 0;
+        }
+        
+        .dark .validation-panel {
+            border-top-color: #333333;
+        }
+        
+        .validation-panel-header {
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .dark .validation-panel-header {
+            background-color: #1e1e2f;
+            border-bottom-color: #333333;
+        }
+        
+        .validation-panel-body {
+            padding: 0.5rem 1rem;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+    </style>
+    <!-- CodeMirror for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/yaml/yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <!-- CodeMirror fold addon -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/fold/foldcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/fold/foldgutter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/fold/indent-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/fold/comment-fold.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/fold/foldgutter.min.css">
+</head>
+<body class="bg-gray-50 dark:bg-dark-900 text-gray-900 dark:text-gray-100 font-sans">
+    <!-- Dark mode detection -->
+    <script>
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+    </script>
+
+    <div class="main-wrapper">
+        <header class="main-header border-b border-gray-200 dark:border-dark-600">
+            <h1 class="text-2xl font-bold text-primary-500 flex items-center justify-center">
+                <svg class="w-7 h-7 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm14 1H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1zm-2.3 4.8l.8.8-7.3 7.3-4.3-4.3.8-.8 3.5 3.5 6.5-6.5z"></path>
+                </svg>
+                Enhanced YAML Editor
+                <span class="ml-3 text-sm font-normal text-gray-500 dark:text-gray-400">Convert, validate, and format YAML to JSON</span>
+            </h1>
+        </header>
+        
+        <div class="main-layout">
+            <!-- Sidebar: Structure Outline and Templates -->
+            <div class="sidebar">
+                <!-- Tabs -->
+                <div class="tab-bar">
+                    <div id="outline-tab" class="tab active flex-1 text-center">
+                        <i class="fas fa-sitemap mr-2"></i>Outline
+                    </div>
+                    <div id="templates-tab" class="tab flex-1 text-center">
+                        <i class="fas fa-puzzle-piece mr-2"></i>Templates
+                    </div>
+                </div>
+                
+                <!-- Outline Tab Content -->
+                <div id="outline-content" class="tab-content active">
+                    <div class="panel-header">
+                        <h2 class="text-lg font-medium flex items-center">
+                            <i class="fas fa-sitemap text-primary-500 mr-2"></i>
+                            Structure Outline
+                        </h2>
+                        <button id="toggle-outline" class="lg:hidden btn btn-secondary btn-sm">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="panel-body p-3 overflow-auto">
+                        <div id="outline-tree" class="text-sm font-mono">
+                            <div class="text-gray-500 dark:text-gray-400 italic text-center my-8">
+                                Loading structure...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Templates Tab Content -->
+                <div id="templates-content" class="tab-content">
+                    <div class="panel-header">
+                        <h2 class="text-lg font-medium flex items-center">
+                            <i class="fas fa-puzzle-piece text-primary-500 mr-2"></i>
+                            YAML Templates
+                        </h2>
+                        <button id="add-template-btn" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div class="panel-body p-3 overflow-auto">
+                        <div class="mb-4">
+                            <div class="relative">
+                                <input type="text" id="template-search" placeholder="Search templates..." class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-dark-700 border border-gray-300 dark:border-dark-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-search text-gray-400 dark:text-gray-500"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-2 py-2 border-b border-gray-200 dark:border-dark-700">
+                            <span class="font-medium text-sm text-gray-500 dark:text-gray-400">Default Templates</span>
+                        </div>
+                        
+                        <div id="default-templates" class="space-y-2 mb-4">
+                            <!-- Default templates will be inserted here -->
+                        </div>
+                        
+                        <div class="mb-2 py-2 border-b border-gray-200 dark:border-dark-700">
+                            <span class="font-medium text-sm text-gray-500 dark:text-gray-400">Custom Templates</span>
+                        </div>
+                        
+                        <div id="custom-templates" class="space-y-2">
+                            <!-- Custom templates will be inserted here -->
+                            <div id="no-custom-templates" class="text-center py-4 text-gray-500 dark:text-gray-400 italic">
+                                No custom templates yet
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Editor Panel -->
+            <div class="editor-panel">
+                <div class="panel-header">
+                    <div class="flex items-center">
+                        <h2 class="text-lg font-medium flex items-center">
+                            <i class="fas fa-code text-primary-500 mr-2"></i>
+                            YAML Editor
+                        </h2>
+                        <div class="flex items-center ml-3" id="validationStatus">
+                            <div id="validIndicator" class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                            <span id="validationText" class="text-green-600 dark:text-green-400 text-sm font-medium">Valid YAML</span>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <div class="relative inline-block">
+                            <button id="format-menu-btn" class="btn btn-primary btn-sm">
+                                <i class="fas fa-file-alt mr-1.5"></i>File
+                                <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                            </button>
+                            <div id="format-menu" class="hidden absolute z-50 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-dark-700 ring-1 ring-black ring-opacity-5 py-1 right-0">
+                                <div class="px-3 py-2 border-b border-gray-200 dark:border-dark-600">
+                                    <span class="block text-xs font-semibold text-gray-500 dark:text-gray-400">导入/导出</span>
+                                </div>
+                                <button id="import-json" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-dark-600 w-full text-left">
+                                    <i class="fas fa-file-import mr-2"></i>从JSON导入
+                                </button>
+                                <button id="export-json" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-dark-600 w-full text-left">
+                                    <i class="fas fa-file-export mr-2"></i>导出为JSON
+                                </button>
+                                <div class="border-t border-gray-200 dark:border-dark-600 my-1"></div>
+                                <button id="import-file" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-dark-600 w-full text-left">
+                                    <i class="fas fa-upload mr-2"></i>上传文件
+                                    <input type="file" id="file-input" class="hidden" accept=".yaml,.yml,.json">
+                                </button>
+                                <div class="border-t border-gray-200 dark:border-dark-600 my-1"></div>
+                                <button id="copy-yaml" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-dark-600 w-full text-left">
+                                    <i class="fas fa-copy mr-2"></i>复制YAML
+                                </button>
+                                <button id="copy-json" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-dark-600 w-full text-left">
+                                    <i class="fas fa-copy mr-2"></i>复制JSON
+                                </button>
+                            </div>
+                        </div>
+                        <button id="formatYaml" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-magic mr-1.5"></i>Format
+                        </button>
+                        <button id="clearEditor" class="btn btn-danger btn-sm">
+                            <i class="fas fa-trash-alt mr-1.5"></i>Clear
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <textarea id="yamlEditor" class="w-full h-full"></textarea>
+                    
+                    <!-- Search toggle button -->
+                    <div id="search-toggle" class="search-toggle-button">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    
+                    <!-- Path Query toggle button -->
+                    <div id="path-query-toggle" class="path-query-toggle-button">
+                        <i class="fas fa-route"></i>
+                    </div>
+                    
+                    <!-- Search & Replace panel -->
+                    <div id="search-panel" class="search-panel hidden">
+                        <div class="search-panel-header">
+                            <h3 class="font-medium text-gray-800 dark:text-gray-200">Search &amp; Replace</h3>
+                            <button id="close-search-panel" class="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="search-panel-content">
+                            <!-- Search input -->
+                            <div class="search-panel-row">
+                                <div class="search-input-group">
+                                    <input id="search-input" type="text" class="search-input" placeholder="Find in YAML...">
+                                    <span class="search-input-icon">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- Search options -->
+                            <div class="search-options">
+                                <label class="search-checkbox">
+                                    <input type="checkbox" id="case-sensitive"> Case sensitive
+                                </label>
+                                <label class="search-checkbox">
+                                    <input type="checkbox" id="whole-word"> Whole word
+                                </label>
+                                <label class="search-checkbox">
+                                    <input type="checkbox" id="regex-search"> Regex
+                                </label>
+                            </div>
+                            
+                            <!-- Search matches info -->
+                            <div id="search-matches" class="search-matches"></div>
+                            
+                            <!-- Search navigation buttons -->
+                            <div class="search-nav-buttons">
+                                <button id="prev-match" class="search-nav-button" disabled="">
+                                    <i class="fas fa-chevron-up mr-1"></i> Previous
+                                </button>
+                                <button id="next-match" class="search-nav-button" disabled="">
+                                    <i class="fas fa-chevron-down mr-1"></i> Next
+                                </button>
+                            </div>
+                            
+                            <!-- Separator -->
+                            <hr class="my-2 border-gray-200 dark:border-gray-700">
+                            
+                            <!-- Replace input -->
+                            <div class="search-panel-row">
+                                <div class="search-input-group">
+                                    <input id="replace-input" type="text" class="search-input" placeholder="Replace with...">
+                                </div>
+                            </div>
+                            
+                            <!-- Replace buttons -->
+                            <div class="search-nav-buttons">
+                                <button id="replace-current" class="search-nav-button" disabled="">
+                                    Replace
+                                </button>
+                                <button id="replace-all" class="search-nav-button" disabled="">
+                                    Replace All
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Path Query panel -->
+                    <div id="path-query-panel" class="path-query-panel hidden">
+                        <div class="path-query-header">
+                            <h3 class="font-medium text-gray-800 dark:text-gray-200">YAML Path Query</h3>
+                            <button id="close-path-query-panel" class="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="path-query-content">
+                            <div class="relative">
+                                <input type="text" id="path-query-input" placeholder="Enter path query (e.g. $.website.settings)" class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-dark-700 border border-gray-300 dark:border-dark-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-route text-gray-400 dark:text-gray-500"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="path-query-examples mt-3">
+                                <span class="block text-xs font-medium mb-1.5">Example queries:</span>
+                                <div class="path-example-item" data-query="$.website.name">$.website.name</div>
+                                <div class="path-example-item" data-query="$.website.features.membership.levels[*].name">$.features.levels[*].name</div>
+                                <div class="path-example-item" data-query="$..description">$..description</div>
+                            </div>
+                            
+                            <div id="path-query-result-container" class="hidden">
+                                <div class="flex justify-between items-center mt-4 mb-1">
+                                    <h4 class="font-medium text-gray-800 dark:text-gray-200 text-sm">Results:</h4>
+                                    <span id="path-query-count" class="text-xs text-gray-600 dark:text-gray-400">0 matches</span>
+                                </div>
+                                <div id="path-query-result" class="path-query-result">
+                                    <!-- Path query results will be displayed here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="validation-panel">
+                    <div class="validation-panel-header">
+                        <h3 class="text-sm font-medium flex items-center">
+                            <i class="fas fa-shield-check text-primary-500 mr-2"></i>
+                            Validation Issues
+                        </h3>
+                        <div id="issuesCount" class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:bg-opacity-30 dark:text-green-400 rounded-full">
+                            <span id="issuesCountNumber">0</span> issues found
+                        </div>
+                    </div>
+                    <div class="validation-panel-body">
+                        <ul id="issuesList" class="list-disc pl-5 space-y-1"></ul>
+                        <div id="noIssues" class="text-center text-gray-500 dark:text-gray-400 py-2">
+                            <i class="fas fa-check-circle text-green-500 mr-1"></i>
+                            No validation issues found
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Resize handle -->
+            <div id="resize-handle" class="resize-handle"></div>
+            
+            <!-- Preview Panel -->
+            <div class="preview-panel">
+                <div class="panel-header">
+                    <h2 class="text-lg font-medium flex items-center">
+                        <i class="fas fa-code text-primary-500 mr-2"></i>
+                        JSON Preview
+                    </h2>
+                    <button id="copyJson" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-copy mr-1.5"></i>Copy JSON
+                    </button>
+                </div>
+                <div class="panel-body">
+                    <pre id="jsonPreview"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching functionality
+            const outlineTab = document.getElementById('outline-tab');
+            const templatesTab = document.getElementById('templates-tab');
+            const outlineContent = document.getElementById('outline-content');
+            const templatesContent = document.getElementById('templates-content');
+            
+            outlineTab.addEventListener('click', () => {
+                outlineTab.classList.add('active');
+                templatesTab.classList.remove('active');
+                outlineContent.classList.add('active');
+                templatesContent.classList.remove('active');
+            });
+            
+            templatesTab.addEventListener('click', () => {
+                templatesTab.classList.add('active');
+                outlineTab.classList.remove('active');
+                templatesContent.classList.add('active');
+                outlineContent.classList.remove('active');
+            });
+
+            // Initialize CodeMirror with folding support
+            const yamlEditor = CodeMirror.fromTextArea(document.getElementById('yamlEditor'), {
+                mode: 'yaml',
+                lineNumbers: true,
+                indentUnit: 2,
+                tabSize: 2,
+                lineWrapping: true,
+                theme: document.documentElement.classList.contains('dark') ? 'darcula' : 'default',
+                autoCloseBrackets: true,
+                matchBrackets: true,
+                foldGutter: true,
+                gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+                extraKeys: {
+                    "Tab": function(cm) {
+                        if (cm.somethingSelected()) {
+                            cm.indentSelection("add");
+                        } else {
+                            cm.replaceSelection("  ", "end", "+input");
+                        }
+                    },
+                    // Code folding shortcut
+                    "Ctrl-Q": function(cm) { 
+                        cm.foldCode(cm.getCursor()); 
+                    }
+                },
+                foldOptions: {
+                    widget: "...",
+                    minFoldSize: 1,
+                }
+            });
+            
+            // Update JSON preview when YAML changes
+            yamlEditor.on('change', debounce(updateJsonPreview, 300));
+            
+            // Format YAML button
+            document.getElementById('formatYaml').addEventListener('click', function() {
+                formatYaml();
+                animateButton(this);
+            });
+            
+            // Clear button
+            document.getElementById('clearEditor').addEventListener('click', function() {
+                yamlEditor.setValue('');
+                document.getElementById('jsonPreview').textContent = '';
+                updateValidationStatus(true);
+                animateButton(this);
+            });
+            
+            // Copy buttons
+            document.getElementById('copy-yaml').addEventListener('click', function() {
+                copyToClipboard(yamlEditor.getValue());
+                closeFormatMenu();
+            });
+            
+            document.getElementById('copy-json').addEventListener('click', function() {
+                copyToClipboard(document.getElementById('jsonPreview').textContent);
+                closeFormatMenu();
+            });
+            
+            document.getElementById('copyJson').addEventListener('click', function() {
+                copyToClipboard(document.getElementById('jsonPreview').textContent);
+                animateButton(this);
+            });
+            
+            // Format menu
+            const formatMenuBtn = document.getElementById('format-menu-btn');
+            const formatMenu = document.getElementById('format-menu');
+            const importJsonBtn = document.getElementById('import-json');
+            const exportJsonBtn = document.getElementById('export-json');
+            const importFileBtn = document.getElementById('import-file');
+            const fileInput = document.getElementById('file-input');
+            
+            // Handle menu toggle
+            formatMenuBtn.addEventListener('click', function() {
+                formatMenu.classList.toggle('hidden');
+            });
+            
+            // Close menu when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!formatMenuBtn.contains(event.target) && !formatMenu.contains(event.target)) {
+                    formatMenu.classList.add('hidden');
+                }
+            });
+            
+            // Helper function for closing menu
+            function closeFormatMenu() {
+                formatMenu.classList.add('hidden');
+            }
+            
+            // Import JSON
+            importJsonBtn.addEventListener('click', function() {
+                try {
+                    let jsonText = prompt('请粘贴JSON数据:');
+                    
+                    if (jsonText) {
+                        // Try to parse the JSON
+                        const jsonObject = JSON.parse(jsonText);
+                        
+                        // Convert to YAML
+                        const yamlContent = jsyaml.dump(jsonObject, {
+                            indent: 2,
+                            lineWidth: -1, 
+                            noRefs: true
+                        });
+                        
+                        // Set the editor content
+                        yamlEditor.setValue(yamlContent);
+                        
+                        // Show success message
+                        showToast('JSON成功导入为YAML', 'success');
+                    }
+                } catch (error) {
+                    showToast('无效的JSON: ' + error.message, 'error');
+                }
+                
+                closeFormatMenu();
+            });
+            
+            // Export JSON
+            exportJsonBtn.addEventListener('click', function() {
+                try {
+                    const yamlContent = yamlEditor.getValue();
+                    
+                    if (!yamlContent.trim()) {
+                        showToast('没有内容可导出', 'warning');
+                        return;
+                    }
+                    
+                    // Parse YAML to JS object
+                    const jsonObject = jsyaml.load(yamlContent);
+                    
+                    // Format JSON with indentation
+                    const formattedJson = JSON.stringify(jsonObject, null, 2);
+                    
+                    // Create a temporary textarea to copy to clipboard
+                    const textArea = document.createElement('textarea');
+                    textArea.value = formattedJson;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    
+                    showToast('JSON已复制到剪贴板', 'success');
+                } catch (error) {
+                    showToast('无效的YAML: ' + error.message, 'error');
+                }
+                
+                closeFormatMenu();
+            });
+            
+            // Import file
+            importFileBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const content = e.target.result;
+                        
+                        // Check if file is JSON or YAML
+                        if (file.name.endsWith('.json')) {
+                            // Parse JSON and convert to YAML
+                            const jsonObject = JSON.parse(content);
+                            const yamlContent = jsyaml.dump(jsonObject, {
+                                indent: 2,
+                                lineWidth: -1,
+                                noRefs: true
+                            });
+                            yamlEditor.setValue(yamlContent);
+                        } else {
+                            // Assume it's YAML
+                            yamlEditor.setValue(content);
+                            // Verify it's valid YAML
+                            jsyaml.load(content);
+                        }
+                        
+                        showToast(`成功导入 ${file.name}`, 'success');
+                    } catch (error) {
+                        showToast(`导入失败: ${error.message}`, 'error');
+                    }
+                    
+                    // Reset file input
+                    fileInput.value = '';
+                };
+                
+                reader.onerror = function() {
+                    showToast('读取文件时出错', 'error');
+                };
+                
+                reader.readAsText(file);
+                closeFormatMenu();
+            });
+            
+            // Implement resizable panels
+            initResizablePanels();
+            
+            // Function to animate button click
+            function animateButton(button) {
+                button.classList.add('pulse-once');
+                setTimeout(() => {
+                    button.classList.remove('pulse-once');
+                }, 1000);
+            }
+            
+            // Function to update JSON preview with error highlighting
+            function updateJsonPreview() {
+                const yamlContent = yamlEditor.getValue();
+                const jsonPreview = document.getElementById('jsonPreview');
+                const issuesList = document.getElementById('issuesList');
+                const noIssues = document.getElementById('noIssues');
+                const issuesCount = document.getElementById('issuesCount');
+                const issuesCountNumber = document.getElementById('issuesCountNumber');
+                
+                issuesList.innerHTML = '';
+                
+                // 清除先前的错误标记
+                clearErrorMarkers();
+                
+                if (!yamlContent.trim()) {
+                    jsonPreview.textContent = '';
+                    updateValidationStatus(true);
+                    issuesCountNumber.textContent = '0';
+                    issuesCount.className = 'px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:bg-opacity-30 dark:text-green-400 rounded-full';
+                    noIssues.style.display = 'block';
+                    return;
+                }
+                
+                try {
+                    // Using js-yaml to parse YAML
+                    const jsonObject = jsyaml.load(yamlContent);
+                    jsonPreview.textContent = JSON.stringify(jsonObject, null, 2);
+                    
+                    // Add animation to show the JSON was updated
+                    jsonPreview.classList.add('pulse-once');
+                    setTimeout(() => {
+                        jsonPreview.classList.remove('pulse-once');
+                    }, 1000);
+                    
+                    updateValidationStatus(true);
+                    issuesCountNumber.textContent = '0';
+                    issuesCount.className = 'px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:bg-opacity-30 dark:text-green-400 rounded-full';
+                    noIssues.style.display = 'block';
+                } catch (error) {
+                    jsonPreview.textContent = '';
+                    updateValidationStatus(false, error.message);
+                    
+                    // Add error to issues list
+                    const li = document.createElement('li');
+                    li.textContent = error.message;
+                    li.className = 'text-red-600 dark:text-red-400 text-sm cursor-pointer';
+                    li.addEventListener('click', () => {
+                        highlightErrorInEditor(error);
+                    });
+                    issuesList.appendChild(li);
+                    
+                    // 在编辑器中标记错误
+                    markErrorInEditor(error);
+                    
+                    issuesCountNumber.textContent = '1';
+                    issuesCount.className = 'px-2 py-1 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:bg-opacity-30 dark:text-red-400 rounded-full';
+                    noIssues.style.display = 'none';
+                }
+            }
+            
+            // 清除所有错误标记
+            function clearErrorMarkers() {
+                // 清除错误行高亮
+                yamlEditor.getAllMarks().forEach(mark => mark.clear());
+                
+                // 清除错误行号标记
+                const gutterMarkers = yamlEditor.getWrapperElement().querySelectorAll('.CodeMirror-gutter-elt .yaml-error-gutter-marker');
+                gutterMarkers.forEach(marker => {
+                    if (marker.parentNode) {
+                        marker.parentNode.removeChild(marker);
+                    }
+                });
+                
+                // 移除所有错误提示工具提示
+                const errorTooltips = document.querySelectorAll('.error-tooltip');
+                errorTooltips.forEach(tooltip => {
+                    tooltip.remove();
+                });
+            }
+            
+            // 在编辑器中标记错误
+            function markErrorInEditor(error) {
+                try {
+                    // 从错误消息中解析行号
+                    const lineMatch = error.message.match(/line (\d+)/i);
+                    
+                    if (lineMatch && lineMatch[1]) {
+                        const lineNum = parseInt(lineMatch[1], 10) - 1; // 转为0基索引
+                        
+                        // 只有当行号有效时才进行标记
+                        if (lineNum >= 0 && lineNum < yamlEditor.lineCount()) {
+                            // 获取行文本
+                            const lineText = yamlEditor.getLine(lineNum);
+                            
+                            // 标记整行为错误
+                            const errorMark = yamlEditor.markText(
+                                {line: lineNum, ch: 0},
+                                {line: lineNum, ch: lineText.length},
+                                {
+                                    className: 'yaml-error-line',
+                                    title: error.message
+                                }
+                            );
+                            
+                            // 尝试从错误消息提取更精确的位置
+                            let columnMatch = error.message.match(/column (\d+)|pos (\d+)/i);
+                            if (columnMatch) {
+                                let column = parseInt(columnMatch[1] || columnMatch[2], 10) - 1;
+                                
+                                // 确保列号有效
+                                if (column >= 0 && column < lineText.length) {
+                                    // 标记具体错误位置
+                                    yamlEditor.markText(
+                                        {line: lineNum, ch: Math.max(0, column - 1)},
+                                        {line: lineNum, ch: Math.min(lineText.length, column + 1)},
+                                        {className: 'yaml-error-highlight'}
+                                    );
+                                }
+                            }
+                            
+                            // 添加错误行号标记
+                            const gutter = yamlEditor.getGutterElement();
+                            const lineInfo = yamlEditor.lineInfo(lineNum);
+                            
+                            if (lineInfo && lineInfo.gutterMarkers && gutter.childNodes[lineNum + 1]) {
+                                const marker = document.createElement('div');
+                                marker.className = 'yaml-error-gutter-marker';
+                                marker.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                                marker.title = error.message;
+                                marker.dataset.line = lineNum;
+                                
+                                marker.addEventListener('mouseenter', (e) => {
+                                    showErrorTooltip(e.target, error.message, lineNum);
+                                });
+                                
+                                marker.addEventListener('mouseleave', () => {
+                                    hideErrorTooltip();
+                                });
+                                
+                                yamlEditor.setGutterMarker(lineNum, "CodeMirror-linenumbers", marker);
+                            }
+                            
+                            // 滚动到错误位置
+                            yamlEditor.scrollIntoView({line: lineNum, ch: 0}, 100);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error highlighting YAML error:", e);
+                }
+            }
+            
+            // 显示错误提示工具提示
+            function showErrorTooltip(element, message, lineNum) {
+                // 移除已有的提示
+                hideErrorTooltip();
+                
+                const tooltip = document.createElement('div');
+                tooltip.className = 'error-tooltip';
+                tooltip.textContent = message;
+                tooltip.id = 'current-error-tooltip';
+                document.body.appendChild(tooltip);
+                
+                // 定位提示
+                const editorRect = yamlEditor.getWrapperElement().getBoundingClientRect();
+                const coords = yamlEditor.charCoords({line: lineNum, ch: 0}, 'local');
+                
+                tooltip.style.top = `${editorRect.top + coords.top}px`;
+                tooltip.style.left = `${editorRect.left + 40}px`; // 行号宽度约40px
+                tooltip.style.maxWidth = `${editorRect.width - 50}px`;
+            }
+            
+            // 隐藏错误提示工具提示
+            function hideErrorTooltip() {
+                const tooltip = document.getElementById('current-error-tooltip');
+                if (tooltip) {
+                    tooltip.remove();
+                }
+            }
+            
+            // 高亮错误并滚动到错误位置
+            function highlightErrorInEditor(error) {
+                const lineMatch = error.message.match(/line (\d+)/i);
+                if (lineMatch && lineMatch[1]) {
+                    const lineNum = parseInt(lineMatch[1], 10) - 1;
+                    
+                    // 确保行号有效
+                    if (lineNum >= 0 && lineNum < yamlEditor.lineCount()) {
+                        // 滚动到错误行
+                        yamlEditor.scrollIntoView({line: lineNum, ch: 0}, 200);
+                        
+                        // 高亮整行并闪烁效果
+                        const lineText = yamlEditor.getLine(lineNum);
+                        const errorMark = yamlEditor.getDoc().markText(
+                            {line: lineNum, ch: 0},
+                            {line: lineNum, ch: lineText.length},
+                            {className: 'yaml-error-line pulse-once'}
+                        );
+                        
+                        // 设置光标到错误行
+                        yamlEditor.setCursor({line: lineNum, ch: 0});
+                        yamlEditor.focus();
+                    }
+                }
+            }
+            
+            // Function to format YAML
+            function formatYaml() {
+                try {
+                    const yamlContent = yamlEditor.getValue();
+                    if (!yamlContent.trim()) return;
+                    
+                    // Parse to JSON and back to YAML to format
+                    const jsonObject = jsyaml.load(yamlContent);
+                    const formattedYaml = jsyaml.dump(jsonObject, {
+                        indent: 2,
+                        lineWidth: -1,
+                        noRefs: true,
+                        sortKeys: true
+                    });
+                    
+                    yamlEditor.setValue(formattedYaml);
+                    updateValidationStatus(true);
+                    
+                    // Show success toast
+                    showToast('YAML formatted successfully', 'success');
+                } catch (error) {
+                    updateValidationStatus(false, error.message);
+                    showToast('Could not format invalid YAML', 'error');
+                }
+            }
+            
+            // Update validation status
+            function updateValidationStatus(isValid, message = '') {
+                const validIndicator = document.getElementById('validIndicator');
+                const validationText = document.getElementById('validationText');
+                
+                if (isValid) {
+                    validIndicator.className = 'w-3 h-3 rounded-full bg-green-500 mr-2';
+                    validationText.textContent = 'Valid YAML';
+                    validationText.className = 'text-green-600 dark:text-green-400 text-sm font-medium';
+                } else {
+                    validIndicator.className = 'w-3 h-3 rounded-full bg-red-500 mr-2';
+                    validationText.textContent = 'Invalid YAML';
+                    validationText.className = 'text-red-600 dark:text-red-400 text-sm font-medium';
+                }
+            }
+            
+            // Utility function to copy to clipboard
+            function copyToClipboard(text) {
+                if (!text.trim()) {
+                    showToast('Nothing to copy', 'warning');
+                    return;
+                }
+                
+                navigator.clipboard.writeText(text)
+                    .then(() => {
+                        showToast('✓ Copied to clipboard', 'success');
+                    })
+                    .catch(err => {
+                        console.error('Could not copy text: ', err);
+                        showToast('Failed to copy to clipboard', 'error');
+                    });
+            }
+            
+            // Create toast notification
+            function showToast(message, type = 'success') {
+                // Remove any existing toasts
+                const existingToasts = document.querySelectorAll('.toast');
+                existingToasts.forEach(t => t.remove());
+                
+                const toast = document.createElement('div');
+                toast.className = 'toast fixed bottom-4 right-4 py-2 px-4 rounded-lg shadow-lg z-50 flex items-center toast-enter';
+                
+                let bgColor, textColor, icon;
+                
+                switch(type) {
+                    case 'success':
+                        bgColor = 'bg-green-600 dark:bg-green-700';
+                        textColor = 'text-white';
+                        icon = '<i class="fas fa-check-circle mr-2"></i>';
+                        break;
+                    case 'error':
+                        bgColor = 'bg-red-600 dark:bg-red-700';
+                        textColor = 'text-white';
+                        icon = '<i class="fas fa-times-circle mr-2"></i>';
+                        break;
+                    case 'warning':
+                        bgColor = 'bg-yellow-500 dark:bg-yellow-600';
+                        textColor = 'text-white';
+                        icon = '<i class="fas fa-exclamation-circle mr-2"></i>';
+                        break;
+                    default:
+                        bgColor = 'bg-gray-800 dark:bg-gray-700';
+                        textColor = 'text-white';
+                        icon = '';
+                }
+                
+                toast.className += ` ${bgColor} ${textColor}`;
+                toast.innerHTML = `${icon}${message}`;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.classList.remove('toast-enter');
+                    toast.classList.add('toast-exit');
+                    setTimeout(() => {
+                        toast.remove();
+                    }, 300);
+                }, 2000);
+            }
+            
+            // Function to initialize resizable panels
+            function initResizablePanels() {
+                const resizeHandle = document.getElementById('resize-handle');
+                const editorPanel = document.querySelector('.editor-panel');
+                const previewPanel = document.querySelector('.preview-panel');
+                const sidebar = document.querySelector('.sidebar');
+                let isResizing = false;
+                let startX, startEditorWidth, startPreviewWidth;
+                
+                resizeHandle.addEventListener('mousedown', (e) => {
+                    isResizing = true;
+                    document.body.classList.add('resizing');
+                    startX = e.clientX;
+                    startEditorWidth = editorPanel.offsetWidth;
+                    startPreviewWidth = previewPanel.offsetWidth;
+                    
+                    e.preventDefault(); // Prevent text selection during resize
+                });
+                
+                document.addEventListener('mousemove', (e) => {
+                    if (!isResizing) return;
+                    
+                    const totalWidth = startEditorWidth + startPreviewWidth;
+                    const deltaX = e.clientX - startX;
+                    let newEditorWidth = startEditorWidth + deltaX;
+                    let newPreviewWidth = totalWidth - newEditorWidth;
+                    
+                    // Set minimum widths (20% of total minus sidebar)
+                    const mainWidth = document.querySelector('.main-layout').offsetWidth;
+                    const minWidth = Math.max(200, (mainWidth - sidebar.offsetWidth) * 0.2);
+                    
+                    if (newEditorWidth < minWidth) {
+                        newEditorWidth = minWidth;
+                        newPreviewWidth = totalWidth - minWidth;
+                    } else if (newPreviewWidth < minWidth) {
+                        newPreviewWidth = minWidth;
+                        newEditorWidth = totalWidth - minWidth;
+                    }
+                    
+                    editorPanel.style.width = `${newEditorWidth}px`;
+                    previewPanel.style.width = `${newPreviewWidth}px`;
+                });
+                
+                document.addEventListener('mouseup', () => {
+                    if (isResizing) {
+                        isResizing = false;
+                        document.body.classList.remove('resizing');
+                        
+                        // Refresh the editor to adjust to new size
+                        yamlEditor.refresh();
+                    }
+                });
+            }
+            
+            // Debounce function
+            function debounce(func, wait) {
+                let timeout;
+                return function() {
+                    const context = this, args = arguments;
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        func.apply(context, args);
+                    }, wait);
+                };
+            }
+            
+            // Function to add sample YAML for demonstration
+            function addSampleYaml() {
+                const sampleYaml = `# YAML示例 - 一个简单的网站配置
+website:
+  name: 我的网站
+  description: 这是一个示例网站配置
+  version: 1.0.0
+  launch_date: 2023-05-15
+  
+  # 基本设置
+  settings:
+    theme: modern
+    language: zh-CN
+    timezone: Asia/Shanghai
+    maintenance_mode: false
+    
+  # 功能开关
+  features:
+    comments: true
+    search: 
+      enabled: true
+      provider: elasticsearch
+    membership:
+      enabled: true
+      levels:
+        - name: 基础会员
+          price: 0
+          features: [阅读文章, 发表评论]
+        - name: 高级会员
+          price: 88
+          features: [下载资源, 参与讨论, 优先支持]
+  
+  # 性能参数
+  performance:
+    cache_time: 3600  # 单位：秒
+    max_connections: 1000
+    timeout: 30
+  
+  # 联系方式
+  contact:
+    email: contact@example.com
+    phone: "+86123456789"
+    address:
+      street: 示例路123号
+      city: 示例市
+      province: 示例省
+      postcode: "100000"
+`;
+                yamlEditor.setValue(sampleYaml);
+                yamlEditor.setCursor({line: 0, ch: 0});
+                updateJsonPreview();
+            }
+            
+            // Add sample data after a short delay
+            setTimeout(addSampleYaml, 500);
+            
+            // Initialize search & replace functionality
+            initializeSearchAndReplace();
+            
+            // Initialize YAML path query functionality
+            initializePathQuery();
+            
+            // Initialize structure outline
+            initializeStructureOutline();
+            
+            // Initialize templates functionality
+            initializeTemplates();
+            
+            // Search & Replace functionality
+            function initializeSearchAndReplace() {
+                // DOM Elements
+                const searchPanel = document.getElementById('search-panel');
+                const searchToggle = document.getElementById('search-toggle');
+                const closeSearchPanel = document.getElementById('close-search-panel');
+                const searchInput = document.getElementById('search-input');
+                const replaceInput = document.getElementById('replace-input');
+                const caseSensitive = document.getElementById('case-sensitive');
+                const wholeWord = document.getElementById('whole-word');
+                const regexSearch = document.getElementById('regex-search');
+                const prevMatch = document.getElementById('prev-match');
+                const nextMatch = document.getElementById('next-match');
+                const replaceBtn = document.getElementById('replace-current');
+                const replaceAllBtn = document.getElementById('replace-all');
+                const searchMatches = document.getElementById('search-matches');
+                
+                // Search state
+                let currentSearchQuery = '';
+                let searchResults = [];
+                let currentMatchIndex = -1;
+                let searchMarks = [];
+                
+                // Toggle search panel
+                searchToggle.addEventListener('click', () => {
+                    searchPanel.classList.toggle('hidden');
+                    if (!searchPanel.classList.contains('hidden')) {
+                        searchInput.focus();
+                        // Perform search if there's text in the search input
+                        if (searchInput.value.trim()) {
+                            performSearch();
+                        }
+                    } else {
+                        // Clear search highlights when closing
+                        clearSearchHighlights();
+                    }
+                });
+                
+                // Close search panel
+                closeSearchPanel.addEventListener('click', () => {
+                    searchPanel.classList.add('hidden');
+                    clearSearchHighlights();
+                });
+                
+                // Keyboard shortcut for search (Ctrl+F / Cmd+F)
+                yamlEditor.setOption('extraKeys', Object.assign(yamlEditor.getOption('extraKeys') || {}, {
+                    'Ctrl-F': (cm) => {
+                        searchPanel.classList.remove('hidden');
+                        searchInput.focus();
+                        return false; // Don't propagate to default browser behavior
+                    },
+                    'Cmd-F': (cm) => {
+                        searchPanel.classList.remove('hidden');
+                        searchInput.focus();
+                        return false;
+                    },
+                    'Esc': (cm) => {
+                        if (!searchPanel.classList.contains('hidden')) {
+                            searchPanel.classList.add('hidden');
+                            clearSearchHighlights();
+                            cm.focus();
+                            return false;
+                        }
+                    }
+                }));
+                
+                // Setup search input events
+                searchInput.addEventListener('input', debounce(performSearch, 300));
+                searchInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (e.shiftKey) {
+                            findPrevious();
+                        } else {
+                            findNext();
+                        }
+                    }
+                    
+                    // Escape key to close panel
+                    if (e.key === 'Escape') {
+                        searchPanel.classList.add('hidden');
+                        clearSearchHighlights();
+                        yamlEditor.focus();
+                    }
+                });
+                
+                // Search options change
+                caseSensitive.addEventListener('change', performSearch);
+                wholeWord.addEventListener('change', performSearch);
+                regexSearch.addEventListener('change', performSearch);
+                
+                // Navigation buttons
+                prevMatch.addEventListener('click', findPrevious);
+                nextMatch.addEventListener('click', findNext);
+                
+                // Replace buttons
+                replaceBtn.addEventListener('click', replaceCurrentMatch);
+                replaceAllBtn.addEventListener('click', replaceAllMatches);
+                
+                // Main search function
+                function performSearch() {
+                    const query = searchInput.value;
+                    
+                    // Clear previous search
+                    clearSearchHighlights();
+                    
+                    if (!query.trim()) {
+                        updateMatchesInfo(0, 0);
+                        return;
+                    }
+                    
+                    currentSearchQuery = query;
+                    searchResults = [];
+                    currentMatchIndex = -1;
+                    
+                    try {
+                        // Build search regex
+                        let flags = 'g';
+                        if (!caseSensitive.checked) flags += 'i';
+                        
+                        let searchRegex;
+                        if (regexSearch.checked) {
+                            // User provided regex
+                            searchRegex = new RegExp(query, flags);
+                        } else if (wholeWord.checked) {
+                            // Whole word search
+                            searchRegex = new RegExp(`\\b${escapeRegExp(query)}\\b`, flags);
+                        } else {
+                            // Normal search
+                            searchRegex = new RegExp(escapeRegExp(query), flags);
+                        }
+                        
+                        // Get document content and search for matches
+                        const content = yamlEditor.getValue();
+                        const lines = content.split('\\n');
+                        
+                        for (let lineIdx = 0; lineIdx < yamlEditor.lineCount(); lineIdx++) {
+                            const lineText = yamlEditor.getLine(lineIdx);
+                            let match;
+                            
+                            while ((match = searchRegex.exec(lineText)) !== null) {
+                                const from = { line: lineIdx, ch: match.index };
+                                const to = { line: lineIdx, ch: match.index + match[0].length };
+                                
+                                searchResults.push({ from, to, text: match[0] });
+                                
+                                // Create highlight mark
+                                const mark = yamlEditor.markText(from, to, {
+                                    className: 'search-mark',
+                                    clearOnEnter: false,
+                                    title: match[0]
+                                });
+                                
+                                searchMarks.push(mark);
+                                
+                                // Avoid infinite loop with zero-width matches
+                                if (match.index === searchRegex.lastIndex) {
+                                    searchRegex.lastIndex++;
+                                }
+                            }
+                        }
+                        
+                        // Update navigation controls
+                        updateMatchesInfo(searchResults.length, currentMatchIndex);
+                        if (searchResults.length > 0) {
+                            // Highlight first match
+                            currentMatchIndex = 0;
+                            highlightCurrentMatch();
+                        }
+                    } catch (e) {
+                        // Handle invalid regex
+                        if (regexSearch.checked) {
+                            showToast('Invalid regular expression', 'error');
+                            updateMatchesInfo(0, 0);
+                        }
+                    }
+                }
+                
+                // Update match information
+                function updateMatchesInfo(totalMatches, currentIndex) {
+                    // Update matches text
+                    if (totalMatches === 0) {
+                        searchMatches.textContent = 'No matches found';
+                        prevMatch.disabled = true;
+                        nextMatch.disabled = true;
+                        replaceBtn.disabled = true;
+                        replaceAllBtn.disabled = true;
+                    } else {
+                        searchMatches.textContent = `${currentIndex + 1} of ${totalMatches} matches`;
+                        prevMatch.disabled = false;
+                        nextMatch.disabled = false;
+                        replaceBtn.disabled = false;
+                        replaceAllBtn.disabled = false;
+                    }
+                }
+                
+                // Clear all search highlights
+                function clearSearchHighlights() {
+                    searchMarks.forEach(mark => mark.clear());
+                    searchMarks = [];
+                    searchResults = [];
+                    currentMatchIndex = -1;
+                }
+                
+                // Highlight the current match
+                function highlightCurrentMatch() {
+                    if (currentMatchIndex < 0 || currentMatchIndex >= searchResults.length) return;
+                    
+                    // Clear any existing 'active' highlights
+                    searchMarks.forEach((mark, index) => {
+                        const match = searchResults[index];
+                        if (mark.className === 'search-mark-active') {
+                            // Replace with regular mark
+                            mark.clear();
+                            searchMarks[index] = yamlEditor.markText(match.from, match.to, {
+                                className: 'search-mark',
+                                clearOnEnter: false
+                            });
+                        }
+                    });
+                    
+                    // Add active highlight to current match
+                    const match = searchResults[currentMatchIndex];
+                    
+                    // Clear old mark
+                    if (searchMarks[currentMatchIndex]) {
+                        searchMarks[currentMatchIndex].clear();
+                    }
+                    
+                    // Create new active mark
+                    searchMarks[currentMatchIndex] = yamlEditor.markText(match.from, match.to, {
+                        className: 'search-mark-active',
+                        clearOnEnter: false
+                    });
+                    
+                    // Scroll to current match
+                    yamlEditor.scrollIntoView(match.from, 100);
+                    
+                    // Update cursor to end of match
+                    yamlEditor.setCursor(match.to);
+                    
+                    // Update match count display
+                    updateMatchesInfo(searchResults.length, currentMatchIndex);
+                }
+                
+                // Find next match
+                function findNext() {
+                    if (searchResults.length === 0) return;
+                    
+                    currentMatchIndex = (currentMatchIndex + 1) % searchResults.length;
+                    highlightCurrentMatch();
+                }
+                
+                // Find previous match
+                function findPrevious() {
+                    if (searchResults.length === 0) return;
+                    
+                    currentMatchIndex = (currentMatchIndex - 1 + searchResults.length) % searchResults.length;
+                    highlightCurrentMatch();
+                }
+                
+                // Replace current match
+                function replaceCurrentMatch() {
+                    if (currentMatchIndex < 0 || searchResults.length === 0) return;
+                    
+                    const match = searchResults[currentMatchIndex];
+                    const replacement = replaceInput.value;
+                    
+                    // Perform replacement
+                    yamlEditor.replaceRange(replacement, match.from, match.to);
+                    
+                    // Re-run search to update matches
+                    performSearch();
+                }
+                
+                // Replace all matches
+                function replaceAllMatches() {
+                    if (searchResults.length === 0) return;
+                    
+                    const replacement = replaceInput.value;
+                    let count = searchResults.length;
+                    
+                    // Start from the end to avoid position shifting problems
+                    for (let i = searchResults.length - 1; i >= 0; i--) {
+                        const match = searchResults[i];
+                        yamlEditor.replaceRange(replacement, match.from, match.to);
+                    }
+                    
+                    showToast(`Replaced ${count} matches`, 'success');
+                    
+                    // Re-run search
+                    performSearch();
+                }
+            }
+            
+            // Path Query functionality
+            function initializePathQuery() {
+                // DOM Elements
+                const pathQueryPanel = document.getElementById('path-query-panel');
+                const pathQueryToggle = document.getElementById('path-query-toggle');
+                const closePathQueryPanel = document.getElementById('close-path-query-panel');
+                const pathQueryInput = document.getElementById('path-query-input');
+                const pathQueryResultContainer = document.getElementById('path-query-result-container');
+                const pathQueryResult = document.getElementById('path-query-result');
+                const pathQueryCount = document.getElementById('path-query-count');
+                const pathExamples = document.querySelectorAll('.path-example-item');
+                
+                // Query state
+                let currentQueryMarks = [];
+                let currentQueryResults = [];
+                
+                // Toggle path query panel
+                pathQueryToggle.addEventListener('click', () => {
+                    pathQueryPanel.classList.toggle('hidden');
+                    if (!pathQueryPanel.classList.contains('hidden')) {
+                        pathQueryInput.focus();
+                        // Execute query if there's text in the input
+                        if (pathQueryInput.value.trim()) {
+                            executePathQuery();
+                        }
+                    } else {
+                        // Clear query highlights when closing
+                        clearQueryHighlights();
+                    }
+                });
+                
+                // Close path query panel
+                closePathQueryPanel.addEventListener('click', () => {
+                    pathQueryPanel.classList.add('hidden');
+                    clearQueryHighlights();
+                });
+                
+                // Setup query input events
+                pathQueryInput.addEventListener('input', debounce(executePathQuery, 300));
+                pathQueryInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        executePathQuery();
+                    }
+                    
+                    // Escape key to close panel
+                    if (e.key === 'Escape') {
+                        pathQueryPanel.classList.add('hidden');
+                        clearQueryHighlights();
+                        yamlEditor.focus();
+                    }
+                });
+                
+                // Example queries
+                pathExamples.forEach(example => {
+                    example.addEventListener('click', () => {
+                        pathQueryInput.value = example.dataset.query;
+                        executePathQuery();
+                        pathQueryInput.focus();
+                    });
+                });
+                
+                // Main query function
+                function executePathQuery() {
+                    const query = pathQueryInput.value.trim();
+                    
+                    // Clear previous highlights and results
+                    clearQueryHighlights();
+                    
+                    if (!query) {
+                        pathQueryResultContainer.classList.add('hidden');
+                        return;
+                    }
+                    
+                    try {
+                        // Get YAML content as object
+                        const yamlContent = yamlEditor.getValue();
+                        if (!yamlContent.trim()) {
+                            showNoResults('Empty document');
+                            return;
+                        }
+                        
+                        // Parse YAML to object
+                        const yamlObject = jsyaml.load(yamlContent);
+                        
+                        // Execute the path query
+                        const results = queryYamlObject(yamlObject, query);
+                        currentQueryResults = results;
+                        
+                        // Display results
+                        if (results.length === 0) {
+                            showNoResults('No matches found');
+                        } else {
+                            showQueryResults(results);
+                        }
+                        
+                    } catch (error) {
+                        console.error('Path query error:', error);
+                        showNoResults(`Error: ${error.message}`);
+                    }
+                }
+                
+                // Query the YAML object with path expression
+                function queryYamlObject(obj, path) {
+                    // Remove starting $ if present for JSONPath compatibility
+                    if (path.startsWith('$')) {
+                        path = path.substring(1);
+                    }
+                    
+                    // Normalize path
+                    if (path.startsWith('.')) {
+                        path = path.substring(1);
+                    }
+                    
+                    // Handle different query patterns
+                    if (path === '') {
+                        // Root object query
+                        return [{ path: '$', value: obj, line: 0 }];
+                    } else if (path.includes('..')) {
+                        // Recursive descent
+                        return handleRecursiveQuery(obj, path);
+                    } else if (path.includes('[*]')) {
+                        // Array wildcard
+                        return handleArrayWildcardQuery(obj, path);
+                    } else {
+                        // Standard path query
+                        return handleStandardQuery(obj, path);
+                    }
+                }
+                
+                // Handle standard path query (e.g. .prop1.prop2)
+                function handleStandardQuery(obj, path) {
+                    const parts = path.split(/\.|\[|\]/).filter(Boolean);
+                    let current = obj;
+                    let currentPath = '$';
+                    let results = [];
+                    
+                    try {
+                        for (let i = 0; i < parts.length; i++) {
+                            let part = parts[i];
+                            
+                            // Handle array indices
+                            if (/^\d+$/.test(part)) {
+                                part = parseInt(part, 10);
+                                currentPath += `[${part}]`;
+                            } else {
+                                currentPath += `.${part}`;
+                            }
+                            
+                            // Navigate to next level
+                            if (current[part] !== undefined) {
+                                current = current[part];
+                            } else {
+                                // Path doesn't exist
+                                return [];
+                            }
+                        }
+                        
+                        // Find line for this path
+                        const line = findLineByPath(path);
+                        results.push({ path: currentPath, value: current, line });
+                    } catch (e) {
+                        console.error('Error in standard query:', e);
+                    }
+                    
+                    return results;
+                }
+                
+                // Handle recursive descent query (e.g. ..prop)
+                function handleRecursiveQuery(obj, path) {
+                    // Extract the property to find
+                    const targetProp = path.split('..')[1];
+                    const results = [];
+                    
+                    // Recursive function to traverse object
+                    function traverse(current, currentPath = '$', level = 0) {
+                        if (level > 100) return; // Prevent infinite recursion
+                        
+                        if (Array.isArray(current)) {
+                            // Handle arrays
+                            for (let i = 0; i < current.length; i++) {
+                                const newPath = `${currentPath}[${i}]`;
+                                
+                                // If this array element is the target prop
+                                if (targetProp === '*') {
+                                    const line = findLineByPath(newPath.substring(1)); // Remove $ prefix
+                                    results.push({ path: newPath, value: current[i], line });
+                                }
+                                
+                                // Continue traversing if it's an object or array
+                                if (typeof current[i] === 'object' && current[i] !== null) {
+                                    traverse(current[i], newPath, level + 1);
+                                }
+                            }
+                        } else if (typeof current === 'object' && current !== null) {
+                            // Handle objects
+                            for (const key in current) {
+                                if (Object.prototype.hasOwnProperty.call(current, key)) {
+                                    const newPath = `${currentPath}.${key}`;
+                                    
+                                    // If this key matches the target property
+                                    if (key === targetProp || targetProp === '*') {
+                                        const line = findLineByPath(newPath.substring(1)); // Remove $ prefix
+                                        results.push({ path: newPath, value: current[key], line });
+                                    }
+                                    
+                                    // Continue traversing if it's an object or array
+                                    if (typeof current[key] === 'object' && current[key] !== null) {
+                                        traverse(current[key], newPath, level + 1);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    traverse(obj);
+                    return results;
+                }
+                
+                // Handle array wildcard query (e.g. .items[*].name)
+                function handleArrayWildcardQuery(obj, path) {
+                    // Split the path into parts before and after the wildcard
+                    const [beforeWildcard, afterWildcard] = path.split('[*]');
+                    let results = [];
+                    
+                    try {
+                        // Get the array
+                        const arrayResults = beforeWildcard ? handleStandardQuery(obj, beforeWildcard) : [{ path: '$', value: obj }];
+                        
+                        if (arrayResults.length === 0 || !Array.isArray(arrayResults[0].value)) {
+                            return [];
+                        }
+                        
+                        const array = arrayResults[0].value;
+                        const arrayPath = arrayResults[0].path;
+                        
+                        // Process each array element
+                        for (let i = 0; i < array.length; i++) {
+                            const item = array[i];
+                            const itemPath = `${arrayPath}[${i}]`;
+                            
+                            if (afterWildcard) {
+                                // Remove leading dot for further processing
+                                const restPath = afterWildcard.startsWith('.') ? afterWildcard.substring(1) : afterWildcard;
+                                
+                                if (!restPath) {
+                                    // Query is just for array elements
+                                    const line = findLineByPath(itemPath.substring(1)); // Remove $ prefix
+                                    results.push({ path: itemPath, value: item, line });
+                                } else {
+                                    // Continue with the rest of the path on this array item
+                                    const subResults = handleStandardQuery(item, restPath);
+                                    
+                                    if (subResults.length > 0) {
+                                        // Adjust the path to include the array index
+                                        results.push({
+                                            path: `${itemPath}${subResults[0].path.substring(1)}`, // Skip the $ in subResult path
+                                            value: subResults[0].value,
+                                            line: subResults[0].line
+                                        });
+                                    }
+                                }
+                            } else {
+                                // Just return the array items
+                                const line = findLineByPath(itemPath.substring(1)); // Remove $ prefix
+                                results.push({ path: itemPath, value: item, line });
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error in array wildcard query:', e);
+                    }
+                    
+                    return results;
+                }
+                
+                // Show no results message
+                function showNoResults(message) {
+                    pathQueryResultContainer.classList.remove('hidden');
+                    pathQueryResult.innerHTML = `
+                        <div class="p-4 text-center text-gray-500 dark:text-gray-400 italic">
+                            ${message}
+                        </div>
+                    `;
+                    pathQueryCount.textContent = '0 matches';
+                }
+                
+                // Show query results
+                function showQueryResults(results) {
+                    pathQueryResultContainer.classList.remove('hidden');
+                    pathQueryResult.innerHTML = '';
+                    pathQueryCount.textContent = `${results.length} match${results.length !== 1 ? 'es' : ''}`;
+                    
+                    results.forEach((result, index) => {
+                        const resultElement = document.createElement('div');
+                        resultElement.className = 'path-result-item';
+                        resultElement.dataset.index = index;
+                        
+                        const pathElement = document.createElement('div');
+                        pathElement.className = 'path-result-path';
+                        pathElement.textContent = result.path;
+                        
+                        const valueElement = document.createElement('div');
+                        valueElement.className = 'path-result-value';
+                        
+                        // Format the value based on its type
+                        if (typeof result.value === 'object' && result.value !== null) {
+                            valueElement.textContent = Array.isArray(result.value) 
+                                ? `Array(${result.value.length})` 
+                                : `Object{${Object.keys(result.value).length}}`;
+                        } else {
+                            valueElement.textContent = formatResultValue(result.value);
+                        }
+                        
+                        resultElement.appendChild(pathElement);
+                        resultElement.appendChild(valueElement);
+                        
+                        // Add click handler to navigate to the result location
+                        resultElement.addEventListener('click', () => {
+                            navigateToResult(result, index);
+                        });
+                        
+                        pathQueryResult.appendChild(resultElement);
+                    });
+                    
+                    // Highlight all matches in the editor
+                    highlightAllMatches(results);
+                }
+                
+                // Format result value for display
+                function formatResultValue(value) {
+                    if (value === null) return 'null';
+                    if (value === undefined) return 'undefined';
+                    
+                    switch (typeof value) {
+                        case 'string':
+                            if (value.length > 100) {
+                                return `"${value.substring(0, 97)}..."`;
+                            }
+                            return `"${value}"`;
+                        case 'number':
+                        case 'boolean':
+                            return value.toString();
+                        default:
+                            return String(value);
+                    }
+                }
+                
+                // Highlight all query matches in the editor
+                function highlightAllMatches(results) {
+                    clearQueryHighlights();
+                    
+                    results.forEach(result => {
+                        if (result.line !== undefined && result.line >= 0) {
+                            const line = result.line;
+                            const lineText = yamlEditor.getLine(line);
+                            
+                            // Mark the line
+                            const mark = yamlEditor.markText(
+                                {line: line, ch: 0},
+                                {line: line, ch: lineText.length},
+                                {className: 'query-match'}
+                            );
+                            
+                            currentQueryMarks.push(mark);
+                        }
+                    });
+                }
+                
+                // Navigate to specific result
+                function navigateToResult(result, index) {
+                    // Clear previous active highlights
+                    currentQueryMarks.forEach(mark => {
+                        if (mark.className === 'query-match-active') {
+                            const from = mark.find().from;
+                            const line = from.line;
+                            const lineText = yamlEditor.getLine(line);
+                            
+                            mark.clear();
+                            
+                            // Re-apply regular highlight
+                            const newMark = yamlEditor.markText(
+                                {line: line, ch: 0},
+                                {line: line, ch: lineText.length},
+                                {className: 'query-match'}
+                            );
+                            
+                            // Update in the array
+                            const idx = currentQueryMarks.indexOf(mark);
+                            if (idx !== -1) {
+                                currentQueryMarks[idx] = newMark;
+                            }
+                        }
+                    });
+                    
+                    // Highlight the selected result
+                    if (result.line !== undefined && result.line >= 0) {
+                        const line = result.line;
+                        const lineText = yamlEditor.getLine(line);
+                        
+                        // First clear any existing mark for this line
+                        currentQueryMarks = currentQueryMarks.filter(mark => {
+                            const pos = mark.find();
+                            if (pos && pos.from.line === line) {
+                                mark.clear();
+                                return false;
+                            }
+                            return true;
+                        });
+                        
+                        // Add active highlight
+                        const activeMark = yamlEditor.markText(
+                            {line: line, ch: 0},
+                            {line: line, ch: lineText.length},
+                            {className: 'query-match-active'}
+                        );
+                        
+                        currentQueryMarks.push(activeMark);
+                        
+                        // Scroll to the match
+                        yamlEditor.scrollIntoView({line: line, ch: 0}, 100);
+                        
+                        // Set cursor to the line
+                        yamlEditor.setCursor({line: line, ch: 0});
+                        yamlEditor.focus();
+                    }
+                    
+                    // Update result item styling in the results panel
+                    document.querySelectorAll('.path-result-item').forEach(item => {
+                        item.classList.remove('bg-blue-50', 'dark:bg-dark-600');
+                    });
+                    
+                    const currentItem = document.querySelector(`.path-result-item[data-index="${index}"]`);
+                    if (currentItem) {
+                        currentItem.classList.add('bg-blue-50', 'dark:bg-dark-600');
+                        
+                        // Scroll the result item into view if needed
+                        const resultContainer = document.getElementById('path-query-result');
+                        const itemRect = currentItem.getBoundingClientRect();
+                        const containerRect = resultContainer.getBoundingClientRect();
+                        
+                        if (itemRect.top < containerRect.top || itemRect.bottom > containerRect.bottom) {
+                            currentItem.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+                        }
+                    }
+                }
+                
+                // Clear all query highlights
+                function clearQueryHighlights() {
+                    currentQueryMarks.forEach(mark => mark.clear());
+                    currentQueryMarks = [];
+                    currentQueryResults = [];
+                    pathQueryResult.innerHTML = '';
+                }
+            }
+            
+            // Structure outline functionality
+            function initializeStructureOutline() {
+                const toggleOutlineBtn = document.getElementById('toggle-outline');
+                const outlineContent = document.getElementById('outline-content');
+                
+                toggleOutlineBtn.addEventListener('click', () => {
+                    outlineContent.classList.toggle('expanded');
+                    toggleOutlineBtn.querySelector('i').classList.toggle('fa-chevron-down');
+                    toggleOutlineBtn.querySelector('i').classList.toggle('fa-chevron-up');
+                });
+                
+                // Generate outline from YAML content
+                yamlEditor.on('change', debounce(generateOutline, 500));
+                
+                // Function to generate outline
+                function generateOutline() {
+                    const outlineTree = document.getElementById('outline-tree');
+                    const content = yamlEditor.getValue();
+                    
+                    // Clear previous outline
+                    outlineTree.innerHTML = '';
+                    
+                    if (!content.trim()) {
+                        outlineTree.innerHTML = `
+                            <div class="text-gray-500 dark:text-gray-400 italic text-center my-8">
+                                No content to display
+                            </div>`;
+                        return;
+                    }
+                    
+                    try {
+                        // Parse YAML to JSON object
+                        const data = jsyaml.load(content);
+                        
+                        // Generate outline
+                        if (typeof data === 'object' && data !== null) {
+                            const outlineHtml = buildOutlineTree(data);
+                            outlineTree.innerHTML = outlineHtml;
+                            
+                            // Add event listeners to toggle outline items
+                            setupOutlineInteraction();
+                        } else {
+                            outlineTree.innerHTML = `
+                                <div class="text-gray-500 dark:text-gray-400 italic text-center my-8">
+                                    Invalid or empty YAML structure
+                                </div>`;
+                        }
+                    } catch (error) {
+                        outlineTree.innerHTML = `
+                            <div class="text-red-500 dark:text-red-400 italic text-center my-8">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                Unable to generate outline: invalid YAML
+                            </div>`;
+                    }
+                }
+                
+                // Build outline HTML from JSON object
+                function buildOutlineTree(data, path = '', level = 0) {
+                    let html = '';
+                    
+                    if (Array.isArray(data)) {
+                        // Handle array
+                        html += `<div class="outline-item" data-path="${path}">
+                            <span class="outline-toggle ${level > 0 ? '' : 'collapsed'}">
+                                <i class="fas fa-chevron-down"></i>
+                            </span>
+                            <span class="outline-key">Array</span>
+                            <span class="outline-collection-info">[${data.length} items]</span>
+                        </div>`;
+                        
+                        html += `<div class="outline-children ${level > 0 ? '' : 'outline-hidden'}">`;
+                        
+                        if (data.length === 0) {
+                            html += `<div class="outline-empty">Empty array</div>`;
+                        } else {
+                            data.forEach((item, index) => {
+                                const itemPath = path ? `${path}[${index}]` : `[${index}]`;
+                                const itemType = getValueType(item);
+                                
+                                if (typeof item === 'object' && item !== null) {
+                                    html += buildOutlineTree(item, itemPath, level + 1);
+                                } else {
+                                    // Simple value in array
+                                    html += `<div class="outline-item" data-path="${itemPath}" data-line="${getLineForPath(itemPath)}">
+                                        <span class="ml-4"></span>
+                                        <span class="outline-key">[${index}]</span>
+                                        <span class="outline-value">${formatValue(item, itemType)}</span>
+                                    </div>`;
+                                }
+                            });
+                        }
+                        
+                        html += '</div>';
+                    } else if (typeof data === 'object' && data !== null) {
+                        // Handle object
+                        if (level > 0) {
+                            html += `<div class="outline-item" data-path="${path}">
+                                <span class="outline-toggle">
+                                    <i class="fas fa-chevron-down"></i>
+                                </span>
+                                <span class="outline-key">${getLastPathPart(path)}</span>
+                                <span class="outline-collection-info">{${Object.keys(data).length} props}</span>
+                            </div>`;
+                        }
+                        
+                        html += `<div class="outline-children">`;
+                        
+                        if (Object.keys(data).length === 0) {
+                            html += `<div class="outline-empty">Empty object</div>`;
+                        } else {
+                            for (const key in data) {
+                                if (Object.prototype.hasOwnProperty.call(data, key)) {
+                                    const value = data[key];
+                                    const newPath = path ? `${path}.${key}` : key;
+                                    const valueType = getValueType(value);
+                                    
+                                    if (typeof value === 'object' && value !== null) {
+                                        // Nested object or array
+                                        html += buildOutlineTree(value, newPath, level + 1);
+                                    } else {
+                                        // Simple value
+                                        html += `<div class="outline-item" data-path="${newPath}" data-line="${getLineForPath(newPath)}">
+                                            <span class="ml-4"></span>
+                                            <span class="outline-key">${key}:</span>
+                                            <span class="outline-value">${formatValue(value, valueType)}</span>
+                                        </div>`;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        html += '</div>';
+                    }
+                    
+                    return html;
+                }
+                
+                // Setup click handlers for outline items
+                function setupOutlineInteraction() {
+                    // Toggle outline items
+                    document.querySelectorAll('.outline-toggle').forEach(toggle => {
+                        toggle.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const item = toggle.closest('.outline-item');
+                            const children = item.nextElementSibling;
+                            
+                            toggle.classList.toggle('collapsed');
+                            children.classList.toggle('outline-hidden');
+                            
+                            if (toggle.classList.contains('collapsed')) {
+                                toggle.querySelector('i').classList.remove('fa-chevron-down');
+                                toggle.querySelector('i').classList.add('fa-chevron-right');
+                            } else {
+                                toggle.querySelector('i').classList.remove('fa-chevron-right');
+                                toggle.querySelector('i').classList.add('fa-chevron-down');
+                            }
+                        });
+                    });
+                    
+                    // Navigate to position on click
+                    document.querySelectorAll('.outline-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            const path = item.dataset.path;
+                            if (path) {
+                                const line = findLineByPath(path);
+                                if (line >= 0) {
+                                    // Set active state
+                                    document.querySelectorAll('.outline-item.active').forEach(el => {
+                                        el.classList.remove('active');
+                                    });
+                                    item.classList.add('active');
+                                    
+                                    // Jump to line
+                                    yamlEditor.setCursor({line: line, ch: 0});
+                                    yamlEditor.focus();
+                                    yamlEditor.scrollIntoView({line: line, ch: 0}, 100);
+                                }
+                            }
+                        });
+                    });
+                }
+                
+                // Track editor cursor position to highlight active outline item
+                yamlEditor.on('cursorActivity', debounce(() => {
+                    updateActiveOutlineItem();
+                }, 200));
+                
+                // Update active item in outline based on cursor position
+                function updateActiveOutlineItem() {
+                    const cursor = yamlEditor.getCursor();
+                    const cursorLine = cursor.line;
+                    
+                    // Find the best matching outline item for current cursor position
+                    let bestMatch = null;
+                    let bestDistance = Infinity;
+                    
+                    document.querySelectorAll('.outline-item[data-line]').forEach(item => {
+                        const itemLine = parseInt(item.dataset.line);
+                        if (!isNaN(itemLine)) {
+                            const distance = Math.abs(itemLine - cursorLine);
+                            if (distance < bestDistance) {
+                                bestDistance = distance;
+                                bestMatch = item;
+                            }
+                        }
+                    });
+                    
+                    // Update active state
+                    document.querySelectorAll('.outline-item.active').forEach(el => {
+                        el.classList.remove('active');
+                    });
+                    
+                    if (bestMatch && bestDistance <= 3) {
+                        bestMatch.classList.add('active');
+                        
+                        // Ensure the active item is visible by expanding its parents
+                        let parent = bestMatch.parentElement;
+                        while (parent && parent.classList.contains('outline-children')) {
+                            if (parent.classList.contains('outline-hidden')) {
+                                parent.classList.remove('outline-hidden');
+                                const toggle = parent.previousElementSibling.querySelector('.outline-toggle');
+                                if (toggle) {
+                                    toggle.classList.remove('collapsed');
+                                    toggle.querySelector('i').classList.remove('fa-chevron-right');
+                                    toggle.querySelector('i').classList.add('fa-chevron-down');
+                                }
+                            }
+                            parent = parent.parentElement;
+                        }
+                        
+                        // Scroll the outline to show the active item if needed
+                        const outlineContent = document.getElementById('outline-content');
+                        const itemRect = bestMatch.getBoundingClientRect();
+                        const containerRect = outlineContent.getBoundingClientRect();
+                        
+                        if (itemRect.top < containerRect.top || itemRect.bottom > containerRect.bottom) {
+                            bestMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+                }
+            }
+            
+            // Templates functionality
+            function initializeTemplates() {
+                // DOM elements
+                const addTemplateBtn = document.getElementById('add-template-btn');
+                const templateSearch = document.getElementById('template-search');
+                const defaultTemplatesContainer = document.getElementById('default-templates');
+                const customTemplatesContainer = document.getElementById('custom-templates');
+                const noCustomTemplates = document.getElementById('no-custom-templates');
+                
+                // Default templates
+                const defaultTemplates = [
+                    {
+                        id: 'web-config',
+                        name: '网站配置',
+                        description: '基本网站配置结构',
+                        yaml: `# 网站基本配置
+website:
+  name: 站点名称
+  description: 网站描述信息
+  version: 1.0.0
+  settings:
+    theme: default
+    language: zh-CN
+    timezone: Asia/Shanghai
+`
+                    },
+                    {
+                        id: 'api-config',
+                        name: 'API配置',
+                        description: 'RESTful API配置模板',
+                        yaml: `# API配置
+api:
+  base_url: https://api.example.com
+  version: v1
+  rate_limit: 100
+  timeout: 30
+  endpoints:
+    - name: users
+      methods: [GET, POST, PUT, DELETE]
+      auth_required: true
+    - name: products
+      methods: [GET]
+      auth_required: false
+`
+                    },
+                    {
+                        id: 'docker-compose',
+                        name: 'Docker Compose',
+                        description: 'Docker Compose配置模板',
+                        yaml: `# Docker Compose配置
+version: '3'
+
+services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./web:/usr/share/nginx/html
+    restart: always
+
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_PASSWORD: example
+      POSTGRES_USER: user
+      POSTGRES_DB: mydb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  postgres_data:
+`
+                    },
+                    {
+                        id: 'k8s-deployment',
+                        name: 'Kubernetes部署',
+                        description: 'Kubernetes部署配置',
+                        yaml: `# Kubernetes部署配置
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+  labels:
+    app: myapp
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - name: myapp
+        image: myapp:1.0
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: "1"
+            memory: "512Mi"
+          requests:
+            cpu: "0.5"
+            memory: "256Mi"
+`
+                    }
+                ];
+                
+                // Load saved custom templates from localStorage
+                let customTemplates = [];
+                try {
+                    const savedTemplates = localStorage.getItem('yaml_custom_templates');
+                    if (savedTemplates) {
+                        customTemplates = JSON.parse(savedTemplates);
+                    }
+                } catch (e) {
+                    console.error('Failed to load custom templates:', e);
+                    customTemplates = [];
+                }
+                
+                // Render templates
+                function renderTemplates() {
+                    // Render default templates
+                    defaultTemplatesContainer.innerHTML = '';
+                    defaultTemplates.forEach(template => {
+                        const templateCard = createTemplateCard(template, false);
+                        defaultTemplatesContainer.appendChild(templateCard);
+                    });
+                    
+                    // Render custom templates
+                    customTemplatesContainer.innerHTML = '';
+                    
+                    if (customTemplates.length === 0) {
+                        noCustomTemplates.style.display = 'block';
+                    } else {
+                        noCustomTemplates.style.display = 'none';
+                        customTemplates.forEach(template => {
+                            const templateCard = createTemplateCard(template, true);
+                            customTemplatesContainer.appendChild(templateCard);
+                        });
+                    }
+                }
+                
+                // Create template card
+                function createTemplateCard(template, isCustom) {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white dark:bg-dark-700 rounded-lg border border-gray-200 dark:border-dark-600 overflow-hidden hover:shadow-md transition-shadow duration-200';
+                    
+                    // Template content
+                    const content = document.createElement('div');
+                    content.className = 'p-3';
+                    
+                    const header = document.createElement('div');
+                    header.className = 'flex justify-between items-start mb-2';
+                    
+                    const title = document.createElement('h3');
+                    title.className = 'font-medium text-gray-800 dark:text-gray-200';
+                    title.textContent = template.name;
+                    
+                    // Actions dropdown
+                    const actions = document.createElement('div');
+                    actions.className = 'relative inline-block text-left';
+                    
+                    const actionsButton = document.createElement('button');
+                    actionsButton.className = 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200';
+                    actionsButton.innerHTML = '<i class="fas fa-ellipsis-v"></i>';
+                    actionsButton.onclick = (e) => {
+                        e.stopPropagation();
+                        const dropdown = actions.querySelector('.dropdown-menu');
+                        dropdown.classList.toggle('hidden');
+                        
+                        // Close other open dropdowns
+                        document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                            if (menu !== dropdown && !menu.classList.contains('hidden')) {
+                                menu.classList.add('hidden');
+                            }
+                        });
+                    };
+                    
+                    const dropdownMenu = document.createElement('div');
+                    dropdownMenu.className = 'dropdown-menu absolute right-0 mt-2 w-40 bg-white dark:bg-dark-700 border border-gray-200 dark:border-dark-600 rounded-md shadow-lg z-10 hidden';
+                    
+                    // Insert option
+                    const insertOption = document.createElement('button');
+                    insertOption.className = 'block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-dark-600';
+                    insertOption.innerHTML = '<i class="fas fa-plus-circle mr-2"></i>插入';
+                    insertOption.onclick = (e) => {
+                        e.stopPropagation();
+                        insertTemplate(template);
+                        dropdownMenu.classList.add('hidden');
+                    };
+                    
+                    // Preview option
+                    const previewOption = document.createElement('button');
+                    previewOption.className = 'block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-dark-600';
+                    previewOption.innerHTML = '<i class="fas fa-eye mr-2"></i>预览';
+                    previewOption.onclick = (e) => {
+                        e.stopPropagation();
+                        previewTemplate(template);
+                        dropdownMenu.classList.add('hidden');
+                    };
+                    
+                    // Edit option (only for custom templates)
+                    let editOption;
+                    if (isCustom) {
+                        editOption = document.createElement('button');
+                        editOption.className = 'block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-dark-600';
+                        editOption.innerHTML = '<i class="fas fa-edit mr-2"></i>编辑';
+                        editOption.onclick = (e) => {
+                            e.stopPropagation();
+                            editTemplate(template);
+                            dropdownMenu.classList.add('hidden');
+                        };
+                    }
+                    
+                    // Delete option (only for custom templates)
+                    let deleteOption;
+                    if (isCustom) {
+                        deleteOption = document.createElement('button');
+                        deleteOption.className = 'block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-dark-600';
+                        deleteOption.innerHTML = '<i class="fas fa-trash-alt mr-2"></i>删除';
+                        deleteOption.onclick = (e) => {
+                            e.stopPropagation();
+                            deleteTemplate(template);
+                            dropdownMenu.classList.add('hidden');
+                        };
+                    }
+                    
+                    // Add options to dropdown
+                    dropdownMenu.appendChild(insertOption);
+                    dropdownMenu.appendChild(previewOption);
+                    if (isCustom) {
+                        dropdownMenu.appendChild(editOption);
+                        dropdownMenu.appendChild(deleteOption);
+                    }
+                    
+                    actions.appendChild(actionsButton);
+                    actions.appendChild(dropdownMenu);
+                    
+                    header.appendChild(title);
+                    header.appendChild(actions);
+                    
+                    const description = document.createElement('p');
+                    description.className = 'text-sm text-gray-600 dark:text-gray-400';
+                    description.textContent = template.description;
+                    
+                    content.appendChild(header);
+                    content.appendChild(description);
+                    
+                    card.appendChild(content);
+                    
+                    // Make the whole card clickable to insert the template
+                    card.addEventListener('click', () => {
+                        insertTemplate(template);
+                    });
+                    
+                    return card;
+                }
+                
+                // Insert template into editor
+                function insertTemplate(template) {
+                    const cursor = yamlEditor.getCursor();
+                    yamlEditor.replaceRange(template.yaml, cursor);
+                    yamlEditor.focus();
+                    showToast(`已插入模板: ${template.name}`, 'success');
+                }
+                
+                // Preview template
+                function previewTemplate(template) {
+                    // Create modal for preview
+                    const modal = document.createElement('div');
+                    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                    
+                    const modalContent = document.createElement('div');
+                    modalContent.className = 'bg-white dark:bg-dark-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col';
+                    
+                    const modalHeader = document.createElement('div');
+                    modalHeader.className = 'flex justify-between items-center p-4 border-b border-gray-200 dark:border-dark-600';
+                    
+                    const modalTitle = document.createElement('h3');
+                    modalTitle.className = 'text-lg font-medium text-gray-900 dark:text-gray-100';
+                    modalTitle.textContent = `预览: ${template.name}`;
+                    
+                    const closeButton = document.createElement('button');
+                    closeButton.className = 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200';
+                    closeButton.innerHTML = '<i class="fas fa-times"></i>';
+                    closeButton.onclick = () => {
+                        document.body.removeChild(modal);
+                    };
+                    
+                    modalHeader.appendChild(modalTitle);
+                    modalHeader.appendChild(closeButton);
+                    
+                    const modalBody = document.createElement('div');
+                    modalBody.className = 'p-4 overflow-auto flex-grow';
+                    
+                    const previewText = document.createElement('pre');
+                    previewText.className = 'font-mono text-sm bg-gray-50 dark:bg-dark-700 p-3 rounded whitespace-pre-wrap';
+                    previewText.textContent = template.yaml;
+                    
+                    modalBody.appendChild(previewText);
+                    
+                    const modalFooter = document.createElement('div');
+                    modalFooter.className = 'flex justify-end p-4 border-t border-gray-200 dark:border-dark-600';
+                    
+                    const insertButton = document.createElement('button');
+                    insertButton.className = 'btn btn-primary text-sm py-1.5';
+                    insertButton.innerHTML = '<i class="fas fa-plus-circle mr-2"></i>插入模板';
+                    insertButton.onclick = () => {
+                        insertTemplate(template);
+                        document.body.removeChild(modal);
+                    };
+                    
+                    const cancelButton = document.createElement('button');
+                    cancelButton.className = 'btn btn-secondary text-sm py-1.5 ml-2';
+                    cancelButton.textContent = '关闭';
+                    cancelButton.onclick = () => {
+                        document.body.removeChild(modal);
+                    };
+                    
+                    modalFooter.appendChild(insertButton);
+                    modalFooter.appendChild(cancelButton);
+                    
+                    modalContent.appendChild(modalHeader);
+                    modalContent.appendChild(modalBody);
+                    modalContent.appendChild(modalFooter);
+                    
+                    modal.appendChild(modalContent);
+                    document.body.appendChild(modal);
+                    
+                    // Handle click outside to close
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            document.body.removeChild(modal);
+                        }
+                    });
+                }
+                
+                // Add new template
+                addTemplateBtn.addEventListener('click', () => {
+                    showTemplateForm();
+                });
+                
+                // Edit existing template
+                function editTemplate(template) {
+                    showTemplateForm(template);
+                }
+                
+                // Delete template
+                function deleteTemplate(template) {
+                    if (confirm(`确定要删除模板 "${template.name}" 吗？`)) {
+                        customTemplates = customTemplates.filter(t => t.id !== template.id);
+                        saveCustomTemplates();
+                        renderTemplates();
+                        showToast(`模板已删除: ${template.name}`, 'success');
+                    }
+                }
+                
+                // Show template form (for add/edit)
+                function showTemplateForm(template = null) {
+                    const isEdit = template !== null;
+                    
+                    // Create modal
+                    const modal = document.createElement('div');
+                    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                    
+                    const modalContent = document.createElement('div');
+                    modalContent.className = 'bg-white dark:bg-dark-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col';
+                    
+                    const modalHeader = document.createElement('div');
+                    modalHeader.className = 'flex justify-between items-center p-4 border-b border-gray-200 dark:border-dark-600';
+                    
+                    const modalTitle = document.createElement('h3');
+                    modalTitle.className = 'text-lg font-medium text-gray-900 dark:text-gray-100';
+                    modalTitle.textContent = isEdit ? '编辑模板' : '添加新模板';
+                    
+                    const closeButton = document.createElement('button');
+                    closeButton.className = 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200';
+                    closeButton.innerHTML = '<i class="fas fa-times"></i>';
+                    closeButton.onclick = () => {
+                        document.body.removeChild(modal);
+                    };
+                    
+                    modalHeader.appendChild(modalTitle);
+                    modalHeader.appendChild(closeButton);
+                    
+                    const modalBody = document.createElement('div');
+                    modalBody.className = 'p-4 overflow-auto';
+                    
+                    // Form
+                    const form = document.createElement('form');
+                    form.id = 'template-form';
+                    form.onsubmit = (e) => {
+                        e.preventDefault();
+                        saveTemplateForm(isEdit, template?.id);
+                    };
+                    
+                    // Name field
+                    const nameGroup = document.createElement('div');
+                    nameGroup.className = 'mb-4';
+                    
+                    const nameLabel = document.createElement('label');
+                    nameLabel.className = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1';
+                    nameLabel.htmlFor = 'template-name';
+                    nameLabel.textContent = '模板名称';
+                    
+                    const nameInput = document.createElement('input');
+                    nameInput.className = 'w-full p-2 border border-gray-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-700 text-gray-900 dark:text-gray-100';
+                    nameInput.id = 'template-name';
+                    nameInput.type = 'text';
+                    nameInput.required = true;
+                    nameInput.value = isEdit ? template.name : '';
+                    
+                    nameGroup.appendChild(nameLabel);
+                    nameGroup.appendChild(nameInput);
+                    
+                    // Description field
+                    const descGroup = document.createElement('div');
+                    descGroup.className = 'mb-4';
+                    
+                    const descLabel = document.createElement('label');
+                    descLabel.className = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1';
+                    descLabel.htmlFor = 'template-desc';
+                    descLabel.textContent = '模板描述';
+                    
+                    const descInput = document.createElement('input');
+                    descInput.className = 'w-full p-2 border border-gray-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-700 text-gray-900 dark:text-gray-100';
+                    descInput.id = 'template-desc';
+                    descInput.type = 'text';
+                    descInput.required = true;
+                    descInput.value = isEdit ? template.description : '';
+                    
+                    descGroup.appendChild(descLabel);
+                    descGroup.appendChild(descInput);
+                    
+                    // YAML content field
+                    const contentGroup = document.createElement('div');
+                    contentGroup.className = 'mb-4';
+                    
+                    const contentLabel = document.createElement('label');
+                    contentLabel.className = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1';
+                    contentLabel.htmlFor = 'template-content';
+                    contentLabel.textContent = 'YAML内容';
+                    
+                    const contentInput = document.createElement('textarea');
+                    contentInput.className = 'w-full p-2 border border-gray-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-700 text-gray-900 dark:text-gray-100 font-mono text-sm';
+                    contentInput.id = 'template-content';
+                    contentInput.rows = 10;
+                    contentInput.required = true;
+                    contentInput.value = isEdit ? template.yaml : '';
+                    
+                    contentGroup.appendChild(contentLabel);
+                    contentGroup.appendChild(contentInput);
+                    
+                    // Option to use current editor content
+                    const useCurrentGroup = document.createElement('div');
+                    useCurrentGroup.className = 'mb-4';
+                    
+                    const useCurrentBtn = document.createElement('button');
+                    useCurrentBtn.type = 'button';
+                    useCurrentBtn.className = 'btn btn-secondary text-sm py-1.5';
+                    useCurrentBtn.innerHTML = '<i class="fas fa-file-import mr-2"></i>使用当前编辑器内容';
+                    useCurrentBtn.onclick = () => {
+                        const editorContent = yamlEditor.getValue();
+                        if (editorContent.trim()) {
+                            contentInput.value = editorContent;
+                        } else {
+                            showToast('编辑器内容为空', 'warning');
+                        }
+                    };
+                    
+                    useCurrentGroup.appendChild(useCurrentBtn);
+                    
+                    // Add form elements to the form
+                    form.appendChild(nameGroup);
+                    form.appendChild(descGroup);
+                    form.appendChild(contentGroup);
+                    form.appendChild(useCurrentGroup);
+                    
+                    modalBody.appendChild(form);
+                    
+                    const modalFooter = document.createElement('div');
+                    modalFooter.className = 'flex justify-end p-4 border-t border-gray-200 dark:border-dark-600';
+                    
+                    const saveButton = document.createElement('button');
+                    saveButton.className = 'btn btn-primary text-sm py-1.5';
+                    saveButton.type = 'submit';
+                    saveButton.form = 'template-form';
+                    saveButton.innerHTML = isEdit ? '<i class="fas fa-save mr-2"></i>更新模板' : '<i class="fas fa-save mr-2"></i>保存模板';
+                    
+                    const cancelButton = document.createElement('button');
+                    cancelButton.className = 'btn btn-secondary text-sm py-1.5 ml-2';
+                    cancelButton.type = 'button';
+                    cancelButton.textContent = '取消';
+                    cancelButton.onclick = () => {
+                        document.body.removeChild(modal);
+                    };
+                    
+                    modalFooter.appendChild(saveButton);
+                    modalFooter.appendChild(cancelButton);
+                    
+                    modalContent.appendChild(modalHeader);
+                    modalContent.appendChild(modalBody);
+                    modalContent.appendChild(modalFooter);
+                    
+                    modal.appendChild(modalContent);
+                    document.body.appendChild(modal);
+                    
+                    // Handle click outside to close
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            document.body.removeChild(modal);
+                        }
+                    });
+                    
+                    // Focus first input
+                    nameInput.focus();
+                }
+                
+                // Save template form
+                function saveTemplateForm(isEdit, templateId) {
+                    const name = document.getElementById('template-name').value;
+                    const description = document.getElementById('template-desc').value;
+                    const content = document.getElementById('template-content').value;
+                    
+                    // Validate YAML
+                    try {
+                        jsyaml.load(content);
+                    } catch (e) {
+                        showToast('模板包含无效的YAML: ' + e.message, 'error');
+                        return;
+                    }
+                    
+                    if (isEdit) {
+                        // Update existing template
+                        const templateIndex = customTemplates.findIndex(t => t.id === templateId);
+                        if (templateIndex !== -1) {
+                            customTemplates[templateIndex] = {
+                                id: templateId,
+                                name,
+                                description,
+                                yaml: content
+                            };
+                        }
+                    } else {
+                        // Add new template
+                        const newId = 'custom-' + Date.now();
+                        customTemplates.push({
+                            id: newId,
+                            name,
+                            description,
+                            yaml: content
+                        });
+                    }
+                    
+                    // Save to localStorage
+                    saveCustomTemplates();
+                    
+                    // Close modal & refresh
+                    const modal = document.querySelector('form#template-form').closest('.fixed');
+                    document.body.removeChild(modal);
+                    
+                    renderTemplates();
+                    showToast(isEdit ? '模板已更新' : '新模板已保存', 'success');
+                }
+                
+                // Save custom templates to localStorage
+                function saveCustomTemplates() {
+                    try {
+                        localStorage.setItem('yaml_custom_templates', JSON.stringify(customTemplates));
+                    } catch (e) {
+                        console.error('Failed to save custom templates:', e);
+                        showToast('保存模板失败', 'error');
+                    }
+                }
+                
+                // Search templates
+                templateSearch.addEventListener('input', debounce(() => {
+                    const searchTerm = templateSearch.value.toLowerCase();
+                    
+                    // Search all template cards
+                    document.querySelectorAll('#default-templates > div, #custom-templates > div').forEach(card => {
+                        if (card.id === 'no-custom-templates') return;
+                        
+                        const title = card.querySelector('h3').textContent.toLowerCase();
+                        const description = card.querySelector('p').textContent.toLowerCase();
+                        
+                        if (title.includes(searchTerm) || description.includes(searchTerm)) {
+                            card.style.display = 'block';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                    
+                    // Check if any results found
+                    const defaultVisible = Array.from(document.querySelectorAll('#default-templates > div')).some(
+                        card => card.style.display !== 'none'
+                    );
+                    
+                    const customVisible = Array.from(document.querySelectorAll('#custom-templates > div')).some(
+                        card => card.style.display !== 'none' && card.id !== 'no-custom-templates'
+                    );
+                    
+                    // Show/hide section headers
+                    document.querySelector('#default-templates').previousElementSibling.style.display = 
+                        defaultVisible ? 'block' : 'none';
+                    
+                    document.querySelector('#custom-templates').previousElementSibling.style.display = 
+                        (customVisible || customTemplates.length === 0) ? 'block' : 'none';
+                    
+                    // Show "no custom templates" message if appropriate
+                    if (customTemplates.length === 0) {
+                        noCustomTemplates.style.display = 'block';
+                    } else {
+                        noCustomTemplates.style.display = customVisible ? 'none' : 'block';
+                        if (!customVisible && searchTerm) {
+                            noCustomTemplates.textContent = '没有匹配的自定义模板';
+                        } else {
+                            noCustomTemplates.textContent = '没有自定义模板';
+                        }
+                    }
+                    
+                }, 300));
+                
+                // Render templates initially
+                renderTemplates();
+                
+                // Close dropdowns when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.dropdown-menu') && !e.target.closest('button')) {
+                        document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                            menu.classList.add('hidden');
+                        });
+                    }
+                });
+            }
+            
+            /* Common utility functions */
+            
+            // Find line number by path
+            function findLineByPath(path) {
+                if (!path) return 0;
+                
+                const yamlContent = yamlEditor.getValue();
+                const lines = yamlContent.split('\n');
+                
+                // Convert path to parts
+                let parts = [];
+                
+                // Handle array indices and object keys
+                if (path.includes('[') && path.includes(']')) {
+                    // Complex path with arrays
+                    const segments = path.split(/\.[^.]+(?=\[)|\.|\[|\]/g).filter(p => p);
+                    parts = segments;
+                } else {
+                    // Simple dot notation
+                    parts = path.split('.');
+                }
+                
+                let searchKey = parts[parts.length - 1];
+                
+                // Check if the key is an array index
+                const isArrayIndex = /^\d+$/.test(searchKey);
+                if (isArrayIndex) {
+                    const arrayLevel = parts.length - 1;
+                    let index = parseInt(searchKey);
+                    
+                    // Build pattern to locate the array
+                    let pattern = '';
+                    for (let i = 0; i < arrayLevel; i++) {
+                        pattern += (i === 0 ? '' : '  ') + parts[i];
+                        if (i < arrayLevel - 1) pattern += ':';
+                    }
+                    
+                    // Find array and count to the index
+                    let inArray = false;
+                    let arrayIndent = 0;
+                    let itemCount = 0;
+                    
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i];
+                        
+                        if (!inArray && line.includes(pattern)) {
+                            inArray = true;
+                            arrayIndent = line.search(/\S/);
+                            continue;
+                        }
+                        
+                        if (inArray) {
+                            const indent = line.search(/\S/);
+                            if (indent <= arrayIndent && line.trim()) {
+                                break; // End of array
+                            }
+                            
+                            if (line.trim().startsWith('-')) {
+                                if (itemCount === index) {
+                                    return i;
+                                }
+                                itemCount++;
+                            }
+                        }
+                    }
+                } else {
+                    // For object keys, search for the key with appropriate indentation
+                    const keyPattern = new RegExp(`(^|\\s)${escapeRegExp(searchKey)}\\s*:`, 'i');
+                    
+                    // Try to find exact key match with indentation level
+                    let expectedIndent = (parts.length - 1) * 2;
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i].trimEnd();
+                        if (keyPattern.test(line)) {
+                            const lineIndent = line.search(/\S/);
+                            // Check if indentation approximately matches expected level 
+                            if (Math.abs(lineIndent - expectedIndent) <= 4) {
+                                return i;
+                            }
+                        }
+                    }
+                    
+                    // Fallback: less strict matching
+                    for (let i = 0; i < lines.length; i++) {
+                        if (keyPattern.test(lines[i])) {
+                            return i;
+                        }
+                    }
+                }
+                
+                return 0; // Default to start if not found
+            }
+            
+            // Get line number for a path
+            function getLineForPath(path) {
+                if (!path) return '';
+                try {
+                    const line = findLineByPath(path);
+                    return line >= 0 ? line : '';
+                } catch (e) {
+                    return '';
+                }
+            }
+            
+            // Get value type
+            function getValueType(value) {
+                if (value === null) return 'null';
+                if (Array.isArray(value)) return 'array';
+                if (typeof value === 'object') return 'object';
+                return typeof value;
+            }
+            
+            // Format a value for display
+            function formatValue(value, type) {
+                if (value === null) return '<null>';
+                if (value === undefined) return '<undefined>';
+                
+                switch (type) {
+                    case 'string': 
+                        if (value.length > 30) {
+                            return `"${value.substring(0, 27)}..."`;
+                        }
+                        return `"${value}"`;
+                    case 'number': return value;
+                    case 'boolean': return value ? 'true' : 'false';
+                    case 'null': return 'null';
+                    case 'undefined': return 'undefined';
+                    default: return value.toString();
+                }
+            }
+            
+            // Get the last part of a path
+            function getLastPathPart(path) {
+                if (!path) return 'root';
+                
+                // Handle array index
+                const arrayMatch = path.match(/\[(\d+)\]$/);
+                if (arrayMatch) {
+                    return `[${arrayMatch[1]}]`;
+                }
+                
+                // Handle object key
+                const parts = path.split('.');
+                return parts[parts.length - 1];
+            }
+            
+            // Escape special characters in a string for RegExp
+            function escapeRegExp(string) {
+                return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+            
+            // Make the editor react to window size changes
+            window.addEventListener('resize', debounce(() => {
+                yamlEditor.refresh();
+            }, 200));
+        });
+    </script>
+
+
+</body></html>

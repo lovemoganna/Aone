@@ -1,0 +1,1868 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全能表格格式转换器 v2.0</title>
+    <meta name="description" content="专业级表格转换工具，支持HTML、Markdown、CSV、Excel等格式互转">
+    <style>
+        :root {
+            --primary-color: #5D5CDE;
+            --primary-hover: #4C4BCD;
+            --success-color: #10B981;
+            --warning-color: #F59E0B;
+            --error-color: #EF4444;
+            --bg-light: #FFFFFF;
+            --bg-dark: #181818;
+            --text-light: #111827;
+            --text-dark: #F9FAFB;
+            --border-light: #D1D5DB;
+            --border-dark: #4B5563;
+            --card-light: #FFFFFF;
+            --card-dark: #1F2937;
+            --gray-50: #F9FAFB;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-400: #9CA3AF;
+            --gray-500: #6B7280;
+            --gray-600: #4B5563;
+            --gray-700: #374151;
+            --gray-800: #1F2937;
+            --gray-900: #111827;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-light);
+            min-height: 100vh;
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        body.dark {
+            background: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        /* 布局系统 */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-5 { grid-template-columns: repeat(5, 1fr); }
+
+        @media (min-width: 1024px) {
+            .lg\:grid-2 { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 0.5rem; }
+            .grid-2, .grid-3, .grid-5 { grid-template-columns: 1fr; }
+            .mobile\:grid-2 { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* 组件样式 */
+        .card {
+            background: var(--card-light);
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        body.dark .card {
+            background: var(--card-dark);
+            border-color: var(--border-dark);
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-1px);
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-light);
+        }
+
+        body.dark .card h2 {
+            color: var(--text-dark);
+        }
+
+        /* 表单控件 */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--gray-700);
+        }
+
+        body.dark .form-label {
+            color: var(--gray-300);
+        }
+
+        textarea, select, input[type="file"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border-light);
+            border-radius: 0.5rem;
+            background: var(--card-light);
+            color: var(--text-light);
+            font-size: 16px;
+            transition: all 0.2s ease;
+            resize: vertical;
+        }
+
+        body.dark textarea,
+        body.dark select {
+            border-color: var(--border-dark);
+            background: var(--gray-700);
+            color: var(--text-dark);
+        }
+
+        textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(93, 92, 222, 0.1);
+        }
+
+        /* 按钮系统 */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            min-height: 44px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--gray-600);
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--gray-700);
+        }
+
+        .btn-outline {
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            background: transparent;
+        }
+
+        .btn-outline:hover:not(:disabled) {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            min-height: 36px;
+        }
+
+        /* 文件上传区域 */
+        .file-drop-zone {
+            border: 2px dashed var(--border-light);
+            border-radius: 0.75rem;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--gray-50);
+        }
+
+        body.dark .file-drop-zone {
+            border-color: var(--border-dark);
+            background: var(--gray-800);
+        }
+
+        .file-drop-zone:hover,
+        .file-drop-zone.dragover {
+            border-color: var(--primary-color);
+            background: rgba(93, 92, 222, 0.05);
+            transform: scale(1.02);
+        }
+
+        .file-drop-zone svg {
+            width: 3rem;
+            height: 3rem;
+            margin: 0 auto 1rem;
+            color: var(--gray-400);
+        }
+
+        /* 表格样式 */
+        .table-container {
+            max-height: 400px;
+            overflow: auto;
+            border: 1px solid var(--border-light);
+            border-radius: 0.5rem;
+            background: var(--card-light);
+        }
+
+        body.dark .table-container {
+            border-color: var(--border-dark);
+            background: var(--card-dark);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 1px solid var(--border-light);
+            padding: 0.75rem;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        body.dark th,
+        body.dark td {
+            border-color: var(--border-dark);
+        }
+
+        th {
+            background: var(--gray-100);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        body.dark th {
+            background: var(--gray-700);
+        }
+
+        tr:nth-child(even) td {
+            background: var(--gray-50);
+        }
+
+        body.dark tr:nth-child(even) td {
+            background: var(--gray-800);
+        }
+
+        /* 全屏预览 */
+        .fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg-light);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        body.dark .fullscreen-overlay {
+            background: var(--bg-dark);
+        }
+
+        .fullscreen-header {
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            background: var(--card-light);
+        }
+
+        body.dark .fullscreen-header {
+            border-bottom-color: var(--border-dark);
+            background: var(--card-dark);
+        }
+
+        .fullscreen-content {
+            flex: 1;
+            overflow: auto;
+            padding: 2rem;
+        }
+
+        .fullscreen-table-container {
+            border: 1px solid var(--border-light);
+            border-radius: 0.5rem;
+            overflow: auto;
+            height: 100%;
+            background: var(--card-light);
+        }
+
+        body.dark .fullscreen-table-container {
+            border-color: var(--border-dark);
+            background: var(--card-dark);
+        }
+
+        /* 工具栏 */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* 快捷键面板 */
+        .shortcuts-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--card-light);
+            border: 1px solid var(--border-light);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            z-index: 1001;
+            min-width: 300px;
+        }
+
+        body.dark .shortcuts-panel {
+            background: var(--card-dark);
+            border-color: var(--border-dark);
+        }
+
+        .shortcuts-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        kbd {
+            background: var(--gray-100);
+            border: 1px solid var(--gray-300);
+            border-radius: 0.25rem;
+            padding: 0.125rem 0.25rem;
+            font-family: monospace;
+            font-size: 0.75rem;
+        }
+
+        body.dark kbd {
+            background: var(--gray-700);
+            border-color: var(--gray-600);
+        }
+
+        /* 状态指示器 */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .status-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+        }
+
+        .status-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error-color);
+        }
+
+        /* 输出区域 */
+        .output-container {
+            border: 1px solid var(--border-light);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background: var(--card-light);
+        }
+
+        body.dark .output-container {
+            border-color: var(--border-dark);
+            background: var(--card-dark);
+        }
+
+        .output-pre {
+            padding: 1rem;
+            font-size: 0.875rem;
+            overflow: auto;
+            max-height: 24rem;
+            background: var(--gray-50);
+            color: var(--text-light);
+            white-space: pre-wrap;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            line-height: 1.5;
+        }
+
+        body.dark .output-pre {
+            background: var(--gray-900);
+            color: var(--text-dark);
+        }
+
+        /* 通知系统 */
+        .notice {
+            background: #FEF3C7;
+            border: 1px solid #F59E0B;
+            color: #92400E;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        body.dark .notice {
+            background: #451A03;
+            border-color: #92400E;
+            color: #FCD34D;
+        }
+
+        /* 工具类 */
+        .hidden { display: none !important; }
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .justify-center { justify-content: center; }
+        .gap-2 { gap: 0.5rem; }
+        .gap-4 { gap: 1rem; }
+        .mt-4 { margin-top: 1rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .text-center { text-align: center; }
+        .text-sm { font-size: 0.875rem; }
+        .font-semibold { font-weight: 600; }
+
+        /* 无障碍性 */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* 动画 */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* 加载状态 */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 640px) {
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .toolbar-group {
+                justify-content: center;
+            }
+            
+            .grid-5 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .card {
+                padding: 1rem;
+            }
+            
+            .shortcuts-panel {
+                width: 90vw;
+                max-width: 320px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 标题区域 -->
+        <header class="text-center mb-4">
+            <h1 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem;">全能表格转换器</h1>
+            <p style="color: var(--gray-600); font-size: 1.125rem;">专业级表格格式转换工具 - 零依赖，完全离线</p>
+        </header>
+
+        <!-- 状态通知 -->
+        <div class="notice">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <div>
+                <strong>专业级功能：</strong>智能格式检测、真实Excel生成、快捷键操作、无障碍访问。按 <kbd>?</kbd> 查看快捷键。
+            </div>
+        </div>
+
+        <!-- 工具栏 -->
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <div id="statusIndicator" class="status-indicator status-success hidden">
+                    <span id="statusText">就绪</span>
+                </div>
+            </div>
+            <div class="toolbar-group">
+                <button id="helpBtn" class="btn btn-sm btn-secondary" title="快捷键帮助 (?)">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
+                    </svg>
+                    帮助
+                </button>
+                <button id="undoBtn" class="btn btn-sm btn-secondary" title="撤销 (Ctrl+Z)" disabled>
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z"/>
+                        <path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z"/>
+                    </svg>
+                    撤销
+                </button>
+            </div>
+        </div>
+
+        <!-- 主要输入区域 -->
+        <div class="grid lg:grid-2 mb-4">
+            <!-- 文件上传 -->
+            <div class="card">
+                <h2>📁 文件输入</h2>
+                <div id="dropZone" class="file-drop-zone" 
+                     role="button" 
+                     tabindex="0"
+                     aria-label="点击或拖拽文件到此处上传"
+                     aria-describedby="file-help">
+                    <svg stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <p><strong>点击选择文件</strong> 或拖拽到此处</p>
+                    <p class="text-sm" id="file-help">支持 HTML、TXT、CSV、MD 格式</p>
+                </div>
+                <input type="file" id="fileInput" style="display: none;" 
+                       accept=".html,.txt,.htm,.csv,.md,.markdown"
+                       aria-label="选择要上传的文件">
+            </div>
+
+            <!-- 文本输入 -->
+            <div class="card">
+                <h2>📝 文本输入</h2>
+                <div class="form-group">
+                    <label for="inputFormat" class="form-label">输入格式</label>
+                    <select id="inputFormat" aria-label="选择输入格式">
+                        <option value="auto">🔍 自动检测</option>
+                        <option value="html">🌐 HTML表格</option>
+                        <option value="markdown">📋 Markdown表格</option>
+                        <option value="csv">📊 CSV数据</option>
+                        <option value="text">📄 纯文本</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="htmlInput" class="form-label">表格数据</label>
+                    <textarea 
+                        id="htmlInput" 
+                        placeholder="粘贴您的表格数据... 支持HTML、Markdown、CSV等格式"
+                        rows="8"
+                        aria-describedby="input-help"
+                    ></textarea>
+                    <div id="input-help" class="text-sm" style="color: var(--gray-500); margin-top: 0.5rem;">
+                        💡 提示：按 Ctrl+V 直接粘贴，支持从Excel、网页等复制的表格
+                    </div>
+                </div>
+                <button id="parseBtn" class="btn btn-primary" aria-describedby="parse-help">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
+                    </svg>
+                    解析表格
+                </button>
+                <div id="parse-help" class="sr-only">点击解析输入的表格数据</div>
+            </div>
+        </div>
+
+        <!-- 表格预览区域 -->
+        <div id="previewSection" class="card hidden" role="region" aria-labelledby="preview-title">
+            <div class="toolbar">
+                <h2 id="preview-title">👀 表格预览</h2>
+                <div class="toolbar-group">
+                    <span id="tableStats" class="text-sm" style="color: var(--gray-600);"></span>
+                    <button id="fullscreenBtn" class="btn btn-secondary" title="全屏预览 (F11)">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707z"/>
+                        </svg>
+                        全屏预览
+                    </button>
+                </div>
+            </div>
+            <div class="table-container" role="table" aria-label="解析后的表格数据预览">
+                <div id="tablePreview"></div>
+            </div>
+        </div>
+
+        <!-- 格式转换区域 -->
+        <div id="convertSection" class="card hidden" role="region" aria-labelledby="convert-title">
+            <h2 id="convert-title">🔄 格式转换</h2>
+            <div class="grid grid-5 mobile:grid-2">
+                <button id="convertMarkdown" class="btn btn-outline" data-format="markdown">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M14 3a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h12zM2 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H2z"/>
+                        <path d="M6.354 5.5H4a.5.5 0 0 0 0 1h.535l.5 2h-.69a.5.5 0 0 0 0 1h.747l.5 2H4.5a.5.5 0 0 0 0 1h2.354a.5.5 0 0 0 .496-.59l-.5-2H8.5l-.5 2H7.5a.5.5 0 0 0 0 1h2.354a.5.5 0 0 0 .496-.59l-.5-2H11a.5.5 0 0 0 0-1h-.535l-.5-2H11a.5.5 0 0 0 0-1H8.646a.5.5 0 0 0-.496.59l.5 2H7.5l.5-2H8.5a.5.5 0 0 0 0-1H6.354a.5.5 0 0 0-.496.59z"/>
+                    </svg>
+                    Markdown
+                </button>
+                <button id="convertCSV" class="btn btn-outline" data-format="csv">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5z"/>
+                        <path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5L9.5 0zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
+                    </svg>
+                    CSV
+                </button>
+                <button id="convertExcel" class="btn btn-outline" data-format="excel">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.781l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.219l-2.116-2.54z"/>
+                        <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+                    </svg>
+                    Excel
+                </button>
+                <button id="convertHTML" class="btn btn-outline" data-format="html">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5z"/>
+                        <path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5L9.5 0zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
+                    </svg>
+                    HTML
+                </button>
+                <button id="convertOrgMode" class="btn btn-outline" data-format="orgmode">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zM2.5 2a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3z"/>
+                    </svg>
+                    Org Mode
+                </button>
+            </div>
+        </div>
+
+        <!-- 输出结果区域 -->
+        <div id="outputSection" class="card hidden" role="region" aria-labelledby="output-title">
+            <div class="toolbar">
+                <h2 id="output-title">📤 转换结果</h2>
+                <div class="toolbar-group">
+                    <span id="outputStats" class="text-sm" style="color: var(--gray-600);"></span>
+                    <button id="copyBtn" class="btn btn-secondary" title="复制到剪贴板 (Ctrl+C)">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                            <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+                        </svg>
+                        复制
+                    </button>
+                    <button id="downloadBtn" class="btn btn-primary" title="下载文件">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                        </svg>
+                        下载
+                    </button>
+                </div>
+            </div>
+            <div class="output-container">
+                <pre id="output" class="output-pre" role="textbox" aria-readonly="true" aria-label="转换后的结果"></pre>
+            </div>
+        </div>
+
+        <!-- 全屏预览覆盖层 -->
+        <div id="fullscreenOverlay" class="fullscreen-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="fullscreen-title">
+            <div class="fullscreen-header">
+                <h2 id="fullscreen-title">📊 全屏表格预览</h2>
+                <button id="closeFullscreenBtn" class="btn btn-secondary" title="关闭全屏 (Esc)">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                    </svg>
+                    关闭全屏
+                </button>
+            </div>
+            <div class="fullscreen-content">
+                <div class="fullscreen-table-container" role="table" aria-label="全屏表格预览">
+                    <div id="fullscreenTablePreview"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快捷键帮助面板 -->
+        <div id="shortcutsPanel" class="shortcuts-panel hidden" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="shortcuts-title">⌨️ 快捷键</h3>
+                <button id="closeShortcutsBtn" class="btn btn-sm btn-secondary">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="shortcuts-grid">
+                <div class="flex justify-between items-center"><span>粘贴数据</span><kbd>Ctrl+V</kbd></div>
+                <div class="flex justify-between items-center"><span>全屏预览</span><kbd>F11</kbd></div>
+                <div class="flex justify-between items-center"><span>退出全屏</span><kbd>Esc</kbd></div>
+                <div class="flex justify-between items-center"><span>撤销操作</span><kbd>Ctrl+Z</kbd></div>
+                <div class="flex justify-between items-center"><span>复制结果</span><kbd>Ctrl+C</kbd></div>
+                <div class="flex justify-between items-center"><span>显示帮助</span><kbd>?</kbd></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // 1. 工具函数模块
+        // ========================================
+        
+        class TableConverter {
+            constructor() {
+                this.currentTableData = [];
+                this.currentFormat = '';
+                this.currentOutput = '';
+                this.history = [];
+                this.historyIndex = -1;
+                this.isProcessing = false;
+                
+                this.initializeElements();
+                this.attachEventListeners();
+                this.setupKeyboardShortcuts();
+                this.initializeDarkMode();
+                this.updateStatus('就绪', 'success');
+            }
+
+            // 初始化DOM元素引用
+            initializeElements() {
+                this.elements = {
+                    dropZone: document.getElementById('dropZone'),
+                    fileInput: document.getElementById('fileInput'),
+                    htmlInput: document.getElementById('htmlInput'),
+                    inputFormat: document.getElementById('inputFormat'),
+                    parseBtn: document.getElementById('parseBtn'),
+                    previewSection: document.getElementById('previewSection'),
+                    tablePreview: document.getElementById('tablePreview'),
+                    tableStats: document.getElementById('tableStats'),
+                    convertSection: document.getElementById('convertSection'),
+                    outputSection: document.getElementById('outputSection'),
+                    output: document.getElementById('output'),
+                    outputStats: document.getElementById('outputStats'),
+                    copyBtn: document.getElementById('copyBtn'),
+                    downloadBtn: document.getElementById('downloadBtn'),
+                    fullscreenBtn: document.getElementById('fullscreenBtn'),
+                    fullscreenOverlay: document.getElementById('fullscreenOverlay'),
+                    closeFullscreenBtn: document.getElementById('closeFullscreenBtn'),
+                    fullscreenTablePreview: document.getElementById('fullscreenTablePreview'),
+                    helpBtn: document.getElementById('helpBtn'),
+                    shortcutsPanel: document.getElementById('shortcutsPanel'),
+                    closeShortcutsBtn: document.getElementById('closeShortcutsBtn'),
+                    undoBtn: document.getElementById('undoBtn'),
+                    statusIndicator: document.getElementById('statusIndicator'),
+                    statusText: document.getElementById('statusText')
+                };
+            }
+
+            // 设置事件监听器
+            attachEventListeners() {
+                // 文件上传相关
+                this.elements.dropZone.addEventListener('click', () => this.elements.fileInput.click());
+                this.elements.dropZone.addEventListener('dragover', this.handleDragOver.bind(this));
+                this.elements.dropZone.addEventListener('dragleave', this.handleDragLeave.bind(this));
+                this.elements.dropZone.addEventListener('drop', this.handleDrop.bind(this));
+                this.elements.fileInput.addEventListener('change', this.handleFileSelect.bind(this));
+
+                // 解析和转换
+                this.elements.parseBtn.addEventListener('click', this.parseTable.bind(this));
+                this.elements.htmlInput.addEventListener('input', this.debounce(this.handleInputChange.bind(this), 500));
+
+                // 格式转换按钮
+                const formatButtons = {
+                    'convertMarkdown': 'markdown',
+                    'convertCSV': 'csv', 
+                    'convertExcel': 'excel',
+                    'convertHTML': 'html',
+                    'convertOrgMode': 'orgmode'
+                };
+                
+                Object.entries(formatButtons).forEach(([buttonId, format]) => {
+                    const btn = document.getElementById(buttonId);
+                    if (btn) {
+                        btn.addEventListener('click', () => this.convertToFormat(format));
+                    } else {
+                        console.warn(`按钮未找到: ${buttonId}`);
+                    }
+                });
+
+                // 操作按钮
+                this.elements.copyBtn.addEventListener('click', this.copyToClipboard.bind(this));
+                this.elements.downloadBtn.addEventListener('click', this.downloadFile.bind(this));
+                this.elements.undoBtn.addEventListener('click', this.undo.bind(this));
+
+                // 全屏功能
+                this.elements.fullscreenBtn.addEventListener('click', this.openFullscreen.bind(this));
+                this.elements.closeFullscreenBtn.addEventListener('click', this.closeFullscreen.bind(this));
+                this.elements.fullscreenOverlay.addEventListener('click', this.handleOverlayClick.bind(this));
+
+                // 帮助面板
+                this.elements.helpBtn.addEventListener('click', this.toggleHelp.bind(this));
+                this.elements.closeShortcutsBtn.addEventListener('click', this.closeHelp.bind(this));
+            }
+
+            // 设置键盘快捷键
+            setupKeyboardShortcuts() {
+                document.addEventListener('keydown', (e) => {
+                    // 全局快捷键
+                    if (e.ctrlKey || e.metaKey) {
+                        switch (e.key) {
+                            case 'v':
+                                if (e.target === this.elements.htmlInput) {
+                                    setTimeout(() => this.parseTable(), 100);
+                                }
+                                break;
+                            case 'c':
+                                if (e.target === this.elements.output) {
+                                    e.preventDefault();
+                                    this.copyToClipboard();
+                                }
+                                break;
+                            case 'z':
+                                e.preventDefault();
+                                this.undo();
+                                break;
+                        }
+                    }
+
+                    // 特殊功能键
+                    switch (e.key) {
+                        case 'F11':
+                            e.preventDefault();
+                            if (!this.elements.fullscreenOverlay.classList.contains('hidden')) {
+                                this.closeFullscreen();
+                            } else if (!this.elements.previewSection.classList.contains('hidden')) {
+                                this.openFullscreen();
+                            }
+                            break;
+                        case 'Escape':
+                            if (!this.elements.fullscreenOverlay.classList.contains('hidden')) {
+                                this.closeFullscreen();
+                            } else if (!this.elements.shortcutsPanel.classList.contains('hidden')) {
+                                this.closeHelp();
+                            }
+                            break;
+                        case '?':
+                            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                                e.preventDefault();
+                                this.toggleHelp();
+                            }
+                            break;
+                    }
+                });
+            }
+
+            // 初始化暗黑模式
+            initializeDarkMode() {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.body.classList.add('dark');
+                }
+                
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+                    document.body.classList.toggle('dark', event.matches);
+                });
+            }
+
+            // ========================================
+            // 2. 解析器模块
+            // ========================================
+
+            // 主解析函数
+            async parseTable() {
+                if (this.isProcessing) return;
+                
+                const content = this.elements.htmlInput.value.trim();
+                if (!content) {
+                    this.showError('请输入表格数据或上传文件');
+                    return;
+                }
+
+                this.setProcessing(true);
+                this.updateStatus('解析中...', 'warning');
+
+                try {
+                    const format = this.elements.inputFormat.value;
+                    let tableData = [];
+
+                    if (format === 'auto') {
+                        tableData = await this.autoDetectAndParse(content);
+                    } else {
+                        tableData = await this.parseByFormat(content, format);
+                    }
+
+                    if (tableData.length === 0) {
+                        throw new Error('未能解析出有效的表格数据');
+                    }
+
+                    this.saveToHistory();
+                    this.currentTableData = tableData;
+                    this.displayTablePreview();
+                    this.showConvertOptions();
+                    this.updateStatus('解析成功', 'success');
+
+                } catch (error) {
+                    console.error('解析错误:', error);
+                    this.showError(`解析失败: ${error.message}`);
+                } finally {
+                    this.setProcessing(false);
+                }
+            }
+
+            // 自动检测格式并解析
+            async autoDetectAndParse(content) {
+                // HTML表格检测
+                if (this.isHTMLTable(content)) {
+                    return this.parseHTMLTable(content);
+                }
+                
+                // Markdown表格检测
+                if (this.isMarkdownTable(content)) {
+                    return this.parseMarkdownTable(content);
+                }
+                
+                // CSV检测
+                if (this.isCSVData(content)) {
+                    return this.parseCSVData(content);
+                }
+                
+                // 最后尝试文本表格
+                return this.parseTextTable(content);
+            }
+
+            // 按指定格式解析
+            async parseByFormat(content, format) {
+                const parsers = {
+                    'html': () => this.parseHTMLTable(content),
+                    'markdown': () => this.parseMarkdownTable(content),
+                    'csv': () => this.parseCSVData(content),
+                    'text': () => this.parseTextTable(content)
+                };
+
+                const parser = parsers[format];
+                if (!parser) {
+                    throw new Error(`不支持的格式: ${format}`);
+                }
+
+                return parser();
+            }
+
+            // HTML表格检测和解析
+            isHTMLTable(content) {
+                return /<table[^>]*>[\s\S]*<\/table>/i.test(content) || 
+                       /<tr[^>]*>[\s\S]*<\/tr>/i.test(content);
+            }
+
+            parseHTMLTable(content) {
+                try {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(content, 'text/html');
+                    const tables = doc.querySelectorAll('table');
+                    
+                    if (tables.length === 0) {
+                        // 尝试查找单独的tr元素
+                        const rows = doc.querySelectorAll('tr');
+                        if (rows.length === 0) {
+                            throw new Error('未找到有效的HTML表格');
+                        }
+                        return this.extractRowsData(rows);
+                    }
+
+                    return this.extractTableData(tables[0]);
+                } catch (error) {
+                    throw new Error(`HTML解析失败: ${error.message}`);
+                }
+            }
+
+            extractTableData(table) {
+                const rows = [];
+                const tableRows = table.querySelectorAll('tr');
+                
+                tableRows.forEach(tr => {
+                    const cells = [];
+                    const tableCells = tr.querySelectorAll('td, th');
+                    
+                    tableCells.forEach(cell => {
+                        // 处理colspan
+                        const colspan = parseInt(cell.getAttribute('colspan')) || 1;
+                        const cellText = cell.textContent.trim();
+                        
+                        for (let i = 0; i < colspan; i++) {
+                            cells.push(i === 0 ? cellText : '');
+                        }
+                    });
+                    
+                    if (cells.length > 0) {
+                        rows.push(cells);
+                    }
+                });
+                
+                return rows;
+            }
+
+            extractRowsData(rows) {
+                const tableData = [];
+                rows.forEach(tr => {
+                    const cells = [];
+                    const tableCells = tr.querySelectorAll('td, th');
+                    
+                    tableCells.forEach(cell => {
+                        cells.push(cell.textContent.trim());
+                    });
+                    
+                    if (cells.length > 0) {
+                        tableData.push(cells);
+                    }
+                });
+                
+                return tableData;
+            }
+
+            // Markdown表格检测和解析
+            isMarkdownTable(content) {
+                const lines = content.split('\n').filter(line => line.trim());
+                if (lines.length < 2) return false;
+                
+                let hasTableStructure = false;
+                let hasSeparatorLine = false;
+                
+                for (const line of lines) {
+                    if (line.includes('|')) {
+                        hasTableStructure = true;
+                    }
+                    if (/^\|?[\s]*[-:]+[\s]*(\|[\s]*[-:]+[\s]*)*\|?$/.test(line.trim())) {
+                        hasSeparatorLine = true;
+                    }
+                }
+                
+                return hasTableStructure && hasSeparatorLine;
+            }
+
+            parseMarkdownTable(content) {
+                const lines = content.split('\n').filter(line => line.trim());
+                const rows = [];
+                let separatorLineIndex = -1;
+                
+                // 找到分隔线
+                for (let i = 0; i < lines.length; i++) {
+                    if (/^\|?[\s]*[-:]+[\s]*(\|[\s]*[-:]+[\s]*)*\|?$/.test(lines[i].trim())) {
+                        separatorLineIndex = i;
+                        break;
+                    }
+                }
+                
+                if (separatorLineIndex === -1) {
+                    throw new Error('未找到Markdown表格分隔线');
+                }
+                
+                // 解析所有行（跳过分隔线）
+                lines.forEach((line, index) => {
+                    if (index === separatorLineIndex) return;
+                    
+                    const trimmedLine = line.trim();
+                    if (trimmedLine.includes('|')) {
+                        let cells = trimmedLine.split('|');
+                        
+                        // 移除首尾空单元格（仅当首尾为完全空白时）
+                        if (cells.length > 0 && cells[0].trim() === '') cells.shift();
+                        if (cells.length > 0 && cells[cells.length - 1].trim() === '') cells.pop();
+                        
+                        // 修剪空白字符但保留空单元格
+                        cells = cells.map(cell => cell.trim());
+                        
+                        if (cells.length > 0) {
+                            rows.push(cells);
+                        }
+                    }
+                });
+                
+                // 标准化表格结构
+                return this.normalizeTableStructure(rows);
+            }
+
+            // CSV数据检测和解析
+            isCSVData(content) {
+                const lines = content.split('\n').filter(line => line.trim());
+                if (lines.length < 2) return false;
+                
+                // 检查是否有一致的分隔符模式
+                const firstLine = lines[0];
+                const commaCount = (firstLine.match(/,/g) || []).length;
+                const semicolonCount = (firstLine.match(/;/g) || []).length;
+                
+                // 至少需要有分隔符，且各行分隔符数量相对一致
+                return commaCount > 0 || semicolonCount > 0;
+            }
+
+            parseCSVData(content) {
+                const lines = content.split('\n').filter(line => line.trim());
+                const rows = [];
+                
+                // 检测分隔符
+                const firstLine = lines[0];
+                const delimiter = firstLine.includes(',') ? ',' : ';';
+                
+                lines.forEach(line => {
+                    const cells = this.parseCSVLine(line, delimiter);
+                    // 不检查cells.length，即使是空行也要保留结构
+                    rows.push(cells);
+                });
+                
+                // 标准化表格结构
+                return this.normalizeTableStructure(rows);
+            }
+
+            parseCSVLine(line, delimiter = ',') {
+                const result = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    
+                    if (char === '"') {
+                        if (inQuotes && line[i + 1] === '"') {
+                            current += '"';
+                            i++; // 跳过下一个引号
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                    } else if (char === delimiter && !inQuotes) {
+                        result.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                
+                result.push(current.trim());
+                // 不过滤空单元格，保持表格结构完整
+                return result;
+            }
+
+            // 纯文本表格解析
+            parseTextTable(content) {
+                const lines = content.split('\n').filter(line => line.trim());
+                const rows = [];
+                
+                lines.forEach(line => {
+                    let cells = [];
+                    
+                    // 尝试多种分隔符
+                    if (line.includes('\t')) {
+                        cells = line.split('\t');
+                    } else if (line.includes('|')) {
+                        cells = line.split('|');
+                        // 移除管道符表格首尾的空单元格
+                        if (cells.length > 0 && cells[0].trim() === '') cells.shift();
+                        if (cells.length > 0 && cells[cells.length - 1].trim() === '') cells.pop();
+                    } else {
+                        // 使用多个空格作为分隔符
+                        cells = line.split(/\s{2,}/);
+                    }
+                    
+                    // 修剪空白字符但保留空单元格
+                    cells = cells.map(cell => cell.trim());
+                    
+                    if (cells.length > 0) {
+                        rows.push(cells);
+                    }
+                });
+                
+                if (rows.length === 0) {
+                    throw new Error('无法解析为表格格式');
+                }
+                
+                // 标准化表格结构
+                return this.normalizeTableStructure(rows);
+            }
+
+            // ========================================
+            // 3. 生成器模块
+            // ========================================
+
+            // 格式转换主函数
+            async convertToFormat(format) {
+                if (this.currentTableData.length === 0) {
+                    this.showError('请先解析表格数据');
+                    return;
+                }
+
+                this.setProcessing(true);
+                this.updateStatus(`转换为${format.toUpperCase()}...`, 'warning');
+
+                try {
+                    let result = '';
+                    
+                    switch (format) {
+                        case 'markdown':
+                            result = this.convertToMarkdown();
+                            break;
+                        case 'csv':
+                            result = this.convertToCSV();
+                            break;
+                        case 'excel':
+                            await this.convertToExcel();
+                            return; // Excel直接下载，不显示文本
+                        case 'html':
+                            result = this.convertToHTML();
+                            break;
+                        case 'orgmode':
+                            result = this.convertToOrgMode();
+                            break;
+                        default:
+                            throw new Error(`不支持的格式: ${format}`);
+                    }
+                    
+                    this.currentFormat = format;
+                    this.currentOutput = result;
+                    this.displayOutput(result);
+                    this.updateStatus('转换完成', 'success');
+                    
+                } catch (error) {
+                    console.error('转换错误:', error);
+                    this.showError(`转换失败: ${error.message}`);
+                } finally {
+                    this.setProcessing(false);
+                }
+            }
+
+            // Markdown格式转换
+            convertToMarkdown() {
+                if (this.currentTableData.length === 0) return '';
+                
+                let markdown = '';
+                const [headers, ...dataRows] = this.currentTableData;
+                
+                // 表头
+                markdown += '| ' + headers.join(' | ') + ' |\n';
+                
+                // 分隔线
+                const separators = headers.map(() => '---');
+                markdown += '| ' + separators.join(' | ') + ' |\n';
+                
+                // 数据行
+                dataRows.forEach(row => {
+                    // 确保行长度与表头一致
+                    const paddedRow = [...row];
+                    while (paddedRow.length < headers.length) {
+                        paddedRow.push('');
+                    }
+                    markdown += '| ' + paddedRow.slice(0, headers.length).join(' | ') + ' |\n';
+                });
+                
+                return markdown;
+            }
+
+            // CSV格式转换（带BOM头）
+            convertToCSV() {
+                const csvContent = this.currentTableData.map(row => 
+                    row.map(cell => {
+                        // 转义引号和换行符
+                        const escapedCell = String(cell).replace(/"/g, '""');
+                        // 如果包含逗号、引号或换行符，用引号包围
+                        if (escapedCell.includes(',') || escapedCell.includes('"') || escapedCell.includes('\n')) {
+                            return `"${escapedCell}"`;
+                        }
+                        return escapedCell;
+                    }).join(',')
+                ).join('\n');
+                
+                // 添加BOM头以支持Excel中文显示
+                return '\uFEFF' + csvContent;
+            }
+
+            // Excel兼容格式转换（CSV格式，Excel可直接打开）
+            async convertToExcel() {
+                try {
+                    // 生成Excel兼容的CSV格式
+                    const excelCSV = this.convertToExcelCSV();
+                    
+                    const blob = new Blob([excelCSV], {
+                        type: 'application/vnd.ms-excel;charset=utf-8;'
+                    });
+                    
+                    this.downloadBlob(blob, 'table.xls');
+                    this.updateStatus('Excel兼容文件已下载', 'success');
+                    
+                } catch (error) {
+                    console.error('Excel生成失败:', error);
+                    this.showError(`Excel生成失败: ${error.message}`);
+                }
+            }
+
+            // 生成Excel兼容的CSV格式（带BOM和特殊格式）
+            convertToExcelCSV() {
+                // Excel特殊的CSV格式，支持更好的兼容性
+                let csvContent = '';
+                
+                this.currentTableData.forEach((row, rowIndex) => {
+                    const formattedRow = row.map(cell => {
+                        let cellValue = String(cell || '');
+                        
+                        // 处理特殊字符和格式
+                        if (cellValue.includes(',') || cellValue.includes('"') || 
+                            cellValue.includes('\n') || cellValue.includes('\r')) {
+                            // 转义引号
+                            cellValue = cellValue.replace(/"/g, '""');
+                            // 用引号包围
+                            cellValue = `"${cellValue}"`;
+                        }
+                        
+                        // 如果是数字，但希望保持为文本（比如带前导零的ID）
+                        if (/^\d+$/.test(cellValue) && cellValue.length > 1 && cellValue.startsWith('0')) {
+                            cellValue = `"${cellValue}"`;
+                        }
+                        
+                        return cellValue;
+                    });
+                    
+                    csvContent += formattedRow.join(',') + '\r\n';
+                });
+                
+                // 添加BOM头确保Excel正确识别UTF-8编码
+                return '\uFEFF' + csvContent;
+            }
+
+            // 生成HTML格式的Excel表格（另一种Excel兼容方案）
+            convertToExcelHTML() {
+                let html = `<?xml version="1.0"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+  <Created>${new Date().toISOString()}</Created>
+ </DocumentProperties>
+ <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
+  <WindowHeight>9000</WindowHeight>
+  <WindowWidth>13860</WindowWidth>
+  <WindowTopX>240</WindowTopX>
+  <WindowTopY>75</WindowTopY>
+  <ProtectStructure>False</ProtectStructure>
+  <ProtectWindows>False</ProtectWindows>
+ </ExcelWorkbook>
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Bottom"/>
+   <Borders/>
+   <Font/>
+   <Interior/>
+   <NumberFormat/>
+   <Protection/>
+  </Style>
+  <Style ss:ID="header">
+   <Font ss:Bold="1"/>
+   <Interior ss:Color="#D3D3D3" ss:Pattern="Solid"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Sheet1">
+  <Table>`;
+
+                this.currentTableData.forEach((row, rowIndex) => {
+                    html += '\n   <Row>';
+                    row.forEach(cell => {
+                        const styleID = rowIndex === 0 ? ' ss:StyleID="header"' : '';
+                        const cellData = this.escapeXML(String(cell || ''));
+                        html += `<Cell${styleID}><Data ss:Type="String">${cellData}</Data></Cell>`;
+                    });
+                    html += '</Row>';
+                });
+
+                html += `
+  </Table>
+ </Worksheet>
+</Workbook>`;
+
+                return html;
+            }
+
+            // XML转义函数
+            escapeXML(text) {
+                return text
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&apos;');
+            }
+
+            // HTML格式转换
+            convertToHTML() {
+                if (this.currentTableData.length === 0) return '';
+                
+                let html = '<table border="1" style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif;">\n';
+                
+                this.currentTableData.forEach((row, index) => {
+                    html += '  <tr>\n';
+                    row.forEach(cell => {
+                        const tag = index === 0 ? 'th' : 'td';
+                        const style = index === 0 
+                            ? ' style="background-color: #f0f0f0; font-weight: bold; padding: 12px; text-align: left;"'
+                            : ' style="padding: 12px; text-align: left;"';
+                        html += `    <${tag}${style}>${this.escapeHTML(cell)}</${tag}>\n`;
+                    });
+                    html += '  </tr>\n';
+                });
+                
+                html += '</table>';
+                return html;
+            }
+
+            // Org Mode格式转换
+            convertToOrgMode() {
+                if (this.currentTableData.length === 0) return '';
+                
+                let orgMode = '';
+                
+                this.currentTableData.forEach((row, index) => {
+                    orgMode += '| ' + row.join(' | ') + ' |\n';
+                    if (index === 0) {
+                        // 添加分隔线
+                        const separators = row.map(() => '---');
+                        orgMode += '|' + separators.join('+') + '|\n';
+                    }
+                });
+                
+                return orgMode;
+            }
+
+            // HTML转义
+            escapeHTML(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            // ========================================
+            // 4. UI控制模块
+            // ========================================
+
+            // 显示表格预览
+            displayTablePreview() {
+                let html = '<table>';
+                
+                this.currentTableData.forEach((row, index) => {
+                    const isHeader = index === 0;
+                    html += '<tr>';
+                    row.forEach(cell => {
+                        const tag = isHeader ? 'th' : 'td';
+                        html += `<${tag}>${this.escapeHTML(cell)}</${tag}>`;
+                    });
+                    html += '</tr>';
+                });
+                
+                html += '</table>';
+                this.elements.tablePreview.innerHTML = html;
+                this.elements.previewSection.classList.remove('hidden');
+                
+                // 更新统计信息
+                const rows = this.currentTableData.length;
+                const cols = this.currentTableData[0]?.length || 0;
+                this.elements.tableStats.textContent = `${rows} 行 × ${cols} 列`;
+            }
+
+            // 显示转换选项
+            showConvertOptions() {
+                this.elements.convertSection.classList.remove('hidden');
+            }
+
+            // 显示输出结果
+            displayOutput(result) {
+                this.elements.output.textContent = result;
+                this.elements.outputSection.classList.remove('hidden');
+                
+                // 更新输出统计
+                const lines = result.split('\n').length;
+                const chars = result.length;
+                this.elements.outputStats.textContent = `${lines} 行，${chars} 字符`;
+            }
+
+            // 全屏预览
+            openFullscreen() {
+                this.elements.fullscreenTablePreview.innerHTML = this.elements.tablePreview.innerHTML;
+                this.elements.fullscreenOverlay.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+
+            closeFullscreen() {
+                this.elements.fullscreenOverlay.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+
+            // 帮助面板
+            toggleHelp() {
+                this.elements.shortcutsPanel.classList.toggle('hidden');
+            }
+
+            closeHelp() {
+                this.elements.shortcutsPanel.classList.add('hidden');
+            }
+
+            // 文件处理
+            handleDragOver(e) {
+                e.preventDefault();
+                this.elements.dropZone.classList.add('dragover');
+            }
+
+            handleDragLeave() {
+                this.elements.dropZone.classList.remove('dragover');
+            }
+
+            handleDrop(e) {
+                e.preventDefault();
+                this.elements.dropZone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.handleFile(files[0]);
+                }
+            }
+
+            handleFileSelect(e) {
+                if (e.target.files.length > 0) {
+                    this.handleFile(e.target.files[0]);
+                }
+            }
+
+            async handleFile(file) {
+                if (file.size > 10 * 1024 * 1024) { // 10MB限制
+                    this.showError('文件过大，请选择小于10MB的文件');
+                    return;
+                }
+
+                this.updateStatus('读取文件...', 'warning');
+
+                try {
+                    const content = await this.readFileAsText(file);
+                    this.elements.htmlInput.value = content;
+                    
+                    // 根据文件扩展名自动设置格式
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    const formatMap = {
+                        'html': 'html',
+                        'htm': 'html',
+                        'md': 'markdown',
+                        'markdown': 'markdown',
+                        'csv': 'csv'
+                    };
+                    
+                    if (formatMap[ext]) {
+                        this.elements.inputFormat.value = formatMap[ext];
+                    }
+                    
+                    await this.parseTable();
+                } catch (error) {
+                    this.showError(`文件读取失败: ${error.message}`);
+                }
+            }
+
+            readFileAsText(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsText(file, 'UTF-8');
+                });
+            }
+
+            // 复制到剪贴板
+            async copyToClipboard() {
+                if (!this.currentOutput) return;
+
+                try {
+                    await navigator.clipboard.writeText(this.currentOutput);
+                    this.showSuccess('已复制到剪贴板');
+                } catch (error) {
+                    // 降级处理
+                    this.fallbackCopyToClipboard();
+                }
+            }
+
+            fallbackCopyToClipboard() {
+                const textArea = document.createElement('textarea');
+                textArea.value = this.currentOutput;
+                document.body.appendChild(textArea);
+                textArea.select();
+                
+                try {
+                    document.execCommand('copy');
+                    this.showSuccess('已复制到剪贴板');
+                } catch (error) {
+                    this.showError('复制失败，请手动复制');
+                }
+                
+                document.body.removeChild(textArea);
+            }
+
+            // 文件下载
+            downloadFile() {
+                if (!this.currentOutput || !this.currentFormat) return;
+
+                const extensions = {
+                    'markdown': 'md',
+                    'csv': 'csv',
+                    'excel': 'xlsx',
+                    'html': 'html',
+                    'orgmode': 'org'
+                };
+
+                const mimeTypes = {
+                    'markdown': 'text/markdown',
+                    'csv': 'text/csv',
+                    'excel': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'html': 'text/html',
+                    'orgmode': 'text/plain'
+                };
+
+                const extension = extensions[this.currentFormat] || 'txt';
+                const mimeType = mimeTypes[this.currentFormat] || 'text/plain';
+
+                const blob = new Blob([this.currentOutput], { type: mimeType });
+                this.downloadBlob(blob, `table.${extension}`);
+            }
+
+            downloadBlob(blob, filename) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            // 历史记录和撤销
+            saveToHistory() {
+                const state = {
+                    tableData: JSON.parse(JSON.stringify(this.currentTableData)),
+                    input: this.elements.htmlInput.value,
+                    format: this.elements.inputFormat.value
+                };
+                
+                this.history = this.history.slice(0, this.historyIndex + 1);
+                this.history.push(state);
+                this.historyIndex = this.history.length - 1;
+                
+                this.elements.undoBtn.disabled = this.history.length <= 1;
+            }
+
+            undo() {
+                if (this.historyIndex > 0) {
+                    this.historyIndex--;
+                    const state = this.history[this.historyIndex];
+                    
+                    this.currentTableData = state.tableData;
+                    this.elements.htmlInput.value = state.input;
+                    this.elements.inputFormat.value = state.format;
+                    
+                    if (this.currentTableData.length > 0) {
+                        this.displayTablePreview();
+                        this.showConvertOptions();
+                    }
+                    
+                    this.elements.undoBtn.disabled = this.historyIndex <= 0;
+                    this.showSuccess('已撤销上一步操作');
+                }
+            }
+
+            // ========================================
+            // 5. 工具函数
+            // ========================================
+
+            // 防抖函数
+            debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
+
+            // 处理输入变化
+            handleInputChange() {
+                // 实时检测和建议格式
+                const content = this.elements.htmlInput.value.trim();
+                if (content && this.elements.inputFormat.value === 'auto') {
+                    // 这里可以添加格式提示逻辑
+                }
+            }
+
+            // 覆盖层点击处理
+            handleOverlayClick(e) {
+                if (e.target === this.elements.fullscreenOverlay) {
+                    this.closeFullscreen();
+                }
+            }
+
+            // 状态管理
+            setProcessing(isProcessing) {
+                this.isProcessing = isProcessing;
+                this.elements.parseBtn.disabled = isProcessing;
+                
+                if (isProcessing) {
+                    this.elements.parseBtn.classList.add('loading');
+                } else {
+                    this.elements.parseBtn.classList.remove('loading');
+                }
+            }
+
+            updateStatus(text, type = 'success') {
+                this.elements.statusText.textContent = text;
+                this.elements.statusIndicator.className = `status-indicator status-${type}`;
+                this.elements.statusIndicator.classList.remove('hidden');
+                
+                if (type === 'success') {
+                    setTimeout(() => {
+                        this.elements.statusIndicator.classList.add('hidden');
+                    }, 3000);
+                }
+            }
+
+            showError(message) {
+                this.updateStatus(message, 'error');
+                console.error(message);
+            }
+
+            showSuccess(message) {
+                this.updateStatus(message, 'success');
+            }
+
+            // 表格结构标准化函数
+            normalizeTableStructure(rows) {
+                if (rows.length === 0) return rows;
+                
+                // 找到最长的行作为标准列数
+                const maxColumns = Math.max(...rows.map(row => row.length));
+                
+                // 标准化所有行，确保列数一致
+                const normalizedRows = rows.map(row => {
+                    const normalizedRow = [...row];
+                    // 用空字符串填充缺失的列
+                    while (normalizedRow.length < maxColumns) {
+                        normalizedRow.push('');
+                    }
+                    // 截断超长的行
+                    return normalizedRow.slice(0, maxColumns);
+                });
+                
+                return normalizedRows;
+            }
+        }
+
+        // ========================================
+        // 6. 主程序初始化
+        // ========================================
+
+        // 等待DOM加载完成后初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                new TableConverter();
+                console.log('表格转换器已成功初始化');
+            } catch (error) {
+                console.error('初始化失败:', error);
+                alert('应用初始化失败，请刷新页面重试');
+            }
+        });
+
+        // 全局错误处理
+        window.addEventListener('error', (e) => {
+            console.error('全局错误:', e.error);
+        });
+
+        window.addEventListener('unhandledrejection', (e) => {
+            console.error('未处理的Promise拒绝:', e.reason);
+        });
+    </script>
+</body>
+</html>
