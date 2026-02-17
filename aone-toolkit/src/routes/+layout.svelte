@@ -3,6 +3,8 @@
 	import Sidebar from "$lib/components/Sidebar.svelte";
 	import CommandPalette from "$lib/components/CommandPalette.svelte";
 	import ClipboardPanel from "$lib/components/ClipboardPanel.svelte";
+	import { ToastContainer } from "$lib/components/toast";
+	import ProgressIndicator from "$lib/components/progress/ProgressIndicator.svelte";
 	import { sidebarCollapsed, theme } from "$lib/stores";
 	import { onMount } from "svelte";
 	import { Clipboard } from "lucide-svelte";
@@ -30,6 +32,8 @@
 
 <div class="min-h-screen bg-slate-50 dark:bg-slate-950">
 	<CommandPalette />
+	<ToastContainer />
+	<ProgressIndicator />
 	<Sidebar />
 	<ClipboardPanel bind:isOpen={isClipboardOpen} />
 
