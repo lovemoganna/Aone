@@ -236,8 +236,8 @@
                         {#if isSpeaking}
                             <div class="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-white shadow-lg animate-ping"></div>
                         {/if}
-                    {/each}
-                </div>
+                    </div>
+                {/each}
             </div>
             
             <!-- 图例 -->

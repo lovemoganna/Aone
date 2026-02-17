@@ -22,7 +22,7 @@
   class="fixed z-[200] flex flex-col gap-2 max-w-sm w-full pointer-events-none {positionClasses[position]}"
   aria-live="polite"
 >
-  {#each toastStore as toast (toast.id)}
+  {#each $toastStore as toast (toast.id)}
     <div class="pointer-events-auto">
       <Toast {toast} />
     </div>

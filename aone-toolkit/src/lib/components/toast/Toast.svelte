@@ -10,13 +10,6 @@
 
   let { toast }: Props = $props();
 
-  const icons = {
-    success: CheckCircle,
-    error: XCircle,
-    warning: AlertTriangle,
-    info: Info,
-  };
-
   const colors = {
     success: 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200',
     error: 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200',
@@ -37,7 +30,15 @@
   transition:fly={{ y: -20, duration: 300 }}
   role="alert"
 >
-  <svelte:component this={icons[toast.type]} class="w-5 h-5 shrink-0 {iconColors[toast.type]}" />
+  {#if toast.type === 'success'}
+    <CheckCircle class="w-5 h-5 shrink-0 {iconColors.success}" />
+  {:else if toast.type === 'error'}
+    <XCircle class="w-5 h-5 shrink-0 {iconColors.error}" />
+  {:else if toast.type === 'warning'}
+    <AlertTriangle class="w-5 h-5 shrink-0 {iconColors.warning}" />
+  {:else}
+    <Info class="w-5 h-5 shrink-0 {iconColors.info}" />
+  {/if}
   
   <div class="flex-1 min-w-0">
     <p class="text-sm font-medium">{toast.message}</p>

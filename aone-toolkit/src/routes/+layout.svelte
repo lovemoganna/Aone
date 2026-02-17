@@ -3,7 +3,7 @@
 	import Sidebar from "$lib/components/Sidebar.svelte";
 	import CommandPalette from "$lib/components/CommandPalette.svelte";
 	import ClipboardPanel from "$lib/components/ClipboardPanel.svelte";
-	import { ToastContainer } from "$lib/components/toast";
+	import ToastContainer from "$lib/components/toast/ToastContainer.svelte";
 	import ProgressIndicator from "$lib/components/progress/ProgressIndicator.svelte";
 	import { sidebarCollapsed, theme } from "$lib/stores";
 	import { onMount } from "svelte";

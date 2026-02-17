@@ -523,6 +523,7 @@ class PersonaStore {
 
     // 本地存储
     private saveToStorage() {
+        if (typeof window === 'undefined') return; // SSR check
         try {
             localStorage.setItem('custom_personas', JSON.stringify(this.customPersonas));
         } catch (e) {
@@ -531,6 +532,7 @@ class PersonaStore {
     }
 
     private loadFromStorage() {
+        if (typeof window === 'undefined') return; // SSR check
         try {
             const stored = localStorage.getItem('custom_personas');
             if (stored) {

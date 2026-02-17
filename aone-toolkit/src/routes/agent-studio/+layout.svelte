@@ -13,6 +13,7 @@
     import { fade } from 'svelte/transition';
     import SettingsModal from '../multi-agent/components/SettingsModal.svelte';
 
+    let { children } = $props();
     let settingsOpen = $state(false);
 
     // Navigation items
@@ -124,7 +125,7 @@
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <slot />
+        {@render children()}
     </main>
 </div>
 
