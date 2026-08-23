@@ -1,5 +1,6 @@
 <script lang="ts">
     import { page } from "$app/stores";
+    import { base } from "$app/paths";
     import { sidebarCollapsed, theme } from "$lib/stores";
     import { toolGroups, tools, type Tool } from "$lib/config";
     import {
@@ -97,7 +98,7 @@
         }
     }
 
-    let isDashboardActive = $derived($page.url.pathname === "/");
+    let isDashboardActive = $derived($page.url.pathname === base || $page.url.pathname === `${base}/` || $page.url.pathname === "/");
 </script>
 
 <aside
@@ -111,7 +112,7 @@
             class="h-16 flex items-center justify-between px-3.5 border-b border-slate-200/80 dark:border-slate-800/80"
         >
             <a
-                href="/"
+                href="{base}/"
                 class="flex items-center gap-2.5 overflow-hidden whitespace-nowrap group focus:outline-none"
                 title="Aone 控制台"
             >
@@ -180,14 +181,14 @@
         <!-- 仪表盘独立置顶入口 -->
         <div>
             <a
-                href="/"
+                href="{base}/"
                 class="flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 group relative
                 {isDashboardActive
-                    ? 'bg-indigo-600 text-white shadow-xs shadow-indigo-500/20 font-semibold'
+                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-semibold shadow-2xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/80 dark:hover:bg-slate-800/60'}"
                 title="工作台首页"
             >
-                <div class="shrink-0 {isDashboardActive ? 'text-white' : 'text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'}">
+                <div class="shrink-0 {isDashboardActive ? 'text-white dark:text-slate-950' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-100'}">
                     <LayoutDashboard size={18} />
                 </div>
                 <span
@@ -197,7 +198,7 @@
                     控制台首页
                 </span>
                 {#if isDashboardActive}
-                    <div class="ml-auto h-1.5 w-1.5 rounded-full bg-white {$sidebarCollapsed ? 'hidden' : 'hidden lg:block'}"></div>
+                    <div class="ml-auto h-1.5 w-1.5 rounded-full bg-white dark:bg-slate-950 {$sidebarCollapsed ? 'hidden' : 'hidden lg:block'}"></div>
                 {/if}
             </a>
         </div>
@@ -227,16 +228,17 @@
                 <div class="space-y-0.5">
                     {#each group.tools as tool}
                         {@const Icon = iconMap[tool.icon] ?? Wrench}
-                        {@const isActive = $page.url.pathname === tool.href || $page.url.pathname.startsWith(tool.href + "/")}
+                        {@const targetPath = `${base}${tool.href}`}
+                        {@const isActive = $page.url.pathname === targetPath || $page.url.pathname.startsWith(targetPath + "/")}
                         <a
-                            href={tool.href}
+                            href={targetPath}
                             class="flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs transition-all duration-150 group relative
                             {isActive
-                                ? 'bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-semibold border border-indigo-200/50 dark:border-indigo-800/50'
+                                ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold border border-slate-300/80 dark:border-slate-700/80'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'}"
                             title={tool.name}
                         >
-                            <div class="shrink-0 transition-colors {isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200'}">
+                            <div class="shrink-0 transition-colors {isActive ? 'text-slate-900 dark:text-white' : 'text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200'}">
                                 <Icon size={17} />
                             </div>
                             <span

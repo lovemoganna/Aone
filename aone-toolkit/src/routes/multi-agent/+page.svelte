@@ -2,6 +2,7 @@
     import { onMount, untrack } from "svelte";
     import { page } from "$app/stores";
     import { goto } from "$app/navigation";
+    import { base } from "$app/paths";
     import { Button } from "$lib/components/ui";
     import { settingsStore } from "$lib/stores/settingsStore.svelte";
     import { agentStore } from "$lib/stores/agentStore.svelte";
@@ -206,7 +207,7 @@
         agentStore.resetJointWarfare();
         localStorage.removeItem(SNAPSHOT_KEY);
         hasSavedSnapshot = false;
-        goto("/multi-agent", { replaceState: true });
+        goto(`${base}/multi-agent`, { replaceState: true });
     }
 
     $effect(() => {
@@ -382,7 +383,7 @@
                                 </button>
                                 <button
                                     type="button"
-                                    onclick={() => { moreMenuOpen = false; goto("/agent-studio"); }}
+                                    onclick={() => { moreMenuOpen = false; goto(`${base}/agent-studio`); }}
                                     class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer text-left"
                                 >
                                     <ArrowLeft class="h-3.5 w-3.5 text-slate-500" />

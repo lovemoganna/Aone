@@ -1,5 +1,6 @@
 <script lang="ts">
     import { page } from "$app/stores";
+    import { base } from "$app/paths";
     import SettingsModal from "../multi-agent/components/SettingsModal.svelte";
     import {
         ArrowRight,
@@ -71,7 +72,7 @@
 
     let currentPath = $derived($page.url.pathname);
     let activeTab = $derived.by(() => {
-        const path: string = currentPath;
+        const path: string = currentPath.replace(base, "") || "/";
         if (path.startsWith("/agent-studio/personas")) return "personas";
         if (path.startsWith("/agent-studio/skills")) return "skills";
         if (path.startsWith("/agent-studio/orchestration")) return "orchestration";
@@ -85,7 +86,7 @@
     <header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/90">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="flex min-h-14 items-center justify-between gap-4 py-2.5">
-                <a href="/agent-studio" class="flex min-w-0 items-center gap-2.5">
+                <a href="{base}/agent-studio" class="flex min-w-0 items-center gap-2.5">
                     <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-xs">
                         <Bot class="h-4 w-4" />
                     </div>
@@ -99,7 +100,7 @@
 
                 <div class="hidden items-center gap-2 md:flex">
                     <a
-                        href="/multi-agent"
+                        href="{base}/multi-agent"
                         class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
                     >
                         进入工作台
@@ -122,7 +123,7 @@
                     {#each navItems as item}
                         {@const isActive = activeTab === item.id}
                         <a
-                            href={item.href}
+                            href="{base}{item.href}"
                             class="group inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 {isActive
                                 ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 font-semibold shadow-xs'
                                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-900'}"

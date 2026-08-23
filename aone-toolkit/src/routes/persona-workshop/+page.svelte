@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { base } from "$app/paths";
     import { legacyAgentStudioRoutes } from "$lib/legacyRoutes";
 
     const route = legacyAgentStudioRoutes.personas;
@@ -20,7 +21,7 @@
     </p>
     <a
         class="mt-5 inline-flex rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-        href={route.to}
+        href={`${base}${route.to}`}
     >
         Open Agent Studio Personas
     </a>

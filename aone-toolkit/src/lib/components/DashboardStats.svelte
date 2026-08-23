@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import { base } from "$app/paths";
     import {
         FileText,
         Table2,
@@ -246,7 +247,7 @@
                 {#each recentActivities.slice(0, 4) as item}
                     {@const ItemIcon = item.icon}
                     <a
-                        href={item.href}
+                        href="{base}{item.href}"
                         class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-700 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors text-[11px] font-medium border border-slate-200/60 dark:border-slate-700/60"
                         title="{item.tool}: {item.action}"
                     >

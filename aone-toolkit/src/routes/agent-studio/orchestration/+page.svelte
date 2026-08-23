@@ -1,5 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import { base } from "$app/paths";
     import { fade, fly, slide } from "svelte/transition";
     import {
         ArrowLeft,
@@ -148,7 +149,7 @@
         agentStore.currentSession.activeAgentIds = squad.members.map(
             (member) => member.agentId,
         );
-        goto(`/multi-agent?squadId=${encodeURIComponent(squad.id)}`);
+        goto(`${base}/multi-agent?squadId=${encodeURIComponent(squad.id)}`);
     }
 
     function openWorkflow(id: string | "new") {
@@ -161,7 +162,7 @@
     }
 
     function runWorkflow(workflow: WorkflowRecord) {
-        goto(`/multi-agent?workflowId=${encodeURIComponent(workflow.id)}`);
+        goto(`${base}/multi-agent?workflowId=${encodeURIComponent(workflow.id)}`);
     }
 
     function cloneWorkflow(workflow: WorkflowRecord) {
@@ -261,7 +262,7 @@
                     </button>
                 {/if}
                 <a
-                    href="/multi-agent"
+                    href="{base}/multi-agent"
                     class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50 active:scale-95 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
                     进入工作台

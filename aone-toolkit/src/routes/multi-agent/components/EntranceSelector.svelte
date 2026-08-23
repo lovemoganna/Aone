@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { base } from "$app/paths";
     import { agentStore } from "$lib/stores/agentStore.svelte";
     import { AgentAvatar } from "$lib/components/ui";
     import {
@@ -133,7 +134,7 @@
     <div class="space-y-2.5">
         <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <span class="font-semibold">协作小队在岗成员 ({agentStore.currentSession.activeAgentIds.length})</span>
-            <a href="/agent-studio" class="text-slate-500 hover:text-slate-900 dark:hover:text-white transition">
+            <a href="{base}/agent-studio" class="text-slate-500 hover:text-slate-900 dark:hover:text-white transition">
                 前往 Agent 工作坊 ➔
             </a>
         </div>

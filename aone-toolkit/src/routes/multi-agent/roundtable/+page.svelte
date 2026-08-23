@@ -1,5 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import { base } from "$app/paths";
     import { tick } from "svelte";
     import { fade } from "svelte/transition";
     import { agentStore } from "$lib/stores/agentStore.svelte";
@@ -34,7 +35,7 @@
         agentStore.clearSession();
         agentStore.currentSession.activeAgentIds = [...roundtableAgentIds];
         agentStore.pipelineState.currentGoal = task.trim();
-        goto("/multi-agent");
+        goto(`${base}/multi-agent`);
     }
 
     async function runInWorkbench() {
@@ -51,7 +52,7 @@
         if (goal) {
             agentStore.addMessage("user", goal);
         }
-        await goto("/multi-agent");
+        await goto(`${base}/multi-agent`);
         await tick();
         if (goal) {
             await agentStore.runSquadCollaboration(goal);
@@ -77,11 +78,11 @@
                     圆桌模式聚合了结构拆解、量化精算、破局创新、极限风控与敏捷执行五维核心能力。点击即可直接将该预设专家团队载入协同工作台。
                 </p>
                 <div class="mt-4 flex flex-wrap gap-2.5">
-                    <a href="/multi-agent" class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-500 shadow-xs cursor-pointer active:scale-95">
+                    <a href="{base}/multi-agent" class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-500 shadow-xs cursor-pointer active:scale-95">
                         打开工作台
                         <ArrowRight class="h-3.5 w-3.5" />
                     </a>
-                    <a href="/agent-studio/orchestration" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 transition hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">
+                    <a href="{base}/agent-studio/orchestration" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 transition hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">
                         管理协同阵容
                     </a>
                 </div>

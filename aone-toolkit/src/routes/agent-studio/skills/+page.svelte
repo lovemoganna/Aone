@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { base } from "$app/paths";
     import { fade, slide } from "svelte/transition";
     import { skillRegistry, type SkillDefinition, type SkillType } from "$lib/skills";
     import SkillEditor from "$lib/components/agent-studio/SkillEditor.svelte";
@@ -215,7 +216,7 @@
                 导出
             </button>
             <a
-                href="/agent-studio"
+                href="{base}/agent-studio"
                 class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50 active:scale-95 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
             >
                 返回工作坊

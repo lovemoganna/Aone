@@ -3,6 +3,7 @@ import { onMount } from "svelte";
     import { fade, slide } from "svelte/transition";
     import { browser } from "$app/environment";
     import { goto } from "$app/navigation";
+    import { base } from "$app/paths";
     import { copyToClipboard } from "$lib/utils/clipboard";
     import { dataBridge } from "$lib/stores/dataBridge";
     import HandoffDropdown from "$lib/components/ui/HandoffDropdown.svelte";
@@ -826,7 +827,7 @@ import { onMount } from "svelte";
 
                     {#if activeItem.fullPageHref}
                         <a
-                            href={activeItem.fullPageHref}
+                            href={`${base}${activeItem.fullPageHref}`}
                             class="inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700"
                         >
                             独立页面

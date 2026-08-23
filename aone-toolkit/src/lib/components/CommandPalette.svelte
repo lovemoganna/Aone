@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount, tick, untrack } from "svelte";
     import { goto } from "$app/navigation";
+    import { base } from "$app/paths";
     import { toolGroups, tools, type Tool } from "$lib/config";
     import { theme } from "$lib/stores";
     import {
@@ -105,7 +106,7 @@
             description: "返回 Aone 概览和推荐路径。",
             category: "page",
             icon: Home,
-            action: () => goto("/"),
+            action: () => goto(`${base}/`),
         },
         ...groupedTools.flatMap((group) =>
             group.tools.map((tool) => ({
@@ -114,7 +115,7 @@
                 description: tool.description,
                 category: groupCategoryMap[group.title] ?? "page",
                 icon: iconMap[tool.icon as keyof typeof iconMap] ?? Wrench,
-                action: () => goto(tool.href),
+                action: () => goto(`${base}${tool.href}`),
             })),
         ),
     ];
@@ -148,7 +149,7 @@
             description: "打开画布设计多步骤 Agent 执行流程。",
             category: "workflow",
             icon: Sparkles,
-            action: () => goto("/agent-studio/orchestration"),
+            action: () => goto(`${base}/agent-studio/orchestration`),
         },
         {
             id: "act-multi-roundtable",
@@ -156,7 +157,7 @@
             description: "在多智能体工作台中运行协同研讨。",
             category: "workflow",
             icon: PlayCircle,
-            action: () => goto("/multi-agent"),
+            action: () => goto(`${base}/multi-agent`),
         },
         {
             id: "act-secret-scan",
@@ -164,7 +165,7 @@
             description: "快速检测 API Key、Token 泄漏并一键全量脱敏。",
             category: "utility",
             icon: ShieldCheck,
-            action: () => goto("/secret-scanner"),
+            action: () => goto(`${base}/secret-scanner`),
         },
     ];
 

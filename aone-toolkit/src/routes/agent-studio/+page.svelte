@@ -1,5 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import { base } from "$app/paths";
     import { fade, fly } from "svelte/transition";
     import { agentStore as registryStore, type Agent } from "$lib/agents";
     import { agentStore } from "$lib/stores/agentStore.svelte";
@@ -127,7 +128,7 @@
     function confirmLaunch() {
         if (!launchTargetAgent) return;
         agentStore.currentSession.activeAgentIds = [launchTargetAgent.id];
-        goto(`/multi-agent?agentId=${encodeURIComponent(launchTargetAgent.id)}`);
+        goto(`${base}/multi-agent?agentId=${encodeURIComponent(launchTargetAgent.id)}`);
         closeLauncher();
     }
 
@@ -175,7 +176,7 @@
                 新建自定义 Agent
             </button>
             <a
-                href="/multi-agent"
+                href="{base}/multi-agent"
                 class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50 active:scale-95 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             >
                 进入工作台

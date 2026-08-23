@@ -1,5 +1,6 @@
 import { writable, get } from 'svelte/store';
 import { goto } from '$app/navigation';
+import { base } from '$app/paths';
 
 export type HandoffDataType = 'json' | 'csv' | 'tsv' | 'yaml' | 'text' | 'sql' | 'prompt' | 'curl';
 
@@ -70,7 +71,8 @@ function createDataBridge() {
             }
 
             if (navigate && typeof window !== 'undefined') {
-                goto(targetHref);
+                const navPath = targetHref.startsWith(base) ? targetHref : `${base}${targetHref}`;
+                goto(navPath);
             }
 
             return handoffItem;

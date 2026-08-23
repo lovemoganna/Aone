@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { base } from "$app/paths";
     import { fade, fly } from "svelte/transition";
     import { personaStore, type AbstractPersona, type PersonaMatrix, type SkillBinding } from "$lib/persona";
     import { skillRegistry } from "$lib/skills";
@@ -292,7 +293,7 @@
                 <Plus class="h-3.5 w-3.5" />
                 新建角色人设
             </button>
-            <a href="/agent-studio" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50 active:scale-95 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <a href="{base}/agent-studio" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50 active:scale-95 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
                 返回工作坊
                 <ArrowRight class="h-3.5 w-3.5" />
             </a>

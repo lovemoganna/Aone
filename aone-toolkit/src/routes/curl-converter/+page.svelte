@@ -1,9 +1,10 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { goto } from "$app/navigation";
+    import { base } from "$app/paths";
 
     onMount(() => {
-        goto("/developer-utilities#curl", { replaceState: true });
+        goto(`${base}/developer-utilities#curl`, { replaceState: true });
     });
 </script>
 

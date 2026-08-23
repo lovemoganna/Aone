@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { goto } from "$app/navigation";
+    import { base } from "$app/paths";
     import { tools, type Tool } from "$lib/config";
     import { dataBridge, type HandoffDataType } from "$lib/stores/dataBridge";
     import { toastStore } from "$lib/stores/toastStore.svelte";
@@ -165,12 +166,12 @@
                 title: detectedTarget.label,
             });
             toastStore.success(`已载入 ${detectedTarget.toolName}`);
-            goto(detectedTarget.href);
+            goto(`${base}${detectedTarget.href}`);
             return;
         }
 
         if (filteredTools.length > 0) {
-            goto(filteredTools[0].href);
+            goto(`${base}${filteredTools[0].href}`);
         }
     }
 
@@ -381,7 +382,7 @@
 
                     {#if viewMode === "grid"}
                         <a
-                            href={tool.href}
+                            href="{base}{tool.href}"
                             class="group relative flex flex-col justify-between rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/40 dark:hover:bg-slate-800/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-400"
                         >
                             <div>
@@ -425,7 +426,7 @@
                     {:else}
                         <!-- Compact List Item -->
                         <a
-                            href={tool.href}
+                            href="{base}{tool.href}"
                             class="group flex items-center justify-between p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40"
                         >
                             <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -481,7 +482,7 @@
                             {@const Icon = iconMap[tool.icon as keyof typeof iconMap] ?? Wrench}
                             {@const isFav = favorites.includes(tool.href)}
                             <a
-                                href={tool.href}
+                                href="{base}{tool.href}"
                                 class="group relative flex flex-col justify-between rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/40 dark:hover:bg-slate-800/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-400"
                             >
                                 <div>
@@ -536,7 +537,7 @@
                             </h2>
                         </div>
                         <a
-                            href="/developer-utilities"
+                            href="{base}/developer-utilities"
                             class="text-[11px] text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
                         >
                             进入工具箱全部 30+ 工具 &rarr;
@@ -548,7 +549,7 @@
                             {@const Icon = iconMap[tool.icon as keyof typeof iconMap] ?? Wrench}
                             {@const isFav = favorites.includes(tool.href)}
                             <a
-                                href={tool.href}
+                                href="{base}{tool.href}"
                                 class="group flex items-start gap-3 rounded-lg border border-slate-200/60 dark:border-slate-800/80 bg-white dark:bg-slate-900/80 p-3 transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-800/40"
                             >
                                 <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors mt-0.5">
