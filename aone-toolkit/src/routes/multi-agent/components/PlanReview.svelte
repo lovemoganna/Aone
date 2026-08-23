@@ -8,6 +8,7 @@
         ListTodo,
         Save,
         X,
+        Sparkles
     } from "lucide-svelte";
     import Button from "$lib/components/ui/Button.svelte";
     import { agentStore } from "$lib/stores/agentStore.svelte";
@@ -19,13 +20,11 @@
 
     $effect(() => {
         if (plan && plan.subtasks) {
-            // deeply clone to avoid mutation by reference until saved
             editedSubtasks = JSON.parse(JSON.stringify(plan.subtasks));
         }
     });
 
     function handleApprove() {
-        // Update the plan in store if edited
         if (isEditing) {
             agentStore.updatePlan(editedSubtasks);
         }
@@ -33,101 +32,88 @@
     }
 
     function handleRegenerate() {
-        // Use retryStage('decompose') - need to implement this in store
         agentStore.retryStage("decompose");
     }
 
     function toggleEdit() {
         if (isEditing) {
-            // Cancel edit - revert changes
             editedSubtasks = plan.subtasks.map((t: any) => ({ ...t }));
         }
         isEditing = !isEditing;
     }
 
     function saveEdit() {
-        // Commit changes to local state, ready for approval
-        // In this simple version, saving just keeps the current edited state valid
         isEditing = false;
     }
 
     function removeTask(index: number) {
         editedSubtasks = editedSubtasks.filter((_, i) => i !== index);
     }
-
-    function moveTask(index: number, direction: "up" | "down") {
-        if (direction === "up" && index > 0) {
-            const temp = editedSubtasks[index];
-            editedSubtasks[index] = editedSubtasks[index - 1];
-            editedSubtasks[index - 1] = temp;
-        } else if (direction === "down" && index < editedSubtasks.length - 1) {
-            const temp = editedSubtasks[index];
-            editedSubtasks[index] = editedSubtasks[index + 1];
-            editedSubtasks[index + 1] = temp;
-        }
-    }
 </script>
 
 <div class="w-full max-w-3xl mx-auto mb-6">
     <div
-        class="bg-white dark:bg-slate-800 rounded-xl border-2 border-primary-500/20 shadow-lg overflow-hidden flex flex-col"
+        class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col"
     >
         <!-- Header -->
         <div
-            class="p-4 bg-primary-50 dark:bg-primary-900/10 border-b border-primary-100 dark:border-primary-900/20 flex items-center justify-between"
+            class="p-3.5 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between"
         >
             <div
-                class="flex items-center gap-2 text-primary-700 dark:text-primary-300"
+                class="flex items-center gap-2.5 text-slate-800 dark:text-slate-200"
             >
                 <div
-                    class="p-1.5 bg-primary-100 dark:bg-primary-800/50 rounded-lg"
+                    class="p-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200"
                 >
-                    <ListTodo size={18} />
+                    <ListTodo size={16} />
                 </div>
                 <div>
-                    <h3 class="font-bold text-sm">Strategic Plan Review</h3>
-                    <p class="text-xs opacity-70">
-                        Review the proposed execution plan
+                    <h3 class="font-bold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                        方案策略复核
+                    </h3>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        在推进执行前复核拆解方案，可直接编辑或确认执行
                     </p>
                 </div>
             </div>
 
             <span
-                class="text-xs font-mono bg-white dark:bg-slate-900 px-2 py-1 rounded text-slate-500 border border-slate-200 dark:border-slate-700"
+                class="text-[11px] font-mono bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
             >
-                {plan.taskPlan?.overview || "Analysis Complete"}
+                {plan.taskPlan?.overview || "结构拆解完成"}
             </span>
         </div>
 
-        <!-- content -->
+        <!-- Content -->
         <div class="p-4 space-y-3">
             {#if isEditing}
                 {#each editedSubtasks as task, i}
                     <div class="flex gap-2 items-start" transition:slide>
                         <div
-                            class="flex-1 space-y-2 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50"
+                            class="flex-1 space-y-2 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850/80"
                         >
                             <div class="flex gap-2">
                                 <span
-                                    class="text-xs font-mono text-slate-400 mt-2.5"
+                                    class="text-xs font-mono text-slate-400 mt-2.5 font-bold"
                                     >#{i + 1}</span
                                 >
                                 <input
                                     bind:value={task.name}
-                                    class="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-sm font-medium"
-                                    placeholder="Task Name"
+                                    class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs font-medium focus:outline-none focus:border-slate-400 dark:focus:border-slate-500"
+                                    placeholder="任务名称"
                                 />
                             </div>
                             <textarea
                                 bind:value={task.description}
-                                class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-xs text-slate-600 dark:text-slate-400 min-h-[60px]"
-                                placeholder="Task Description"
+                                class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-600 dark:text-slate-300 min-h-[60px] focus:outline-none focus:border-slate-400 dark:focus:border-slate-500"
+                                placeholder="任务描述与验收条件"
                             ></textarea>
                         </div>
                         <div class="flex flex-col gap-1">
                             <button
-                                class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-red-500 transition-colors"
+                                class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
                                 onclick={() => removeTask(i)}
+                                aria-label="删除子任务"
                             >
                                 <X size={14} />
                             </button>
@@ -137,32 +123,32 @@
                 <div
                     class="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800"
                 >
-                    <Button variant="ghost" size="sm" onclick={toggleEdit}
-                        >Cancel</Button
-                    >
-                    <Button variant="primary" size="sm" onclick={saveEdit}>
-                        <Save size={14} class="mr-1" /> Save Changes
+                    <Button variant="ghost" size="sm" onclick={toggleEdit} class="cursor-pointer">
+                        取消
+                    </Button>
+                    <Button variant="primary" size="sm" onclick={saveEdit} class="bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer">
+                        <Save size={14} class="mr-1" /> 保存修改
                     </Button>
                 </div>
             {:else}
                 <div class="space-y-2">
                     {#each editedSubtasks as task, i}
                         <div
-                            class="flex items-start gap-3 p-3 rounded-lg border border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                            class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
                         >
                             <div
-                                class="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0 mt-0.5"
+                                class="w-6 h-6 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
                             >
                                 {i + 1}
                             </div>
-                            <div>
+                            <div class="min-w-0 flex-1">
                                 <div
-                                    class="text-sm font-medium text-slate-900 dark:text-slate-100"
+                                    class="text-xs font-bold text-slate-900 dark:text-white"
                                 >
                                     {task.name}
                                 </div>
                                 <div
-                                    class="text-xs text-slate-500 dark:text-slate-400 mt-1"
+                                    class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed"
                                 >
                                     {task.description}
                                 </div>
@@ -176,15 +162,16 @@
         <!-- Footer -->
         {#if !isEditing}
             <div
-                class="p-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-3"
+                class="p-3 bg-slate-50/80 dark:bg-slate-900/60 border-t border-slate-200/60 dark:border-slate-800/60 flex flex-wrap items-center justify-between gap-2.5"
             >
                 <Button
                     variant="outline"
                     size="sm"
                     onclick={toggleEdit}
                     disabled={agentStore.metaFlowFinished}
+                    class="cursor-pointer text-xs"
                 >
-                    <Edit2 size={14} class="mr-1.5" /> Edit Plan
+                    <Edit2 size={13} class="mr-1.5" /> 修改方案
                 </Button>
 
                 <div class="flex items-center gap-2">
@@ -193,19 +180,17 @@
                         size="sm"
                         onclick={handleRegenerate}
                         disabled={agentStore.metaFlowFinished}
-                        class="text-slate-500"
+                        class="text-slate-500 text-xs cursor-pointer hover:text-slate-900 dark:hover:text-slate-200"
                     >
-                        <RefreshCw size={14} class="mr-1.5" /> Regenerate
+                        <RefreshCw size={13} class="mr-1.5" /> 重新拆解
                     </Button>
-                    <Button
-                        variant="primary"
-                        size="sm"
+                    <button
                         onclick={handleApprove}
                         disabled={agentStore.metaFlowFinished}
-                        class="shadow-lg shadow-primary-500/20"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                        <Play size={14} class="mr-1.5" /> Approve & Execute
-                    </Button>
+                        <Play size={13} class="fill-current" /> 确认并执行
+                    </button>
                 </div>
             </div>
         {/if}

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { promptStore } from "../../lib/store.svelte";
+    import { toastStore } from "$lib/stores/toastStore.svelte";
     import {
         X,
         Plus,
@@ -9,8 +10,10 @@
         MessageSquare,
         FileText,
         Lightbulb,
+        Check
     } from "lucide-svelte";
     import { fade, scale } from "svelte/transition";
+    import type { VariableDef } from "../../lib/types";
 
     let { isOpen = false, onClose } = $props<{
         isOpen: boolean;
@@ -20,98 +23,138 @@
     const templates = [
         {
             icon: "Sparkles",
-            category: "General",
-            title: "Brainstorming Assistant",
-            description: "Generate creative ideas on any topic",
-            content: `Help me brainstorm ideas for {{topic}}.
+            category: "创意构思",
+            taskType: "写作",
+            scene: "创意策划",
+            title: "头脑风暴助手",
+            description: "针对任意业务主题多维度生成创意和落地建议",
+            content: `帮我围绕以下主题进行头脑风暴：{{topic}}。
 
-Consider:
-- Innovative approaches
-- Potential challenges
-- Quick wins vs long-term solutions
+请从以下维度展开：
+1. 创新且具差异化的切入角度
+2. 实施过程中潜在的痛点与风险
+3. 短期速赢策略与长期规划权衡
 
-Provide at least 5 unique ideas with brief explanations.`,
-            tags: ["creativity", "brainstorming"],
+请提供至少 5 个具体创意方案，并附带简要实施路径。`,
+            tags: ["writing"],
+            variableDefs: [
+                { name: "topic", description: "头脑风暴主题", required: true, exampleValue: "提升开发者工具的用户留存率", inputType: "text" }
+            ] as VariableDef[],
         },
         {
             icon: "Code2",
-            category: "Development",
-            title: "Code Reviewer",
-            description: "Get thorough code review feedback",
-            content: `Review this {{language}} code:
+            category: "研发效能",
+            taskType: "编程",
+            scene: "代码审查",
+            title: "代码审查专家",
+            description: "对代码段进行深度安全、性能与规范审查",
+            content: `请对以下 {{language}} 代码进行系统性 Code Review：
 
-\`\`\`
+\`\`\`{{language}}
 {{code}}
 \`\`\`
 
-Analyze for:
-1. Bugs or potential issues
-2. Performance improvements
-3. Code style and best practices
-4. Security concerns
+重点审查以下维度：
+1. 逻辑 Bug 与潜在边界条件
+2. 性能瓶颈与优化空间
+3. 架构设计与代码风格规范
+4. 安全漏洞（注入、越权等）
 
-Provide specific suggestions with examples.`,
-            tags: ["development", "code-review"],
+请按严重程度输出修改建议，并附带重构后的代码片段。`,
+            tags: ["dev"],
+            variableDefs: [
+                { name: "language", description: "编程语言", required: true, defaultValue: "TypeScript", exampleValue: "TypeScript", inputType: "text" },
+                { name: "code", description: "待审查代码", required: true, exampleValue: "function compute(list) { return list.map(x => x * 2); }", inputType: "textarea" }
+            ] as VariableDef[],
         },
         {
             icon: "Pencil",
-            category: "Writing",
-            title: "Content Rewriter",
-            description: "Improve and rewrite any text",
-            content: `Rewrite the following text to be more {{style}}:
+            category: "文字精炼",
+            taskType: "写作",
+            scene: "内容创作",
+            title: "专业文本润色",
+            description: "将草稿重写为高可读性、指定风格的正式内容",
+            content: `请将以下草稿重写为 {{style}} 风格：
 
-Original:
+原文：
 {{text}}
 
-Requirements:
-- Maintain the core message
-- Improve clarity and flow
-- Target audience: {{audience}}`,
-            tags: ["writing", "editing"],
+要求：
+- 严格保持核心事实与主旨不变
+- 目标受众：{{audience}}
+- 提升语言的凝练度与说服力，去除冗余表达`,
+            tags: ["writing"],
+            variableDefs: [
+                { name: "style", description: "文风要求", required: true, defaultValue: "专业正式", exampleValue: "专业正式", inputType: "text" },
+                { name: "audience", description: "目标受众", required: true, defaultValue: "企业决策层", exampleValue: "企业决策层", inputType: "text" },
+                { name: "text", description: "待润色原文", required: true, exampleValue: "我们的产品挺好的，能帮大家省时间。", inputType: "textarea" }
+            ] as VariableDef[],
         },
         {
             icon: "MessageSquare",
-            category: "Communication",
-            title: "Email Composer",
-            description: "Draft professional emails quickly",
-            content: `Write a {{tone}} email for the following situation:
+            category: "商务协作",
+            taskType: "写作",
+            scene: "商务沟通",
+            title: "商务邮件起草",
+            description: "根据核心意图快速起草规范严谨的商务沟通邮件",
+            content: `请根据以下沟通背景起草一封商务邮件：
 
-Purpose: {{purpose}}
-Key points to include:
+沟通目的：{{purpose}}
+关键要点：
 {{key_points}}
 
-Keep it concise and professional.`,
-            tags: ["email", "communication"],
+要求：
+- 语气礼貌、干练、清晰
+- 包含清晰的 Call to Action (行动号召)`,
+            tags: ["writing"],
+            variableDefs: [
+                { name: "purpose", description: "邮件目的", required: true, exampleValue: "项目进度同步与联调时间确认", inputType: "text" },
+                { name: "key_points", description: "关键要点", required: true, exampleValue: "接口已就绪；需要在本周四前完成联合测试；有问题随时沟通", inputType: "textarea" }
+            ] as VariableDef[],
         },
         {
             icon: "FileText",
-            category: "Documentation",
-            title: "README Generator",
-            description: "Create project documentation",
-            content: `Generate a README.md for a project with these details:
+            category: "工程文档",
+            taskType: "编程",
+            scene: "开源与文档",
+            title: "规范 README 生成器",
+            description: "为开源项目或技术组件快速生成标准的 README 文档",
+            content: `请根据以下信息生成一份规范的 README.md 文档：
 
-Project Name: {{project_name}}
-Description: {{description}}
-Tech Stack: {{tech_stack}}
-Features: {{features}}
+项目名称：{{project_name}}
+项目定位：{{description}}
+核心技术栈：{{tech_stack}}
+主要功能特性：
+{{features}}
 
-Include sections for: Installation, Usage, Contributing, License.`,
-            tags: ["documentation", "development"],
+请包含：项目简介、架构亮点、快速上手、配置说明与开源协议。`,
+            tags: ["dev"],
+            variableDefs: [
+                { name: "project_name", description: "项目名称", required: true, exampleValue: "Aone Toolkit", inputType: "text" },
+                { name: "description", description: "项目简述", required: true, exampleValue: "一站式本地化轻量研发工具套件", inputType: "text" },
+                { name: "tech_stack", description: "技术栈", required: true, exampleValue: "SvelteKit + Tailwind CSS + TypeScript", inputType: "text" },
+                { name: "features", description: "主要特性", required: true, exampleValue: "无依赖本地运行；提示词沉淀；多智能体协同", inputType: "textarea" }
+            ] as VariableDef[],
         },
         {
             icon: "Lightbulb",
-            category: "Learning",
-            title: "Concept Explainer",
-            description: "Get clear explanations of complex topics",
-            content: `Explain {{concept}} in simple terms.
+            category: "知识科普",
+            taskType: "分析",
+            scene: "技术培训",
+            title: "深度概念通俗化",
+            description: "通过生动类比和结构化拆解将复杂概念讲透",
+            content: `请向 {{level}} 水平的读者讲解概念：{{concept}}。
 
-Requirements:
-- Use analogies when helpful
-- Provide practical examples
-- Target knowledge level: {{level}}
-
-Break down complex parts step by step.`,
-            tags: ["learning", "education"],
+要求：
+1. 用一个贴近日常生活的生动类比破题
+2. 拆解其核心运行机制与关键要素
+3. 列举一个真实的工业界应用场景
+4. 总结一句话核心记忆点`,
+            tags: ["writing"],
+            variableDefs: [
+                { name: "concept", description: "需要解释的概念", required: true, exampleValue: "RAG (检索增强生成)", inputType: "text" },
+                { name: "level", description: "受众知识水平", required: true, defaultValue: "非技术背景初学者", exampleValue: "非技术背景初学者", inputType: "text" }
+            ] as VariableDef[],
         },
     ];
 
@@ -130,116 +173,129 @@ Break down complex parts step by step.`,
             title: template.title,
             content: template.content,
             description: template.description,
-            tags: [],
+            taskType: template.taskType,
+            scene: template.scene,
+            tags: template.tags || [],
+            variableDefs: template.variableDefs || [],
             favorite: false,
+            status: "draft",
             createdAt: Date.now(),
             updatedAt: Date.now(),
             usageCount: 0,
         });
+        toastStore.success(`已添加「${template.title}」至提示词库`);
         onClose();
     }
 </script>
 
 {#if isOpen}
     <div
-        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        transition:fade={{ duration: 150 }}
+        class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-5"
+        transition:fade={{ duration: 120 }}
         onclick={onClose}
+        onkeydown={(event) => {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                onClose();
+            }
+        }}
         role="dialog"
         aria-modal="true"
         tabindex="-1"
     >
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
         <div
-            class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
-            transition:scale={{ duration: 150, start: 0.95 }}
+            class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[88vh] overflow-hidden flex flex-col"
+            transition:scale={{ duration: 150, start: 0.97 }}
             onclick={(e) => e.stopPropagation()}
             role="document"
             tabindex="-1"
         >
             <!-- Header -->
             <div
-                class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700"
+                class="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/80 shrink-0"
             >
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2.5">
                     <div
-                        class="p-2 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                        class="p-1.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-900/60"
                     >
-                        <Sparkles size={20} />
+                        <Sparkles size={16} />
                     </div>
                     <div>
-                        <h2
-                            class="text-lg font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                            Template Library
+                        <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            精选提示词模版库
                         </h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">
-                            Pre-built prompts to get you started
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            预置包含变量占位符与场景定义的工业级 Prompt 模板
                         </p>
                     </div>
                 </div>
                 <button
+                    type="button"
                     onclick={onClose}
-                    class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                    aria-label="Close"
+                    class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    aria-label="关闭模版库"
+                    title="关闭模版库"
                 >
-                    <X size={18} class="text-gray-500" />
+                    <X size={16} />
                 </button>
             </div>
 
             <!-- Template Grid -->
             <div class="flex-1 overflow-y-auto p-5">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                     {#each templates as template}
                         {@const IconComponent = iconMap[template.icon]}
                         <div
-                            class="group border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:border-indigo-300 dark:hover:border-indigo-500 hover:shadow-lg transition-all cursor-pointer bg-white dark:bg-gray-800/50"
+                            class="group border border-slate-200 dark:border-slate-800 rounded-lg p-4 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xs transition-all cursor-pointer bg-white dark:bg-slate-800/40 flex flex-col justify-between"
                             onclick={() => addTemplate(template)}
-                            onkeydown={(e) =>
-                                e.key === "Enter" && addTemplate(template)}
+                            onkeydown={(e) => e.key === "Enter" && addTemplate(template)}
                             role="button"
                             tabindex="0"
                         >
-                            <div class="flex items-start justify-between mb-3">
-                                <div class="flex items-center gap-3">
-                                    <div
-                                        class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/30 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors"
+                            <div>
+                                <div class="flex items-start justify-between gap-2 mb-2">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <div
+                                            class="p-1.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors shrink-0"
+                                        >
+                                            <IconComponent size={15} />
+                                        </div>
+                                        <div class="min-w-0">
+                                            <span class="text-[10px] text-slate-400 block font-medium">
+                                                {template.category} · {template.scene}
+                                            </span>
+                                            <h3 class="font-semibold text-xs text-slate-900 dark:text-slate-100 truncate">
+                                                {template.title}
+                                            </h3>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onclick={(event) => {
+                                            event.stopPropagation();
+                                            addTemplate(template);
+                                        }}
+                                        class="p-1 rounded bg-slate-100 hover:bg-indigo-600 hover:text-white dark:bg-slate-800 text-slate-500 transition-colors shrink-0"
+                                        title="添加到我的提示词库"
+                                        aria-label={`添加模版 ${template.title}`}
                                     >
-                                        <IconComponent size={18} />
-                                    </div>
-                                    <div>
-                                        <span
-                                            class="text-xs text-gray-400 dark:text-gray-500"
-                                            >{template.category}</span
-                                        >
-                                        <h3
-                                            class="font-medium text-gray-900 dark:text-gray-100"
-                                        >
-                                            {template.title}
-                                        </h3>
-                                    </div>
+                                        <Plus size={13} />
+                                    </button>
                                 </div>
-                                <button
-                                    onclick={() => addTemplate(template)}
-                                    class="opacity-0 group-hover:opacity-100 p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all"
-                                    title="Add to library"
-                                    aria-label="Add template to library"
-                                >
-                                    <Plus size={16} />
-                                </button>
+
+                                <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed mb-3">
+                                    {template.description}
+                                </p>
                             </div>
-                            <p
-                                class="text-sm text-gray-500 dark:text-gray-400 mb-3"
-                            >
-                                {template.description}
-                            </p>
-                            <div class="flex flex-wrap gap-1.5">
-                                {#each template.tags as tag}
-                                    <span
-                                        class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded text-xs"
-                                    >
-                                        {tag}
-                                    </span>
-                                {/each}
+
+                            <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400">
+                                <span>{template.variableDefs.length} 个变量占位</span>
+                                <span class="text-indigo-600 dark:text-indigo-400 font-medium group-hover:underline flex items-center gap-0.5">
+                                    一键导入 <Plus size={11} />
+                                </span>
                             </div>
                         </div>
                     {/each}

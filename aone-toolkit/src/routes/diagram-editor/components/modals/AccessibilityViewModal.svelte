@@ -2,7 +2,6 @@
     import { X, Table, List } from "lucide-svelte";
     import { fade, slide } from "svelte/transition";
     import { diagramStore } from "../../lib/store.svelte";
-    import { lintDiagram } from "../../lib/linter"; // Re-use logic if helpful, but mainly we need parser
 
     let { isOpen = $bindable(false), onClose } = $props<{
         isOpen: boolean;
@@ -41,16 +40,16 @@
 
 {#if isOpen}
     <div
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-        transition:fade
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
+        transition:fade={{ duration: 100 }}
         onclick={onClose}
         onkeydown={(e) => e.key === "Escape" && onClose()}
         role="button"
         tabindex="0"
     >
         <div
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col max-h-[85vh]"
-            transition:slide={{ duration: 200 }}
+            class="bg-white dark:bg-[#0b0f17] rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[85vh]"
+            transition:slide={{ duration: 120 }}
             onclick={(e) => e.stopPropagation()}
             onkeydown={(e) => e.stopPropagation()}
             role="dialog"
@@ -59,58 +58,58 @@
         >
             <!-- Header -->
             <div
-                class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 shrink-0"
+                class="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 shrink-0"
             >
                 <h3
-                    class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+                    class="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2"
                 >
-                    <Table size={20} class="text-indigo-500" />
+                    <Table size={15} class="text-slate-700 dark:text-slate-300" />
                     Structure View (Accessibility)
                 </h3>
                 <button
-                    class="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg text-gray-500"
+                    class="p-1 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                     onclick={onClose}
                 >
-                    <X size={20} />
+                    <X size={15} />
                 </button>
             </div>
 
             <!-- Body -->
-            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+            <div class="flex-1 overflow-y-auto p-4 space-y-5 text-xs">
                 <!-- Nodes -->
                 <div>
                     <h4
-                        class="font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"
+                        class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1.5"
                     >
-                        <List size={16} /> Nodes ({nodes.length})
+                        <List size={14} /> Nodes ({nodes.length})
                     </h4>
                     <div
-                        class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
+                        class="border border-slate-200 dark:border-slate-800 rounded overflow-hidden"
                     >
-                        <table class="w-full text-sm text-left">
+                        <table class="w-full text-left">
                             <thead
-                                class="bg-gray-50 dark:bg-gray-900 text-gray-500 font-medium border-b border-gray-200 dark:border-gray-700"
+                                class="bg-slate-50 dark:bg-slate-900 text-slate-500 font-semibold text-[11px] border-b border-slate-200 dark:border-slate-800"
                             >
                                 <tr>
-                                    <th class="px-4 py-2">ID</th>
-                                    <th class="px-4 py-2">Label</th>
-                                    <th class="px-4 py-2">Type</th>
+                                    <th class="px-3 py-1.5">ID</th>
+                                    <th class="px-3 py-1.5">Label</th>
+                                    <th class="px-3 py-1.5">Type</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/80">
                                 {#each nodes as node}
                                     <tr
-                                        class="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                                        class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
                                     >
                                         <td
-                                            class="px-4 py-2 font-mono text-indigo-600 dark:text-indigo-400"
+                                            class="px-3 py-1.5 font-mono text-slate-800 dark:text-slate-200 font-medium"
                                             >{node.id}</td
                                         >
                                         <td
-                                            class="px-4 py-2 text-gray-700 dark:text-gray-300"
+                                            class="px-3 py-1.5 text-slate-600 dark:text-slate-400"
                                             >{node.label}</td
                                         >
-                                        <td class="px-4 py-2 text-gray-500"
+                                        <td class="px-3 py-1.5 text-slate-400 font-mono text-[11px]"
                                             >{node.type}</td
                                         >
                                     </tr>
@@ -119,7 +118,7 @@
                                     <tr>
                                         <td
                                             colspan="3"
-                                            class="px-4 py-4 text-center text-gray-500 text-xs italic"
+                                            class="px-3 py-4 text-center text-slate-400 italic text-xs"
                                         >
                                             No explicit nodes detected.
                                         </td>
@@ -133,38 +132,38 @@
                 <!-- Edges -->
                 <div>
                     <h4
-                        class="font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"
+                        class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1.5"
                     >
-                        <List size={16} /> Relationships ({edges.length})
+                        <List size={14} /> Relationships ({edges.length})
                     </h4>
                     <div
-                        class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
+                        class="border border-slate-200 dark:border-slate-800 rounded overflow-hidden"
                     >
-                        <table class="w-full text-sm text-left">
+                        <table class="w-full text-left">
                             <thead
-                                class="bg-gray-50 dark:bg-gray-900 text-gray-500 font-medium border-b border-gray-200 dark:border-gray-700"
+                                class="bg-slate-50 dark:bg-slate-900 text-slate-500 font-semibold text-[11px] border-b border-slate-200 dark:border-slate-800"
                             >
                                 <tr>
-                                    <th class="px-4 py-2">Source</th>
-                                    <th class="px-4 py-2">Target</th>
-                                    <th class="px-4 py-2">Label</th>
+                                    <th class="px-3 py-1.5">Source</th>
+                                    <th class="px-3 py-1.5">Target</th>
+                                    <th class="px-3 py-1.5">Label</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/80">
                                 {#each edges as edge}
                                     <tr
-                                        class="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                                        class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
                                     >
                                         <td
-                                            class="px-4 py-2 font-mono text-indigo-600 dark:text-indigo-400"
+                                            class="px-3 py-1.5 font-mono text-slate-800 dark:text-slate-200 font-medium"
                                             >{edge.source}</td
                                         >
                                         <td
-                                            class="px-4 py-2 font-mono text-indigo-600 dark:text-indigo-400"
+                                            class="px-3 py-1.5 font-mono text-slate-800 dark:text-slate-200 font-medium"
                                             >{edge.target}</td
                                         >
                                         <td
-                                            class="px-4 py-2 text-gray-700 dark:text-gray-300"
+                                            class="px-3 py-1.5 text-slate-600 dark:text-slate-400"
                                             >{edge.label || "-"}</td
                                         >
                                     </tr>
@@ -173,7 +172,7 @@
                                     <tr>
                                         <td
                                             colspan="3"
-                                            class="px-4 py-4 text-center text-gray-500 text-xs italic"
+                                            class="px-3 py-4 text-center text-slate-400 italic text-xs"
                                         >
                                             No explicit edges detected.
                                         </td>

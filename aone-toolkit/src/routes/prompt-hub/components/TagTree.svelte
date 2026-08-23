@@ -17,15 +17,14 @@
         tags,
         level = 0,
         onEditTag,
+        onDeleteTag,
     } = $props<{
         tags: Tag[];
         level?: number;
         onEditTag: (tag: Tag) => void;
+        onDeleteTag: (tag: Tag) => void;
     }>();
 
-    // State for expanded folders (local to component instance for recursion simpicity,
-    // or we can use the store if we want global persistence of expansion state)
-    // For now, let's just make them all expanded or toggleable.
     let expanded = $state(new Set<string>());
 
     function toggle(id: string) {
@@ -34,11 +33,9 @@
         } else {
             expanded.add(id);
         }
-        // Force update Set reactivity
         expanded = new Set(expanded);
     }
 
-    // Auto-expand if level 0?
     $effect(() => {
         if (level === 0 && tags.length > 0) {
             untrack(() => {
@@ -63,13 +60,16 @@
     {#each tags as tag (tag.id)}
         {@const children = getChildren(tag.id)}
         {@const hasChildren = children.length > 0}
+        {@const isActive = promptStore.activeTagId === tag.id}
 
         <div class="group relative">
             <div
-                class="w-full text-left px-2 py-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-2 text-sm transition-colors cursor-pointer"
-                style="padding-left: {level * 12 + 8}px"
+                class="w-full text-left px-2 py-1.5 rounded-md flex items-center gap-1.5 text-xs transition-colors cursor-pointer {isActive
+                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 font-semibold'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}"
+                style="padding-left: {level * 10 + 6}px"
                 onclick={() => {
-                    promptStore.activeTagId = tag.id;
+                    promptStore.activeTagId = promptStore.activeTagId === tag.id ? null : tag.id;
                     if (hasChildren) toggle(tag.id);
                 }}
                 role="button"
@@ -79,19 +79,19 @@
             >
                 {#if hasChildren}
                     <span
-                        class="text-gray-400 group-hover:text-gray-600 transition-transform duration-200"
+                        class="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-transform duration-150"
                         class:rotate-90={expanded.has(tag.id)}
                     >
-                        <ChevronRight size={14} />
+                        <ChevronRight size={13} />
                     </span>
                 {:else}
-                    <span class="w-[14px]"></span>
+                    <span class="w-[13px]"></span>
                 {/if}
 
                 {#if hasChildren}
-                    <Folder size={14} class="text-blue-500" />
+                    <Folder size={13} class="text-indigo-500 shrink-0" />
                 {:else}
-                    <Hash size={14} class="text-gray-400" />
+                    <Hash size={13} class="text-slate-400 shrink-0" />
                 {/if}
 
                 <span class="truncate flex-1">{tag.name}</span>
@@ -99,32 +99,42 @@
 
             <!-- Action Buttons -->
             <div
-                class="absolute right-2 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded shadow-sm px-1"
+                class="absolute right-1.5 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded shadow-2xs px-0.5"
             >
                 <button
+                    type="button"
                     onclick={(e) => {
                         e.stopPropagation();
                         onEditTag(tag);
                     }}
-                    class="p-1 text-gray-500 hover:text-indigo-500 transition-colors"
+                    class="p-0.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                    title="编辑标签"
+                    aria-label="编辑标签"
                 >
-                    <Pencil size={12} />
+                    <Pencil size={11} />
                 </button>
                 <button
+                    type="button"
                     onclick={(e) => {
                         e.stopPropagation();
-                        if (confirm('Delete tag "' + tag.name + '"?'))
-                            promptStore.deleteTag(tag.id);
+                        onDeleteTag(tag);
                     }}
-                    class="p-1 text-gray-500 hover:text-red-500 transition-colors"
+                    class="p-0.5 text-slate-400 hover:text-rose-500 transition-colors"
+                    title="删除标签"
+                    aria-label="删除标签"
                 >
-                    <Trash2 size={12} />
+                    <Trash2 size={11} />
                 </button>
             </div>
 
             {#if hasChildren && expanded.has(tag.id)}
-                <div transition:slide|local={{ duration: 200 }}>
-                    <TagTree tags={children} level={level + 1} {onEditTag} />
+                <div transition:slide|local={{ duration: 150 }}>
+                    <TagTree
+                        tags={children}
+                        level={level + 1}
+                        {onEditTag}
+                        {onDeleteTag}
+                    />
                 </div>
             {/if}
         </div>

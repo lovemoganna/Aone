@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { HTMLButtonAttributes } from "svelte/elements";
 
-  type Variant = "primary" | "secondary" | "ghost" | "danger" | "outline";
+  type Variant = "primary" | "secondary" | "ghost" | "danger" | "outline" | "ghost-danger";
   type Size = "sm" | "md" | "lg" | "icon";
 
   interface Props extends HTMLButtonAttributes {
@@ -36,6 +36,7 @@
     ghost:
       "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800",
     danger: "bg-red-500 text-white hover:bg-red-600 active:bg-red-700",
+    "ghost-danger": "text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20",
     outline:
       "border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800",
   };

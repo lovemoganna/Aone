@@ -1,13 +1,13 @@
 <script lang="ts">
-    import { X, AlertTriangle } from "lucide-svelte";
+    import { X, AlertTriangle, AlertCircle, Info } from "lucide-svelte";
     import { fade, scale } from "svelte/transition";
 
     let {
         isOpen = false,
-        title = "Confirm Action",
-        message = "Are you sure you want to proceed?",
-        confirmText = "Confirm",
-        cancelText = "Cancel",
+        title = "确认操作",
+        message = "确定要继续执行此操作吗？",
+        confirmText = "确认",
+        cancelText = "取消",
         variant = "danger",
         onConfirm,
         onCancel,
@@ -24,19 +24,19 @@
 
     const variantStyles: Record<
         "danger" | "warning" | "info",
-        { icon: string; button: string }
+        { iconColor: string; button: string }
     > = {
         danger: {
-            icon: "text-red-500",
-            button: "bg-red-600 hover:bg-red-700",
+            iconColor: "text-rose-500",
+            button: "bg-rose-600 hover:bg-rose-700 text-white",
         },
         warning: {
-            icon: "text-amber-500",
-            button: "bg-amber-600 hover:bg-amber-700",
+            iconColor: "text-amber-500",
+            button: "bg-amber-600 hover:bg-amber-700 text-white",
         },
         info: {
-            icon: "text-blue-500",
-            button: "bg-blue-600 hover:bg-blue-700",
+            iconColor: "text-indigo-500",
+            button: "bg-indigo-600 hover:bg-indigo-700 text-white",
         },
     };
 
@@ -48,61 +48,74 @@
 <svelte:window onkeydown={handleKeydown} />
 
 {#if isOpen}
-    <!-- Backdrop -->
     <div
-        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
-        transition:fade={{ duration: 150 }}
+        class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+        transition:fade={{ duration: 120 }}
         onclick={onCancel}
+        onkeydown={(event) => {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                onCancel();
+            }
+        }}
         role="dialog"
         aria-modal="true"
+        tabindex="-1"
     >
-        <!-- Modal -->
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
         <div
-            class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
-            transition:scale={{ duration: 150, start: 0.95 }}
+            class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-800"
+            transition:scale={{ duration: 150, start: 0.97 }}
             onclick={(e) => e.stopPropagation()}
             role="alertdialog"
+            tabindex="-1"
         >
             <!-- Header -->
             <div
-                class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700"
+                class="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/80"
             >
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2.5">
                     <div
-                        class={`p-2 rounded-full bg-gray-100 dark:bg-gray-700 ${variantStyles[variant as keyof typeof variantStyles].icon}`}
+                        class={`p-1.5 rounded-md bg-slate-100 dark:bg-slate-800 ${variantStyles[variant as keyof typeof variantStyles].iconColor}`}
                     >
-                        <AlertTriangle size={20} />
+                        <AlertTriangle size={16} />
                     </div>
                     <h3
-                        class="text-lg font-semibold text-gray-900 dark:text-gray-100"
+                        class="text-sm font-semibold text-slate-900 dark:text-slate-100"
                     >
                         {title}
                     </h3>
                 </div>
                 <button
+                    type="button"
                     onclick={onCancel}
-                    class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    title="关闭"
+                    aria-label="关闭"
                 >
-                    <X size={18} class="text-gray-500" />
+                    <X size={16} />
                 </button>
             </div>
 
             <!-- Body -->
             <div class="p-5">
-                <p class="text-gray-600 dark:text-gray-300">{message}</p>
+                <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{message}</p>
             </div>
 
             <!-- Footer -->
-            <div class="flex justify-end gap-3 p-5 pt-0">
+            <div class="flex justify-end gap-2 px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40">
                 <button
+                    type="button"
                     onclick={onCancel}
-                    class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium"
+                    class="px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors font-medium border border-slate-200 dark:border-slate-700"
                 >
                     {cancelText}
                 </button>
                 <button
+                    type="button"
                     onclick={onConfirm}
-                    class={`px-4 py-2 text-white rounded-lg transition-colors font-medium ${variantStyles[variant as keyof typeof variantStyles].button}`}
+                    class={`px-3.5 py-1.5 text-xs rounded-md transition-colors font-semibold shadow-2xs ${variantStyles[variant as keyof typeof variantStyles].button}`}
                 >
                     {confirmText}
                 </button>

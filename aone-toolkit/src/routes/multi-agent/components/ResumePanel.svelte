@@ -1,34 +1,16 @@
 <script lang="ts">
     import { agentStore } from "$lib/stores/agentStore.svelte";
-    import { slide, fade } from "svelte/transition";
+    import { slide } from "svelte/transition";
     import {
         Play,
-        Shrink,
         Trash2,
-        AlertTriangle,
         RotateCcw,
     } from "lucide-svelte";
 
-    let checkpoint = $derived(agentStore.checkpoint);
-    let isRunning = $derived(agentStore.metaFlowIsRunning);
-
-    const STAGE_NAMES: Record<string, string> = {
-        intent: "Intent Analysis",
-        scene: "Scene Mapping",
-        decompose: "Task Decomposition",
-        prompt: "Strategy Design",
-        execute: "Agent Execution",
-        aggregate: "Result Synthesis",
-    };
-
-    function completedCount(): number {
-        return checkpoint ? Object.keys(checkpoint.results).length : 0;
-    }
-
-    function stageName(): string {
-        if (!checkpoint) return "";
-        return STAGE_NAMES[checkpoint.stage] || checkpoint.stage;
-    }
+    let hasResumable = $derived(agentStore.hasResumableCheckpoint);
+    let cp = $derived(agentStore.savedCheckpoint || agentStore.checkpoint);
+    let currentStep = $derived((cp?.currentStrategyStep || 0) + 1);
+    let totalSteps = $derived(cp?.governanceState?.strategy?.strategy?.length || cp?.collaborationSteps?.length || 4);
 
     function handleResume() {
         agentStore.resumeFromCheckpoint();
@@ -39,103 +21,50 @@
     }
 </script>
 
-{#if checkpoint && checkpoint.error && !isRunning}
+{#if hasResumable && cp}
     <div
         transition:slide
-        class="p-5 mt-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-2 border-amber-200 dark:border-amber-800/50 shadow-lg"
+        class="mx-auto my-3 w-full max-w-3xl p-3.5 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 text-xs shadow-2xs"
     >
-        <!-- Header -->
-        <div class="flex items-center gap-3 mb-4">
-            <div
-                class="p-2 rounded-lg bg-amber-500 text-white shadow-lg shadow-amber-500/20"
-            >
-                <AlertTriangle size={18} />
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <div class="p-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 shrink-0">
+                    <RotateCcw size={15} />
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-slate-900 dark:text-slate-100 truncate">
+                            未完成任务断点
+                        </span>
+                        <span class="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-800 px-1.5 py-0.2 rounded">
+                            Step {currentStep}/{totalSteps}
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                        {cp.goal || '多 Agent 协同任务'}
+                    </p>
+                </div>
             </div>
-            <div>
-                <h3
-                    class="text-sm font-bold text-slate-900 dark:text-slate-100"
-                >
-                    Pipeline Interrupted — Checkpoint Saved
-                </h3>
-                <p class="text-[10px] text-slate-500">
-                    You can resume, or discard and start fresh.
-                </p>
-            </div>
-        </div>
 
-        <!-- Info Grid -->
-        <div
-            class="grid grid-cols-3 gap-3 mb-4 p-3 rounded-xl bg-white/50 dark:bg-slate-900/50"
-        >
-            <div class="text-center">
-                <div
-                    class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
+            <div class="flex items-center gap-1.5 shrink-0">
+                <button
+                    type="button"
+                    onclick={handleResume}
+                    class="flex items-center gap-1 py-1.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 text-white text-xs font-semibold transition cursor-pointer"
                 >
-                    Failed Stage
-                </div>
-                <div
-                    class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-0.5"
+                    <Play size={12} class="fill-current" />
+                    <span>恢复执行</span>
+                </button>
+                <button
+                    type="button"
+                    onclick={handleAbandon}
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                    title="丢弃断点"
+                    aria-label="丢弃断点"
                 >
-                    {stageName()}
-                </div>
+                    <Trash2 size={13} />
+                </button>
             </div>
-            <div class="text-center">
-                <div
-                    class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
-                >
-                    Completed
-                </div>
-                <div
-                    class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-0.5"
-                >
-                    {completedCount()} / 6
-                </div>
-            </div>
-            <div class="text-center">
-                <div
-                    class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
-                >
-                    Retries
-                </div>
-                <div
-                    class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-0.5"
-                >
-                    {checkpoint.retryCount}
-                </div>
-            </div>
-        </div>
-
-        <!-- Error Message -->
-        <div
-            class="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50"
-        >
-            <div
-                class="flex items-center gap-1.5 text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider mb-1"
-            >
-                <AlertTriangle size={12} />
-                Error Details
-            </div>
-            <div class="text-xs text-rose-700 dark:text-rose-300 break-all">
-                {checkpoint.error}
-            </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="flex gap-3">
-            <button
-                onclick={handleResume}
-                class="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20"
-            >
-                <Play size={14} />
-                Resume
-            </button>
-            <button
-                onclick={handleAbandon}
-                class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-rose-950/30 text-slate-600 dark:text-slate-400 hover:text-rose-600 text-xs font-bold uppercase tracking-wider transition-all"
-            >
-                <Trash2 size={14} />
-                Discard
-            </button>
         </div>
     </div>
 {/if}

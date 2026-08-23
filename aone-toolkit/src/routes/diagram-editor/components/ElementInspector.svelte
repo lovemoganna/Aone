@@ -100,57 +100,55 @@
                 </Button>
             </div>
 
-            <!-- Scale Control (Not bound to code yet) -->
-            <div class="space-y-3">
+            <!-- Scale Control -->
+            <div class="space-y-2">
                 <div class="flex items-center justify-between">
                     <label
-                        class="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2"
+                        class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5"
                     >
                         <Maximize size={12} /> Scale Adjustment
                     </label>
                     <span
-                        class="text-xs font-mono text-indigo-600 dark:text-indigo-400 font-bold"
+                        class="text-xs font-mono text-slate-800 dark:text-slate-200 font-bold"
                     >
                         {Math.round((currentProperties.scale || 1) * 100)}%
                     </span>
                 </div>
-                <!-- ... buttons unchanged but use new updateScale ... -->
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5">
                     <button
-                        class="flex-1 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                        class="flex-1 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-400 transition-colors"
                         onclick={() => updateScale(-0.1)}
                     >
-                        <Minimize size={14} class="mx-auto" />
+                        <Minimize size={13} class="mx-auto" />
                     </button>
                     <button
-                        class="flex-1 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                        class="flex-1 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-400 transition-colors"
                         onclick={() => updateScale(0.1)}
                     >
-                        <Maximize size={14} class="mx-auto" />
+                        <Maximize size={13} class="mx-auto" />
                     </button>
                 </div>
             </div>
 
             <!-- Label Control -->
-            <div class="space-y-3">
+            <div class="space-y-2">
                 <div class="flex items-center justify-between">
                     <label
-                        class="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2"
+                        class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5"
                     >
                         <Type size={12} /> Label Text
                     </label>
                     <div
-                        class="flex items-center gap-1.5 text-[10px] text-indigo-600 font-mono bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded"
+                        class="flex items-center gap-1 text-[10px] text-slate-500 font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded"
                     >
                         <Code size={10} />
                         <span>bound</span>
                     </div>
                 </div>
-                <!-- Input with debounce? Store updates directly for now, user can blur or enter. -->
                 <input
                     type="text"
                     value={currentProperties.label || ""}
-                    class="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-transparent focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-lg text-sm transition-all"
+                    class="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-slate-400"
                     placeholder="Element Label"
                     onchange={(e) =>
                         diagramStore.updateElementProperty(
@@ -161,27 +159,27 @@
             </div>
 
             <!-- Shape Control (PlantUML only usually) -->
-            <div class="space-y-3">
+            <div class="space-y-2">
                 <div class="flex items-center justify-between">
                     <label
-                        class="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2"
+                        class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5"
                     >
                         <Box size={12} /> Shape Type
                     </label>
                     <div
-                        class="flex items-center gap-1.5 text-[10px] text-indigo-600 font-mono bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded"
+                        class="flex items-center gap-1 text-[10px] text-slate-500 font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded"
                     >
                         <Code size={10} />
                         <span>bound</span>
                     </div>
                 </div>
-                <div class="grid grid-cols-4 gap-2">
+                <div class="grid grid-cols-4 gap-1.5">
                     {#each SHAPES as shape}
                         <button
-                            class="flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all hover:bg-slate-100 dark:hover:bg-slate-800 {currentProperties.type ===
+                            class="flex flex-col items-center justify-center p-1.5 rounded border transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 {currentProperties.type ===
                             shape.value
-                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                                : 'border-slate-100 dark:border-slate-800'}"
+                                ? 'border-slate-900 dark:border-slate-100 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-semibold shadow-xs'
+                                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400'}"
                             title={shape.name}
                             onclick={() =>
                                 diagramStore.updateElementProperty(
@@ -189,8 +187,7 @@
                                     shape.value,
                                 )}
                         >
-                            <!-- Simple text icon or lucide icon if available -->
-                            <span class="text-[10px] font-mono mt-1"
+                            <span class="text-[10px] font-mono"
                                 >{shape.name}</span
                             >
                         </button>
@@ -199,16 +196,15 @@
             </div>
 
             <!-- Color Palette (Bound to Code) -->
-            <div class="space-y-3">
+            <div class="space-y-2">
                 <div class="flex items-center justify-between">
                     <label
-                        class="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2"
+                        class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5"
                     >
                         <Palette size={12} /> Visual Theme
                     </label>
-                    <!-- Binding Indicator -->
                     <div
-                        class="flex items-center gap-1.5 text-[10px] text-indigo-600 font-mono bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded"
+                        class="flex items-center gap-1 text-[10px] text-slate-500 font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded"
                         title="Changes are written to code"
                     >
                         <Code size={10} />
@@ -219,16 +215,16 @@
                 <div class="grid grid-cols-7 gap-1">
                     {#each COLORS as color}
                         <button
-                            class="w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 {currentProperties.color ===
+                            class="w-6 h-6 rounded-full border transition-transform hover:scale-110 {currentProperties.color ===
                             color.value
-                                ? 'border-indigo-500 ring-2 ring-indigo-500/20'
-                                : 'border-transparent'}"
+                                ? 'border-slate-900 dark:border-slate-100 ring-2 ring-slate-400/40'
+                                : 'border-black/10 dark:border-white/10'}"
                             style="background-color: {color.value || '#e2e8f0'}"
                             title={color.name}
                             onclick={() => setColor(color.value)}
                         >
                             {#if color.value === ""}
-                                <X size={12} class="mx-auto text-slate-400" />
+                                <X size={10} class="mx-auto text-slate-400" />
                             {/if}
                         </button>
                     {/each}

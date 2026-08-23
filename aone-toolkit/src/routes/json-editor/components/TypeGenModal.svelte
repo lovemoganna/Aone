@@ -9,8 +9,8 @@
 
     let { isOpen, jsonData, onClose }: Props = $props();
 
-    let tsOutput = $state("");
     let interfaceName = $state("RootObject");
+    let tsOutput = $derived(isOpen && jsonData ? jsonToTs(jsonData, interfaceName) : "");
 
     function jsonToTs(obj: any, name: string): string {
         try {
@@ -84,11 +84,6 @@
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
-    $effect(() => {
-        if (isOpen && jsonData) {
-            tsOutput = jsonToTs(jsonData, interfaceName);
-        }
-    });
 
     function copyToClipboard() {
         navigator.clipboard.writeText(tsOutput);
@@ -109,11 +104,13 @@
                 <h3
                     class="text-lg font-semibold text-slate-900 dark:text-white"
                 >
-                    Generate TypeScript Interfaces
+                    生成 TypeScript 接口
                 </h3>
                 <button
                     onclick={onClose}
                     class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    title="关闭类型生成器"
+                    aria-label="关闭类型生成器"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -133,10 +130,11 @@
 
             <div class="p-4 space-y-4 flex-1 overflow-hidden flex flex-col">
                 <div class="flex items-center gap-2">
-                    <label class="text-sm font-medium"
-                        >Root Interface Name:</label
+                    <label for="typegen-root-interface" class="text-sm font-medium"
+                        >根接口名称：</label
                     >
                     <input
+                        id="typegen-root-interface"
                         bind:value={interfaceName}
                         oninput={() =>
                             (tsOutput = jsonToTs(jsonData, interfaceName))}
@@ -155,8 +153,8 @@
             <div
                 class="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2"
             >
-                <Button variant="secondary" onclick={onClose}>Close</Button>
-                <Button onclick={copyToClipboard}>Copy & Close</Button>
+                <Button variant="secondary" onclick={onClose}>关闭</Button>
+                <Button onclick={copyToClipboard}>复制并关闭</Button>
             </div>
         </div>
     </div>

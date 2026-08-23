@@ -1,7 +1,7 @@
 // Type definitions for Table Converter
 
 export type InputFormat = 'auto' | 'html' | 'markdown' | 'csv' | 'text';
-export type OutputFormat = 'markdown' | 'csv' | 'excel' | 'html' | 'orgmode' | 'sql-mysql' | 'sql-pg' | 'sql-duckdb';
+export type OutputFormat = 'markdown' | 'csv' | 'json' | 'excel' | 'html' | 'orgmode' | 'sql-mysql' | 'sql-pg' | 'sql-duckdb';
 
 export type TableData = string[][];
 
@@ -32,6 +32,7 @@ export interface StatusInfo {
 export const FORMAT_CONFIG: Record<OutputFormat, { ext: string; mime: string; label: string }> = {
     markdown: { ext: '.md', mime: 'text/markdown', label: 'Markdown' },
     csv: { ext: '.csv', mime: 'text/csv', label: 'CSV' },
+    json: { ext: '.json', mime: 'application/json', label: 'JSON' },
     excel: { ext: '.xlsx', mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', label: 'Excel' },
     html: { ext: '.html', mime: 'text/html', label: 'HTML' },
     orgmode: { ext: '.org', mime: 'text/plain', label: 'Org Mode' },

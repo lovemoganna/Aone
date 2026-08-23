@@ -6,16 +6,16 @@
 </script>
 
 <div
-    class="space-y-1.5 hover:bg-gray-50 dark:hover:bg-indigo-900/10 p-1 rounded-lg transition-colors group"
+    class="space-y-1 hover:bg-slate-100/50 dark:hover:bg-slate-800/40 p-1 rounded transition-colors group"
 >
     <div class="flex justify-between items-center text-xs">
-        <label
-            class="text-gray-500 dark:text-gray-400 font-medium group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors"
+        <div
+            class="text-slate-500 dark:text-slate-400 font-medium group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors text-[11px]"
         >
             {label}
-        </label>
+        </div>
     </div>
-    <div class="text-gray-700 dark:text-gray-300">
+    <div class="text-slate-700 dark:text-slate-300 text-xs">
         {@render children()}
     </div>
 </div>

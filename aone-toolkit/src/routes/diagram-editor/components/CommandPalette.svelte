@@ -4,7 +4,6 @@
         Search,
         Zap,
         Code,
-        AlertTriangle,
         Lightbulb,
         FilePlus,
         Download,
@@ -16,19 +15,20 @@
         Keyboard,
         Palette,
         Languages,
-        Trash2,
-        Clock,
         Sparkles,
         Database,
+        Clock
     } from "lucide-svelte";
     import { diagramStore } from "../lib/store.svelte";
     import { lintingService } from "../lib/lintingService.svelte";
-
     import { optimizeLayout } from "../lib/optimizer";
-
     import { transformDataToDiagram } from "../lib/transformer";
 
-    let { isOpen, onClose, onAction } = $props();
+    let { isOpen, onClose, onAction } = $props<{
+        isOpen: boolean;
+        onClose: () => void;
+        onAction: (id: string) => void;
+    }>();
 
     let query = $state("");
     let selectedIndex = $state(0);
@@ -36,38 +36,8 @@
 
     const staticItems = [
         {
-            id: "import-json",
-            label: "Import from JSON",
-            section: "Actions",
-            icon: FilePlus,
-            action: () => {
-                const input = window.prompt("Paste JSON object here:");
-                if (input) {
-                    const code = transformDataToDiagram(input, "json");
-                    diagramStore.code = code;
-                    diagramStore.render();
-                }
-            },
-        },
-        {
-            id: "import-sql",
-            label: "Import from SQL",
-            section: "Actions",
-            icon: Database,
-            action: () => {
-                const input = window.prompt(
-                    "Paste SQL CREATE statements here:",
-                );
-                if (input) {
-                    const code = transformDataToDiagram(input, "sql");
-                    diagramStore.code = code;
-                    diagramStore.render();
-                }
-            },
-        },
-        {
             id: "beautify",
-            label: "Beautify Layout",
+            label: "Format & Beautify Layout",
             section: "Actions",
             icon: Sparkles,
             action: () => {
@@ -86,6 +56,36 @@
             icon: Zap,
         },
         {
+            id: "import-json",
+            label: "Import from JSON Schema/Data",
+            section: "Actions",
+            icon: FilePlus,
+            action: () => {
+                const input = window.prompt("Paste JSON object here:");
+                if (input) {
+                    const code = transformDataToDiagram(input, "json");
+                    diagramStore.code = code;
+                    diagramStore.render();
+                }
+            },
+        },
+        {
+            id: "import-sql",
+            label: "Import from SQL DDL",
+            section: "Actions",
+            icon: Database,
+            action: () => {
+                const input = window.prompt(
+                    "Paste SQL CREATE statements here:",
+                );
+                if (input) {
+                    const code = transformDataToDiagram(input, "sql");
+                    diagramStore.code = code;
+                    diagramStore.render();
+                }
+            },
+        },
+        {
             id: "new",
             label: "New Diagram",
             section: "Actions",
@@ -94,77 +94,66 @@
         },
         {
             id: "export",
-            label: "Export Diagram",
+            label: "Export Diagram (PNG/SVG/PDF)",
             section: "Actions",
             shortcut: "Cmd+E",
             icon: Download,
         },
         {
             id: "share",
-            label: "Share Diagram",
+            label: "Share Diagram Link",
             section: "Actions",
             shortcut: "Cmd+S",
             icon: Share2,
         },
         {
             id: "history",
-            label: "History Hub",
+            label: "Snapshot History",
             section: "Actions",
             shortcut: "Cmd+H",
             icon: History,
         },
         {
-            id: "ai-gen",
-            label: "AI Generation",
-            section: "Actions",
-            shortcut: "Cmd+G",
-            icon: Lightbulb,
-        },
-
-        {
             id: "toggle-sidebar",
             label: "Toggle Sidebar",
             section: "Navigation",
-            shortcut: "Cmd+\\",
             icon: Layout,
         },
         {
             id: "toggle-minimap",
-            label: "Toggle Minimap",
+            label: "Toggle Canvas Minimap",
             section: "Navigation",
-            shortcut: "Cmd+M",
             icon: Maximize,
         },
         {
             id: "focus-mode",
-            label: "Zen Mode",
+            label: "Zen / Focus Mode",
             section: "Navigation",
             shortcut: "Esc",
             icon: Code,
         },
         {
             id: "reset-view",
-            label: "Reset Viewport",
+            label: "Reset Zoom & Center View",
             section: "Navigation",
+            shortcut: "Cmd+0",
             icon: Clock,
         },
-
         {
             id: "mode-plantuml",
-            label: "Switch to PlantUML",
-            section: "Language",
+            label: "Switch Syntax to PlantUML",
+            section: "Syntax",
             icon: Languages,
         },
         {
             id: "mode-graphviz",
-            label: "Switch to Graphviz",
-            section: "Language",
+            label: "Switch Syntax to Graphviz (DOT)",
+            section: "Syntax",
             icon: Languages,
         },
-
         {
             id: "settings",
-            label: "Global Settings",
+            label: "Editor Settings",
             section: "System",
             icon: Settings,
         },
@@ -177,11 +166,10 @@
         },
         {
             id: "theme",
-            label: "Theme Engine",
+            label: "Diagram Themes",
             section: "System",
             icon: Palette,
         },
-        // Layout Engine Actions (Graphviz)
         {
             id: "layout-dot",
             label: "Layout: Hierarchical (dot)",
@@ -191,88 +179,49 @@
         },
         {
             id: "layout-neato",
-            label: "Layout: Network (neato)",
+            label: "Layout: Force-Directed (neato)",
             section: "Layout",
             icon: Layout,
             action: () => diagramStore.setLayoutEngine("neato"),
         },
         {
-            id: "layout-fdp",
-            label: "Layout: Cluster (fdp)",
-            section: "Layout",
-            icon: Layout,
-            action: () => diagramStore.setLayoutEngine("fdp"),
-        },
-        {
-            id: "layout-twopi",
-            label: "Layout: Radial (twopi)",
-            section: "Layout",
-            icon: Layout,
-            action: () => diagramStore.setLayoutEngine("twopi"),
-        },
-        // Direction Actions
-        {
             id: "dir-tb",
-            label: "Direction: Top-to-Bottom",
+            label: "Direction: Top to Bottom (TB)",
             section: "Layout",
             icon: Layout,
             action: () => diagramStore.setDirection("TB"),
         },
         {
             id: "dir-lr",
-            label: "Direction: Left-to-Right",
+            label: "Direction: Left to Right (LR)",
             section: "Layout",
             icon: Layout,
             action: () => diagramStore.setDirection("LR"),
-        },
-        {
-            id: "dir-bt",
-            label: "Direction: Bottom-to-Top",
-            section: "Layout",
-            icon: Layout,
-            action: () => diagramStore.setDirection("BT"),
-        },
-        {
-            id: "dir-rl",
-            label: "Direction: Right-to-Left",
-            section: "Layout",
-            icon: Layout,
-            action: () => diagramStore.setDirection("RL"),
-        },
+        }
     ];
 
     let items = $derived.by(() => {
-        const dynamicItems = [];
+        const dynamicItems: any[] = [];
 
-        // Add Quick Fixes from Linting
-        if (lintingService.results.length > 0) {
-            lintingService.results.forEach((lint, i) => {
+        const lintAnalysis = lintingService.lint(
+            diagramStore.code,
+            diagramStore.mode,
+        );
+
+        if (lintAnalysis.results.length > 0) {
+            lintAnalysis.results.forEach((lint, i) => {
                 lint.actions?.forEach((action: any, ai: number) => {
                     dynamicItems.push({
                         id: `fix-${i}-${ai}`,
-                        label: `Fix: ${action.label}`,
-                        section: "Quick Fixes",
+                        label: `Quick Fix: ${action.label}`,
+                        section: "Diagnostics",
                         icon: Lightbulb,
-                        color: "text-amber-400",
                         action: () => {
                             diagramStore.code = action.apply(diagramStore.code);
+                            diagramStore.render();
                         },
                     });
                 });
-            });
-        }
-
-        // Potential AI smart actions (Placeholder for Linear intelligence)
-        if (diagramStore.code.includes("Alice")) {
-            dynamicItems.push({
-                id: "smart-actor",
-                label: "Add Response Actor",
-                section: "Intelligence",
-                icon: Lightbulb,
-                color: "text-indigo-400",
-                action: () => {
-                    diagramStore.code += "\nBob -> Alice: Response";
-                },
             });
         }
 
@@ -290,7 +239,7 @@
     });
 
     let groupedItems = $derived.by(() => {
-        const groups: Record<string, any[]> = {};
+        const groups: Record<string, typeof items> = {};
         filteredItems.forEach((item) => {
             if (!groups[item.section]) groups[item.section] = [];
             groups[item.section].push(item);
@@ -298,24 +247,23 @@
         return groups;
     });
 
-    // Flattened items for keyboard navigation index
     let flatItems = $derived(Object.values(groupedItems).flat());
 
     $effect(() => {
         if (isOpen) {
             selectedIndex = 0;
-            inputRef?.focus();
+            setTimeout(() => inputRef?.focus(), 50);
         }
     });
 
     function handleKeydown(e: KeyboardEvent) {
         if (e.key === "ArrowDown") {
             e.preventDefault();
-            selectedIndex = (selectedIndex + 1) % flatItems.length;
+            selectedIndex = (selectedIndex + 1) % (flatItems.length || 1);
         } else if (e.key === "ArrowUp") {
             e.preventDefault();
             selectedIndex =
-                (selectedIndex - 1 + flatItems.length) % flatItems.length;
+                (selectedIndex - 1 + flatItems.length) % (flatItems.length || 1);
         } else if (e.key === "Enter") {
             e.preventDefault();
             const item = flatItems[selectedIndex];
@@ -328,6 +276,7 @@
                 onClose();
             }
         } else if (e.key === "Escape") {
+            e.preventDefault();
             onClose();
         }
     }
@@ -335,89 +284,93 @@
 
 {#if isOpen}
     <div
-        class="fixed inset-0 bg-black/40 z-[1000] flex items-start justify-center pt-[15vh] backdrop-blur-[2px]"
+        class="fixed inset-0 bg-black/50 z-[999] flex items-start justify-center pt-[15vh] backdrop-blur-xs"
         role="presentation"
         onclick={onClose}
-        transition:fade
+        transition:fade={{ duration: 100 }}
     >
         <div
-            class="w-full max-w-lg glass-dark text-white rounded-xl shadow-2xl overflow-hidden ring-1 ring-white/5"
+            class="w-full max-w-lg bg-white dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 rounded-lg shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden ring-1 ring-black/5"
             role="dialog"
             aria-modal="true"
             aria-label="Command Palette"
             tabindex="-1"
             onclick={(e) => e.stopPropagation()}
             onkeydown={handleKeydown}
-            transition:fly={{ y: 20 }}
+            transition:fly={{ y: 10, duration: 120 }}
         >
-            <div class="p-4 border-b border-white/10 flex items-center gap-3">
-                <Search size={18} class="text-white/40" />
+            <div class="p-3 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2.5 bg-slate-50 dark:bg-slate-900/50">
+                <Search size={16} class="text-slate-400 dark:text-slate-500 shrink-0" />
                 <input
                     bind:this={inputRef}
                     bind:value={query}
-                    placeholder="Type a command or search..."
-                    class="bg-transparent border-none outline-none flex-1 text-sm placeholder:text-white/20"
+                    placeholder="Search actions, commands or layout engines..."
+                    class="bg-transparent border-none outline-none flex-1 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
                 />
+                <kbd class="px-1.5 py-0.5 text-[10px] font-mono rounded bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300/50 dark:border-slate-700">ESC</kbd>
             </div>
 
-            <div class="max-h-96 overflow-y-auto" role="listbox">
-                {#each Object.entries(groupedItems) as [section, group]}
-                    <div
-                        class="px-4 py-2 text-[10px] font-bold text-white/30 uppercase tracking-wider bg-white/5"
-                    >
-                        {section}
+            <div class="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/40 p-1" role="listbox">
+                {#if flatItems.length === 0}
+                    <div class="p-6 text-center text-xs text-slate-400">
+                        No commands matching "{query}"
                     </div>
-                    {#each group as item}
-                        {@const isSelected =
-                            flatItems[selectedIndex]?.id === item.id}
-                        {@const Icon = item.icon || Zap}
-                        <button
-                            type="button"
-                            role="option"
-                            aria-selected={isSelected}
-                            class="w-full px-4 py-2.5 cursor-pointer flex items-center justify-between group outline-none {isSelected
-                                ? 'bg-indigo-600'
-                                : 'hover:bg-white/5'}"
-                            onclick={() => {
-                                if (item.action) {
-                                    item.action();
-                                } else {
-                                    onAction(item.id);
-                                }
-                                onClose();
-                            }}
-                            onmouseenter={() => {
-                                selectedIndex = flatItems.findIndex(
-                                    (f) => f.id === item.id,
-                                );
-                            }}
-                        >
+                {:else}
+                    {#each Object.entries(groupedItems) as [section, group]}
+                        <div class="py-1">
                             <div
-                                class="flex items-center gap-3 pointer-events-none"
+                                class="px-2.5 py-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider"
                             >
-                                <Icon
-                                    size={14}
-                                    class={isSelected
-                                        ? "text-white"
-                                        : "text-indigo-400"}
-                                />
-                                <span
-                                    class="text-sm {isSelected
-                                        ? 'text-white'
-                                        : 'text-gray-200'}">{item.label}</span
-                                >
+                                {section}
                             </div>
-                            {#if item.shortcut}
-                                <span
-                                    class="text-[10px] {isSelected
-                                        ? 'text-white/60'
-                                        : 'text-white/20'} font-mono pointer-events-none"
-                                    >{item.shortcut}</span
+                            {#each group as item}
+                                {@const isSelected =
+                                    flatItems[selectedIndex]?.id === item.id}
+                                {@const Icon = item.icon || Zap}
+                                <button
+                                    type="button"
+                                    role="option"
+                                    aria-selected={isSelected}
+                                    class="w-full px-2.5 py-1.5 rounded-md cursor-pointer flex items-center justify-between transition-colors outline-none text-left {isSelected
+                                        ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-medium'
+                                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60'}"
+                                    onclick={() => {
+                                        if (item.action) {
+                                            item.action();
+                                        } else {
+                                            onAction(item.id);
+                                        }
+                                        onClose();
+                                    }}
+                                    onmouseenter={() => {
+                                        selectedIndex = flatItems.findIndex(
+                                            (f) => f.id === item.id,
+                                        );
+                                    }}
                                 >
-                            {/if}
-                        </button>
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <Icon
+                                            size={13}
+                                            class={isSelected
+                                                ? 'text-white dark:text-slate-900 shrink-0'
+                                                : 'text-slate-400 dark:text-slate-500 shrink-0'}
+                                        />
+                                        <span class="text-xs truncate">{item.label}</span>
+                                    </div>
+                                    {#if item.shortcut}
+                                        <span
+                                            class="text-[10px] font-mono ml-2 shrink-0 {isSelected
+                                                ? 'text-slate-300 dark:text-slate-600'
+                                                : 'text-slate-400 dark:text-slate-500'}"
+                                        >
+                                            {item.shortcut}
+                                        </span>
+                                    {/if}
+                                </button>
+                            {/each}
+                        </div>
                     {/each}
-                {/each}
+                {/if}
             </div>
         </div>
     </div>

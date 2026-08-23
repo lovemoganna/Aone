@@ -26,7 +26,7 @@ export default {
         'v2-green': '#20BF55'      // Closer
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['"Noto Sans SC"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', 'monospace']
       },
       borderRadius: {
@@ -36,12 +36,9 @@ export default {
         '2xl': '16px'
       },
       boxShadow: {
-        'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)',
-        'glow': '0 0 20px rgba(99, 102, 241, 0.3)',
-        'glow-sm': '0 0 10px -2px rgba(99, 102, 241, 0.2)',
-        'glow-md': '0 0 20px -5px rgba(99, 102, 241, 0.4)',
-        'glow-lg': '0 10px 40px -10px rgba(99, 102, 241, 0.5)',
-        'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)'
+        '2xs': '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+        'xs': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        'soft': '0 2px 10px -2px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02)'
       },
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out',

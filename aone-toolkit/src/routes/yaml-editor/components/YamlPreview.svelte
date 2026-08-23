@@ -15,44 +15,30 @@
     let { value, data }: Props = $props();
 
     let mode = $state<"yaml" | "json">("yaml");
-    let highlightedCode = $state("");
-
-    $effect(() => {
+    let highlightedCode = $derived.by(() => {
         try {
             if (mode === "yaml") {
                 if (value) {
-                    highlightedCode = hljs.highlight(value, {
+                    return hljs.highlight(value, {
                         language: "yaml",
                     }).value;
-                } else {
-                    highlightedCode = "";
                 }
+                return "";
             } else {
-                // JSON Mode
-                // If data is provided, use it. Else try to parse value?
-                // Visual Editor passes data.
                 let jsonStr = "";
                 if (data !== undefined) {
                     jsonStr = JSON.stringify(data, null, 2);
-                } else {
-                    // Fallback check if value is parsable? (Likely redundant if data passed)
-                    // But value might be only source in some contexts.
-                    // For now assume data is main source for JSON if available.
-                    // Or just parse YAML value?
-                    // Let's rely on data if present, otherwise no JSON or try parse.
                 }
-
                 if (jsonStr) {
-                    highlightedCode = hljs.highlight(jsonStr, {
+                    return hljs.highlight(jsonStr, {
                         language: "json",
                     }).value;
-                } else {
-                    highlightedCode = ""; // or "Invalid JSON source"
                 }
+                return "";
             }
         } catch (e) {
             console.error("Highlight error", e);
-            highlightedCode = value;
+            return value || "";
         }
     });
 

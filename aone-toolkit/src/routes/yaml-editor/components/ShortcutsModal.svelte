@@ -24,18 +24,18 @@
         aria-modal="true"
     >
         <div class="w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
-            <Panel title="Keyboard Shortcuts" class="shadow-xl">
+            <Panel title="键盘快捷键" class="shadow-xl">
                 <div class="space-y-4 p-4">
                     <div class="grid grid-cols-2 gap-4 text-sm">
                         <div class="flex flex-col gap-2">
                             <span
                                 class="font-semibold text-slate-900 dark:text-slate-100"
-                                >General</span
+                                >常规操作</span
                             >
                             <div
                                 class="flex justify-between text-slate-600 dark:text-slate-400"
                             >
-                                <span>Undo</span>
+                                <span>撤销</span>
                                 <kbd
                                     class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 font-mono text-xs"
                                     >Ctrl+Z</kbd
@@ -44,7 +44,7 @@
                             <div
                                 class="flex justify-between text-slate-600 dark:text-slate-400"
                             >
-                                <span>Redo</span>
+                                <span>重做</span>
                                 <kbd
                                     class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 font-mono text-xs"
                                     >Ctrl+Y</kbd
@@ -53,7 +53,7 @@
                             <div
                                 class="flex justify-between text-slate-600 dark:text-slate-400"
                             >
-                                <span>New Root Node</span>
+                                <span>新建根节点</span>
                                 <kbd
                                     class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 font-mono text-xs"
                                     >Ctrl+N</kbd
@@ -63,12 +63,12 @@
                         <div class="flex flex-col gap-2">
                             <span
                                 class="font-semibold text-slate-900 dark:text-slate-100"
-                                >Navigation</span
+                                >导航选择</span
                             >
                             <div
                                 class="flex justify-between text-slate-600 dark:text-slate-400"
                             >
-                                <span>Move Selection</span>
+                                <span>移动选中项</span>
                                 <kbd
                                     class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 font-mono text-xs"
                                     >↑ ↓</kbd
@@ -77,7 +77,7 @@
                             <div
                                 class="flex justify-between text-slate-600 dark:text-slate-400"
                             >
-                                <span>Expand/Focus</span>
+                                <span>展开 / 聚焦</span>
                                 <kbd
                                     class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 font-mono text-xs"
                                     >→</kbd
@@ -86,7 +86,7 @@
                             <div
                                 class="flex justify-between text-slate-600 dark:text-slate-400"
                             >
-                                <span>Collapse/Parent</span>
+                                <span>折叠 / 父节点</span>
                                 <kbd
                                     class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 font-mono text-xs"
                                     >←</kbd
@@ -95,7 +95,7 @@
                             <div
                                 class="flex justify-between text-slate-600 dark:text-slate-400"
                             >
-                                <span>Edit Node</span>
+                                <span>编辑节点</span>
                                 <kbd
                                     class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 font-mono text-xs"
                                     >Enter</kbd
@@ -108,7 +108,7 @@
                 <div
                     class="flex justify-end p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50"
                 >
-                    <Button variant="secondary" onclick={onClose}>Close</Button>
+                    <Button variant="secondary" onclick={onClose}>关闭</Button>
                 </div>
             </Panel>
         </div>

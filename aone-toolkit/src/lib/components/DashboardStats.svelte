@@ -2,184 +2,262 @@
     import { onMount } from "svelte";
     import {
         FileText,
-        Table,
-        Code,
-        BrainCircuit,
+        Table2,
+        Code2,
         Clock,
-        Activity,
+        Sparkles,
+        Bot,
+        ShieldAlert,
+        Database,
+        Braces,
+        Terminal,
+        ArrowUpRight,
+        Network,
+        GitFork,
+        HardDrive,
+        RefreshCw,
+        Layers,
+        Cpu,
     } from "lucide-svelte";
 
-    let stats = $state({
+    interface AssetStats {
+        personas: number;
+        skills: number;
+        prompts: number;
+        workflows: number;
+        diagrams: number;
+        storageUsed: string;
+        storagePercent: number;
+    }
+
+    interface ActivityItem {
+        tool: string;
+        action: string;
+        href: string;
+        icon: any;
+        badge: string;
+    }
+
+    let stats = $state<AssetStats>({
+        personas: 6,
+        skills: 8,
         prompts: 0,
-        collections: 0,
-        snippets: 0,
-        lastActive: "None",
+        workflows: 0,
+        diagrams: 0,
+        storageUsed: "0 KB",
+        storagePercent: 0,
     });
 
-    let recentActivity = $state<
-        {
-            tool: string;
-            action: string;
-            time: string;
-            icon: any;
-            href: string;
-            color: string;
-        }[]
-    >([]);
+    let recentActivities = $state<ActivityItem[]>([]);
 
     onMount(() => {
-        loadStats();
+        loadWorkspaceStats();
     });
 
-    function loadStats() {
+    function formatBytes(bytes: number): string {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    }
+
+    export function loadWorkspaceStats() {
         if (typeof localStorage === "undefined") return;
 
-        // Prompt Hub
+        let personas = 6;
+        let skills = 8;
+        let prompts = 0;
+        let workflows = 0;
+        let diagrams = 0;
+
+        try {
+            const customPersonas = localStorage.getItem("custom_personas");
+            const parsed = customPersonas ? JSON.parse(customPersonas) : [];
+            personas += parsed?.length || 0;
+        } catch (e) {}
+
+        try {
+            const customSkills = localStorage.getItem("custom_skills");
+            const parsed = customSkills ? JSON.parse(customSkills) : [];
+            skills += parsed?.length || 0;
+        } catch (e) {}
+
+        try {
+            const wfData = localStorage.getItem("orchestration_workflows_v1");
+            if (wfData) {
+                const parsed = JSON.parse(wfData);
+                workflows = parsed?.length || 0;
+            }
+        } catch (e) {}
+
         try {
             const promptData = localStorage.getItem("prompthub_data");
             if (promptData) {
                 const parsed = JSON.parse(promptData);
-                stats.prompts = parsed.prompts?.length || 0;
-                stats.collections = parsed.collections?.length || 0;
+                prompts = parsed.prompts?.length || 0;
             }
         } catch (e) {}
 
-        // Diagram Snippets
         try {
             const diagramData = localStorage.getItem("aone_diagram_snippets");
             if (diagramData) {
                 const parsed = JSON.parse(diagramData);
-                stats.snippets = parsed.length || 0;
+                diagrams = parsed.length || 0;
             }
         } catch (e) {}
 
-        // Recent Activity (Synthetic for now, based on modification timestamps if available, or just existence)
-        // In a real app we'd track a separate 'activity_log'.
-        // For now, checks if content exists
-        const activities = [];
+        let totalBytes = 0;
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key) {
+                    const val = localStorage.getItem(key) || "";
+                    totalBytes += (key.length + val.length) * 2;
+                }
+            }
+        } catch (e) {}
 
-        if (localStorage.getItem("yaml_editor_content")) {
+        const storageQuota = 5 * 1024 * 1024;
+        const storagePercent = Math.min(100, Math.round((totalBytes / storageQuota) * 100));
+
+        const activities: ActivityItem[] = [];
+
+        if (localStorage.getItem("aone_multi_agent_state") || localStorage.getItem("multi_agent_history")) {
             activities.push({
-                tool: "YAML Editor",
-                action: "Draft content available",
-                time: "Recently",
-                icon: FileText,
-                href: "/yaml-editor",
-                color: "text-amber-500 bg-amber-50 dark:bg-amber-900/20",
+                tool: "多 Agent",
+                action: "最近会话记录",
+                href: "/multi-agent",
+                icon: Network,
+                badge: "会话",
             });
         }
-        if (localStorage.getItem("table_editor_data")) {
+
+        if (workflows > 0 || localStorage.getItem("orchestration_edit_state")) {
             activities.push({
-                tool: "Table Editor",
-                action: "Spreadsheet data saved",
-                time: "Recently",
-                icon: Table,
+                tool: "编排流",
+                action: `${workflows} 条流程草稿`,
+                href: "/agent-studio",
+                icon: Bot,
+                badge: "编排",
+            });
+        }
+
+        if (localStorage.getItem("aone_sql_code") || localStorage.getItem("sql_editor_content")) {
+            activities.push({
+                tool: "SQL 分析",
+                action: "暂存查询脚本",
+                href: "/sql-architect",
+                icon: Database,
+                badge: "草稿",
+            });
+        }
+
+        if (localStorage.getItem("table_editor_data") || localStorage.getItem("aone_table_data")) {
+            activities.push({
+                tool: "表格清洗",
+                action: "未导出工作表",
                 href: "/table-editor",
-                color: "text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20",
-            });
-        }
-        if (localStorage.getItem("aone_diagram_code")) {
-            activities.push({
-                tool: "Diagram Editor",
-                action: "Diagram draft saved",
-                time: "Recently",
-                icon: Code,
-                href: "/diagram-editor",
-                color: "text-purple-500 bg-purple-50 dark:bg-purple-900/20",
+                icon: Table2,
+                badge: "暂存",
             });
         }
 
-        recentActivity = activities;
+        if (localStorage.getItem("aone_diagram_code") || diagrams > 0) {
+            activities.push({
+                tool: "架构图",
+                action: "PlantUML/Mermaid 代码",
+                href: "/diagram-editor",
+                icon: GitFork,
+                badge: "草稿",
+            });
+        }
+
+        if (localStorage.getItem("json_editor_content")) {
+            activities.push({
+                tool: "JSON",
+                action: "已缓存结构载荷",
+                href: "/json-editor",
+                icon: Braces,
+                badge: "缓存",
+            });
+        }
+
+        stats = {
+            personas,
+            skills,
+            prompts,
+            workflows,
+            diagrams,
+            storageUsed: formatBytes(totalBytes),
+            storagePercent,
+        };
+
+        recentActivities = activities;
+    }
+
+    function openStorageManager() {
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("open-storage-manager"));
+        }
     }
 </script>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <!-- Quick Stats -->
-    <div
-        class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700"
-    >
-        <div class="flex items-center gap-3 mb-4">
-            <div
-                class="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-indigo-600 dark:text-indigo-400"
-            >
-                <Activity size={20} />
-            </div>
-            <h3 class="font-semibold text-gray-900 dark:text-white">
-                Quick Stats
-            </h3>
-        </div>
-        <div class="space-y-4">
-            <div class="flex justify-between items-center">
-                <span class="text-gray-600 dark:text-gray-400 text-sm"
-                    >Saved Prompts</span
-                >
-                <span class="font-bold text-gray-900 dark:text-white"
-                    >{stats.prompts}</span
-                >
-            </div>
-            <div class="flex justify-between items-center">
-                <span class="text-gray-600 dark:text-gray-400 text-sm"
-                    >Collections</span
-                >
-                <span class="font-bold text-gray-900 dark:text-white"
-                    >{stats.collections}</span
-                >
-            </div>
-            <div class="flex justify-between items-center">
-                <span class="text-gray-600 dark:text-gray-400 text-sm"
-                    >Diagram Snippets</span
-                >
-                <span class="font-bold text-gray-900 dark:text-white"
-                    >{stats.snippets}</span
-                >
-            </div>
-        </div>
-    </div>
+<div class="rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 px-4 py-3 shadow-2xs">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-xs">
+        <!-- Asset Stats Overview -->
+        <div class="flex flex-wrap items-center gap-3 sm:gap-4 text-slate-600 dark:text-slate-400">
+            <span class="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5 shrink-0">
+                <Cpu class="h-3.5 w-3.5 text-indigo-500" />
+                <span>工作区状态:</span>
+            </span>
 
-    <!-- Recent Activity -->
-    <div
-        class="md:col-span-2 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700"
-    >
-        <div class="flex items-center gap-3 mb-4">
-            <div
-                class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600 dark:text-blue-400"
+            <span class="inline-flex items-center gap-1">
+                <span>角色</span>
+                <strong class="font-mono text-slate-900 dark:text-white">{stats.personas}</strong>
+            </span>
+            <span class="text-slate-300 dark:text-slate-700">·</span>
+            <span class="inline-flex items-center gap-1">
+                <span>技能</span>
+                <strong class="font-mono text-slate-900 dark:text-white">{stats.skills}</strong>
+            </span>
+            <span class="text-slate-300 dark:text-slate-700">·</span>
+            <span class="inline-flex items-center gap-1">
+                <span>提示词</span>
+                <strong class="font-mono text-slate-900 dark:text-white">{stats.prompts}</strong>
+            </span>
+            <span class="text-slate-300 dark:text-slate-700">·</span>
+            <button
+                type="button"
+                onclick={openStorageManager}
+                class="inline-flex items-center gap-1.5 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+                title="打开存储管理"
             >
-                <Clock size={20} />
-            </div>
-            <h3 class="font-semibold text-gray-900 dark:text-white">
-                Recent Work
-            </h3>
+                <HardDrive class="h-3 w-3 text-slate-400" />
+                <span>存储: <strong class="font-mono text-slate-800 dark:text-slate-200">{stats.storageUsed}</strong></span>
+            </button>
         </div>
 
-        {#if recentActivity.length === 0}
-            <div class="text-center py-8 text-gray-400 text-sm">
-                No recent activity found. Start using tools!
-            </div>
-        {:else}
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {#each recentActivity as activity}
+        <!-- Recent Draft Quick Resume -->
+        {#if recentActivities.length > 0}
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-slate-400 text-[11px] shrink-0 flex items-center gap-1">
+                    <Clock class="h-3 w-3" />
+                    <span>恢复草稿:</span>
+                </span>
+                {#each recentActivities.slice(0, 4) as item}
+                    {@const ItemIcon = item.icon}
                     <a
-                        href={activity.href}
-                        class="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
+                        href={item.href}
+                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-700 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors text-[11px] font-medium border border-slate-200/60 dark:border-slate-700/60"
+                        title="{item.tool}: {item.action}"
                     >
-                        <div class="p-2 rounded-lg {activity.color} shrink-0">
-                            <activity.icon size={18} />
-                        </div>
-                        <div>
-                            <h4
-                                class="text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-500 transition-colors"
-                            >
-                                {activity.tool}
-                            </h4>
-                            <p
-                                class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"
-                            >
-                                {activity.action}
-                            </p>
-                        </div>
+                        <ItemIcon class="h-3 w-3 text-slate-400" />
+                        <span>{item.tool}</span>
+                        <ArrowUpRight class="h-2.5 w-2.5 opacity-60" />
                     </a>
                 {/each}
             </div>
         {/if}
     </div>
 </div>
+
+

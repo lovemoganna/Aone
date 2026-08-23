@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { tick, untrack } from "svelte";
     import { fade, scale } from "svelte/transition";
     import {
         X,
@@ -26,26 +27,11 @@
     let useRegex = $state(false);
     let currentMatch = $state(0);
     let matchCount = $state(0);
+    let findInput = $state<HTMLInputElement>();
 
-    // Find matches
     $effect(() => {
-        if (!findText) {
-            matchCount = 0;
-            currentMatch = 0;
-            return;
-        }
-
-        try {
-            const flags = caseSensitive ? "g" : "gi";
-            const regex = useRegex
-                ? new RegExp(findText, flags)
-                : new RegExp(escapeRegex(findText), flags);
-            const matches = code.match(regex);
-            matchCount = matches?.length ?? 0;
-            if (currentMatch > matchCount) currentMatch = matchCount;
-            if (currentMatch === 0 && matchCount > 0) currentMatch = 1;
-        } catch {
-            matchCount = 0;
+        if (isOpen) {
+            tick().then(() => findInput?.focus());
         }
     });
 
@@ -53,6 +39,39 @@
         return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     }
 
+    // Find matches
+    $effect(() => {
+        const text = findText;
+        const srcCode = code;
+        const isCase = caseSensitive;
+        const isReg = useRegex;
+
+        if (!text) {
+            untrack(() => {
+                matchCount = 0;
+                currentMatch = 0;
+            });
+            return;
+        }
+
+        try {
+            const flags = isCase ? "g" : "gi";
+            const regex = isReg
+                ? new RegExp(text, flags)
+                : new RegExp(escapeRegex(text), flags);
+            const matches = srcCode.match(regex);
+            const count = matches?.length ?? 0;
+            untrack(() => {
+                matchCount = count;
+                if (currentMatch > count) currentMatch = count;
+                if (currentMatch === 0 && count > 0) currentMatch = 1;
+            });
+        } catch {
+            untrack(() => {
+                matchCount = 0;
+            });
+        }
+    });
     function replaceOne() {
         if (!findText || matchCount === 0) return;
         const flags = caseSensitive ? "" : "i";
@@ -128,10 +147,10 @@
                         <input
                             id="find-input"
                             type="text"
+                            bind:this={findInput}
                             bind:value={findText}
                             class="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary-500"
                             placeholder="Search text..."
-                            autofocus
                         />
                         <button
                             class="p-2 rounded-lg border transition-colors {caseSensitive
@@ -139,6 +158,8 @@
                                 : 'bg-slate-50 border-slate-200 text-slate-500 dark:bg-slate-800 dark:border-slate-700'}"
                             onclick={() => (caseSensitive = !caseSensitive)}
                             title="Case Sensitive"
+                            aria-label="Toggle case sensitive search"
+                            aria-pressed={caseSensitive}
                         >
                             <CaseSensitive size={16} />
                         </button>
@@ -148,6 +169,8 @@
                                 : 'bg-slate-50 border-slate-200 text-slate-500 dark:bg-slate-800 dark:border-slate-700'}"
                             onclick={() => (useRegex = !useRegex)}
                             title="Use Regex"
+                            aria-label="Toggle regex search"
+                            aria-pressed={useRegex}
                         >
                             <Regex size={16} />
                         </button>

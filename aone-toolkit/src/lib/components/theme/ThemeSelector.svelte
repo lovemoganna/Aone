@@ -41,12 +41,20 @@
   <!-- Theme Grid -->
   <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
     {#each allThemes as theme}
-      <button
+      <div
         class="relative group p-3 rounded-xl border-2 transition-all hover:shadow-lg text-left
           {currentThemeId === theme.id 
             ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' 
             : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}"
         onclick={() => handleSelectTheme(theme.id)}
+        onkeydown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handleSelectTheme(theme.id);
+          }
+        }}
+        role="button"
+        tabindex="0"
       >
         <!-- Theme Preview -->
         <div 
@@ -80,21 +88,27 @@
           <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               class="p-1 rounded bg-white dark:bg-slate-800 shadow"
-              onclick|stopPropagation={() => handleDuplicate(theme.id)}
+              onclick={(e) => {
+                e.stopPropagation();
+                handleDuplicate(theme.id);
+              }}
               title="复制"
             >
               <Copy class="w-3 h-3" />
             </button>
             <button
               class="p-1 rounded bg-white dark:bg-slate-800 shadow text-red-500"
-              onclick|stopPropagation={() => handleDelete(theme.id)}
+              onclick={(e) => {
+                e.stopPropagation();
+                handleDelete(theme.id);
+              }}
               title="删除"
             >
               <Trash2 class="w-3 h-3" />
             </button>
           </div>
         {/if}
-      </button>
+      </div>
     {/each}
   </div>
 

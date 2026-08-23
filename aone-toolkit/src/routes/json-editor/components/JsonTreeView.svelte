@@ -261,7 +261,7 @@
                                 viewBox="0 0 24 24"
                                 stroke-width="1.5"
                                 stroke="currentColor"
-                                class="w-4 h-4 text-purple-500"
+                                class="w-4 h-4 text-amber-500"
                             >
                                 <path
                                     stroke-linecap="round"
@@ -296,7 +296,7 @@
                                 viewBox="0 0 24 24"
                                 stroke-width="1.5"
                                 stroke="currentColor"
-                                class="w-4 h-4 text-blue-500"
+                                class="w-4 h-4 text-slate-500 dark:text-slate-400"
                             >
                                 <path
                                     stroke-linecap="round"
@@ -311,7 +311,7 @@
                                 viewBox="0 0 24 24"
                                 stroke-width="1.5"
                                 stroke="currentColor"
-                                class="w-4 h-4 text-green-500"
+                                class="w-4 h-4 text-emerald-500"
                             >
                                 <path
                                     stroke-linecap="round"
@@ -322,7 +322,7 @@
                         {/if}
                     </span>
 
-                    <div class="flex-grow font-mono text-sm truncate">
+                    <div class="flex-grow font-mono text-xs truncate">
                         <span
                             class="font-medium text-slate-700 dark:text-slate-200"
                             >{key}</span
@@ -331,8 +331,8 @@
                             <span class="mx-1 text-slate-400">:</span>
                             <span
                                 class={isArray(value)
-                                    ? "text-purple-600 dark:text-purple-400"
-                                    : "text-blue-600 dark:text-blue-400"}
+                                    ? "text-amber-600 dark:text-amber-400"
+                                    : "text-slate-600 dark:text-slate-300"}
                             >
                                 {getValueDisplay(key, value)}
                             </span>

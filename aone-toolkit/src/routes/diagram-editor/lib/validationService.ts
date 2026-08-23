@@ -5,6 +5,7 @@ export interface ValidationIssue {
     severity: 'error' | 'warning' | 'info';
     message: string;
     line?: number;
+    column?: number;
     suggestion?: string;
     autoFix?: (code: string) => string;
 }
@@ -26,45 +27,36 @@ function validatePlantUML(code: string): ValidationIssue[] {
     const issues: ValidationIssue[] = [];
     const lines = code.split('\n');
 
-    // 1. Check for theme usage
-    if (!code.includes('!theme') && !code.includes('skinparam')) {
+    // 1. Check for theme usage (only for standard UML diagrams, not json/yaml/mindmap)
+    const isStandardUML = /@startuml\b/i.test(code);
+    if (isStandardUML && !code.includes('!theme') && !code.includes('skinparam') && !code.includes('scale')) {
         issues.push({
             id: 'puml-no-theme',
             severity: 'info',
-            message: 'No theme or styling detected. Consider using a theme.',
-            suggestion: 'Add "!theme spacelab" or similar to improve aesthetics.',
-            autoFix: (c) => c.replace(/(@start\w+)/, '$1\n!theme spacelab')
+            message: 'No theme or custom styling applied.',
+            suggestion: 'Add "!theme spacelab" or custom skinparam to enhance clarity.',
+            autoFix: (c) => c.replace(/(@startuml[^\n]*\n)/i, '$1!theme spacelab\n')
         });
     }
 
-    // 2. Check for "spaghetti" (too many crossing lines heuristic)
-    // Actually hard to detect without layout engine, but we can check for layout hints
-    if (lines.length > 20 && !code.includes('-[hidden]') && !code.includes('package') && !code.includes('rectangle')) {
+    // 2. Large diagram structure recommendation
+    if (lines.length > 30 && !code.includes('-[hidden]') && !code.includes('package') && !code.includes('rectangle') && !code.includes('frame')) {
         issues.push({
             id: 'puml-structure',
             severity: 'info',
-            message: 'Large diagram without grouping or layout hints.',
-            suggestion: 'Use "package", "rectangle", or "-[hidden]-" to organize nodes.'
+            message: 'Large diagram without container grouping.',
+            suggestion: 'Consider grouping nodes with "package" or "rectangle" for readability.'
         });
     }
 
-    // 3. Check for default colors (yellow note)
-    if (code.includes('note') && !code.includes('skinparam note') && !code.includes('!theme')) {
-        issues.push({
-            id: 'puml-default-note',
-            severity: 'info',
-            message: 'Using default yellow notes.',
-            suggestion: 'Style notes with "skinparam note { ... }".'
-        });
-    }
-
-    // 4. Check for deprecated syntax
+    // 3. Deprecated syntax
     if (code.includes('skinparam monochrome true')) {
         issues.push({
             id: 'puml-deprecated-mono',
             severity: 'warning',
-            message: 'Monochrome skinparam is old-school.',
-            suggestion: 'Use "!theme plain" or "skinparam handwritten false".'
+            message: 'Deprecated monochrome configuration detected.',
+            suggestion: 'Use "!theme plain" or modern skinparam directives.',
+            autoFix: (c) => c.replace(/skinparam\s+monochrome\s+true/g, '!theme plain')
         });
     }
 
@@ -79,45 +71,25 @@ function validateGraphviz(code: string): ValidationIssue[] {
     const lowerCode = code.toLowerCase();
 
     // 1. Check for layout engine definition
-    if (!lowerCode.includes('layout=') && !lowerCode.includes('rankdir=') && lowerCode.includes('digraph')) {
+    if (!lowerCode.includes('rankdir=') && !lowerCode.includes('layout=') && lowerCode.includes('digraph')) {
         issues.push({
             id: 'dot-no-layout',
             severity: 'info',
-            message: 'No explicit layout or rankdir defined.',
-            suggestion: 'Add "rankdir=LR" or "layout=neato" for better control.',
-            autoFix: (c) => c.replace(/(digraph\s+\w+\s*\{)/, '$1\n    rankdir=LR;')
+            message: 'No explicit rankdir or layout defined.',
+            suggestion: 'Add "rankdir=LR;" inside the root graph for horizontal layout flow.',
+            autoFix: (c) => c.replace(/(digraph\s*[\w\-_]*\s*\{)/i, '$1\n    rankdir=LR;')
         });
     }
 
-    // 2. Check for "splines" (curved lines)
-    if (!lowerCode.includes('splines=')) {
+    // 2. Check for splines on complex graphs
+    const edgeCount = (code.match(/->/g) || []).length;
+    if (edgeCount > 6 && !lowerCode.includes('splines=')) {
         issues.push({
             id: 'dot-no-splines',
             severity: 'info',
-            message: 'Default straight lines can be messy.',
-            suggestion: 'Enable curved lines with "splines=true" or "splines=ortho".',
-            autoFix: (c) => c.replace(/(digraph\s+\w+\s*\{)/, '$1\n    splines=ortho;')
-        });
-    }
-
-    // 3. Check for global attributes
-    if (!lowerCode.includes('node [') && (code.match(/\w+\s*->\s*\w+/g) || []).length > 5) {
-        issues.push({
-            id: 'dot-no-globals',
-            severity: 'warning',
-            message: 'Repeating attributes on nodes/edges?',
-            suggestion: 'Use global "node [...]" or "edge [...]" blocks to reduce repetition.'
-        });
-    }
-
-    // 4. Graph type check
-    if (lowerCode.includes('digraph') && code.includes('--')) {
-        issues.push({
-            id: 'dot-syntax-mix',
-            severity: 'error',
-            message: 'Using "--" (undirected) in "digraph" (directed).',
-            suggestion: 'Change "--" to "->".',
-            autoFix: (c) => c.replace(/--/g, '->')
+            message: 'Complex graph with default straight edges.',
+            suggestion: 'Add "splines=ortho;" or "splines=polyline;" for cleaner routing.',
+            autoFix: (c) => c.replace(/(digraph\s*[\w\-_]*\s*\{)/i, '$1\n    splines=ortho;')
         });
     }
 
@@ -125,43 +97,81 @@ function validateGraphviz(code: string): ValidationIssue[] {
 }
 
 /**
- * Main validation function.
+ * Main validation function that produces metrics & issues.
  */
 export function validateDiagram(code: string, mode: DiagramMode): QualityMetrics {
     const isPuml = mode === 'plantuml';
     const validationIssues = isPuml ? validatePlantUML(code) : validateGraphviz(code);
 
-    // Calculate complexity
-    const lines = code.split('\n').filter(l => l.trim().length > 0 && !l.trim().startsWith("'") && !l.trim().startsWith("//"));
-    const nodeCount = (code.match(/\w+\s*(\[|:)/g) || []).length; // Rough heuristic
-    const edgeCount = (code.match(/(-+>|--)/g) || []).length;
+    // Calculate node and edge counts
+    const cleanLines = code.split('\n').filter(l => {
+        const t = l.trim();
+        return t.length > 0 && !t.startsWith("'") && !t.startsWith("//") && !t.startsWith("#");
+    });
+
+    let nodeCount = 0;
+    let edgeCount = 0;
+
+    if (isPuml) {
+        // Count explicit definitions and arrow participants
+        const defs = code.match(/^(?:class|interface|component|node|rectangle|storage|database|actor|participant)\s+([a-zA-Z0-9_]+)/gim) || [];
+        const edges = code.match(/([a-zA-Z0-9_]+)\s*(-+>|<-+|\.\.+>|<+\.\.)\s*([a-zA-Z0-9_]+)/g) || [];
+        edgeCount = edges.length;
+        const participantSet = new Set<string>();
+        defs.forEach(d => {
+            const m = d.match(/\b([a-zA-Z0-9_]+)$/);
+            if (m) participantSet.add(m[1]);
+        });
+        edges.forEach(e => {
+            const m = e.match(/([a-zA-Z0-9_]+)\s*[-.<>]+\s*([a-zA-Z0-9_]+)/);
+            if (m) {
+                participantSet.add(m[1]);
+                participantSet.add(m[2]);
+            }
+        });
+        nodeCount = participantSet.size || defs.length;
+    } else {
+        const edgeMatches = code.match(/([a-zA-Z0-9_]+)\s*(->|--)\s*([a-zA-Z0-9_]+)/g) || [];
+        edgeCount = edgeMatches.length;
+        const nodeSet = new Set<string>();
+        edgeMatches.forEach(e => {
+            const m = e.match(/([a-zA-Z0-9_]+)\s*(?:->|--)\s*([a-zA-Z0-9_]+)/);
+            if (m) {
+                nodeSet.add(m[1]);
+                nodeSet.add(m[2]);
+            }
+        });
+        const declaredNodes = code.match(/^\s*([a-zA-Z0-9_]+)\s*\[/gm) || [];
+        declaredNodes.forEach(d => {
+            const m = d.match(/^\s*([a-zA-Z0-9_]+)/);
+            if (m) nodeSet.add(m[1]);
+        });
+        nodeCount = nodeSet.size;
+    }
 
     let complexity: 'low' | 'medium' | 'high' = 'low';
-    if (lines.length > 50 || edgeCount > 15) complexity = 'medium';
-    if (lines.length > 100 || edgeCount > 30) complexity = 'high';
+    if (cleanLines.length > 40 || edgeCount > 12) complexity = 'medium';
+    if (cleanLines.length > 90 || edgeCount > 25) complexity = 'high';
 
-    // Calculate score (100 - penalties)
+    // Calculate quality score (100 - penalties)
     let score = 100;
     score -= validationIssues.filter(i => i.severity === 'error').length * 20;
     score -= validationIssues.filter(i => i.severity === 'warning').length * 10;
     score -= validationIssues.filter(i => i.severity === 'info').length * 2;
 
-    // Penalize complexity slightly if unmanaged
     if (complexity === 'high' && validationIssues.length > 0) score -= 5;
     if (complexity === 'medium' && validationIssues.length > 2) score -= 5;
 
-    // Calculate Coupling & Density
-    const interContainerEdges = (code.match(/\}?\s*-\[?\w*\]?->\s*\{?/g) || []).length; // High-level proxy
-    const coupling = edgeCount > 0 ? (interContainerEdges / edgeCount) : 0;
-    const density = nodeCount > 1 ? edgeCount / (nodeCount * (nodeCount - 1)) : 0;
+    const density = nodeCount > 1 ? parseFloat((edgeCount / (nodeCount * (nodeCount - 1))).toFixed(2)) : 0;
+    const coupling = edgeCount > 0 ? parseFloat(((code.match(/\}?\s*-\[?\w*\]?->\s*\{?/g) || []).length / edgeCount).toFixed(2)) : 0;
 
     return {
-        score: Math.max(0, score),
+        score: Math.max(0, Math.min(100, score)),
         complexity,
         nodeCount,
         edgeCount,
-        coupling: parseFloat(coupling.toFixed(2)),
-        density: parseFloat(density.toFixed(2)),
+        coupling,
+        density,
         issues: validationIssues
     };
 }

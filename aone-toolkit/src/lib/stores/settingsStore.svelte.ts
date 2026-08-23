@@ -6,6 +6,17 @@ import { AIBridge } from '../services/AIBridge';
 
 const STORAGE_KEY = 'aone-metaflow-settings';
 
+export const DEFAULT_AI_RESTRAINT_RULE = `【AI 输出克制原则（最高铁律）】
+保持克制，先解决问题，再考虑表达。默认短、准、直接、高信息密度：
+1. 不复述问题，不加无意义前言、总结、客套、评价和延伸；
+2. 能一句说清，不写一段；能三点说清，不展开成十点；
+3. 只保留结论、关键依据和必要动作，不为显得专业而堆概念，不为显得完整而扩写；
+4. 除非明确要求，否则不要主动补充背景、发散建议或重复解释；
+5. 信息不足时明确指出，不要猜测或编造；
+原则排序：结论优先 > 信息密度 > 清晰度 > 完整性 > 文采。`;
+
+export type RestraintLevel = 'strict' | 'standard' | 'relaxed' | 'custom' | 'off';
+
 export interface SettingsState {
     provider: ProviderKey;
     apiKey: string;
@@ -16,6 +27,9 @@ export interface SettingsState {
     maxTokens: number;
     stream: boolean;
     stageDelay: number; // seconds between pipeline stages
+    enableOutputRestraint: boolean;
+    restraintLevel: RestraintLevel;
+    customRestraintRule: string;
 }
 
 const DEFAULT_SETTINGS: SettingsState = {
@@ -27,7 +41,10 @@ const DEFAULT_SETTINGS: SettingsState = {
     temperature: 0.7,
     maxTokens: 4096,
     stream: true,
-    stageDelay: 3
+    stageDelay: 3,
+    enableOutputRestraint: true,
+    restraintLevel: 'standard',
+    customRestraintRule: DEFAULT_AI_RESTRAINT_RULE
 };
 
 function loadFromStorage(): Partial<SettingsState> {
@@ -51,7 +68,10 @@ function saveToStorage(state: SettingsState) {
             temperature: state.temperature,
             maxTokens: state.maxTokens,
             stream: state.stream,
-            stageDelay: state.stageDelay
+            stageDelay: state.stageDelay,
+            enableOutputRestraint: state.enableOutputRestraint,
+            restraintLevel: state.restraintLevel,
+            customRestraintRule: state.customRestraintRule
         }));
     } catch (e) {
         console.warn('Failed to save settings:', e);
@@ -76,6 +96,25 @@ class SettingsStore {
     get maxTokens() { return this._state.maxTokens; }
     get stream() { return this._state.stream; }
     get stageDelay() { return this._state.stageDelay; }
+    get enableOutputRestraint() { return this._state.enableOutputRestraint ?? true; }
+    get restraintLevel() { return this._state.restraintLevel ?? 'standard'; }
+    get customRestraintRule() { return this._state.customRestraintRule ?? DEFAULT_AI_RESTRAINT_RULE; }
+
+    get activeRestraintRule(): string {
+        if (this._state.enableOutputRestraint === false || this._state.restraintLevel === 'off') {
+            return '';
+        }
+        if (this._state.restraintLevel === 'custom') {
+            return this._state.customRestraintRule || DEFAULT_AI_RESTRAINT_RULE;
+        }
+        if (this._state.restraintLevel === 'strict') {
+            return `${DEFAULT_AI_RESTRAINT_RULE}\n【极致克制附加令】：严禁超过 3 个核心要点，严禁任何过渡句与修饰词，直接输出核心结论与执行参数。`;
+        }
+        if (this._state.restraintLevel === 'relaxed') {
+            return `【AI 输出效率指南】：优先结论，保持直接高效，必要时可补充关键背景与延伸。`;
+        }
+        return DEFAULT_AI_RESTRAINT_RULE;
+    }
 
     get currentProvider() {
         return PROVIDERS[this._state.provider];
@@ -146,6 +185,28 @@ class SettingsStore {
 
     setStageDelay(seconds: number) {
         this._state.stageDelay = Math.max(0, Math.min(30, seconds));
+        this.persist();
+    }
+
+    setEnableOutputRestraint(enabled: boolean) {
+        this._state.enableOutputRestraint = enabled;
+        this.persist();
+    }
+
+    setRestraintLevel(level: RestraintLevel) {
+        this._state.restraintLevel = level;
+        this.persist();
+    }
+
+    setCustomRestraintRule(rule: string) {
+        this._state.customRestraintRule = rule;
+        this.persist();
+    }
+
+    resetRestraintRuleToDefault() {
+        this._state.customRestraintRule = DEFAULT_AI_RESTRAINT_RULE;
+        this._state.restraintLevel = 'standard';
+        this._state.enableOutputRestraint = true;
         this.persist();
     }
 

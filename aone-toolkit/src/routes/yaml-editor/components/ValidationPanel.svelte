@@ -7,16 +7,12 @@
 
     let { value }: Props = $props();
 
-    let error = $state<string | null>(null);
-
-    $effect(() => {
+    let error = $derived.by(() => {
         try {
             jsyaml.load(value);
-            error = null;
+            return null;
         } catch (e: any) {
-            // js-yaml YAMLException
-            // e.message usually contains line/column info
-            error = e.message;
+            return e.message || "Invalid YAML";
         }
     });
 </script>

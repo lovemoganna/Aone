@@ -1,98 +1,146 @@
 <script lang="ts">
     import { promptStore } from "../../lib/store.svelte";
+    import { toastStore } from "$lib/stores/toastStore.svelte";
     import type { Tag } from "../../lib/types";
-    import { X } from "lucide-svelte";
+    import { X, Tag as TagIcon } from "lucide-svelte";
+    import { fade, scale } from "svelte/transition";
 
     let { onClose, tagToEdit = null } = $props<{
         onClose: () => void;
         tagToEdit?: Tag | null;
     }>();
 
-    let name = $state(tagToEdit?.name || "");
-    let parentId = $state<string | null>(tagToEdit?.parentId || null);
+    let name = $state("");
+    let parentId = $state<string | null>(null);
+    let activeTagId = $state<string | null>(null);
+
+    $effect(() => {
+        const nextTagId = tagToEdit?.id ?? null;
+        if (nextTagId !== activeTagId) {
+            activeTagId = nextTagId;
+            name = tagToEdit?.name || "";
+            parentId = tagToEdit?.parentId || null;
+        }
+    });
 
     function handleSave() {
         if (!name.trim()) return;
 
         if (tagToEdit) {
-            promptStore.updateTag(tagToEdit.id, { name, parentId });
+            promptStore.updateTag(tagToEdit.id, { name: name.trim(), parentId });
+            toastStore.success(`已更新标签「${name.trim()}」`);
         } else {
-            const result = promptStore.addTag(name, parentId);
+            const result = promptStore.addTag(name.trim(), parentId);
             if (!result) {
-                alert("Tag already exists");
+                toastStore.warning("该标签已存在");
                 return;
             }
+            toastStore.success(`已创建标签「${name.trim()}」`);
         }
         onClose();
     }
+
+    function handleKeydown(e: KeyboardEvent) {
+        if (e.key === "Escape") onClose();
+    }
 </script>
 
+<svelte:window onkeydown={handleKeydown} />
+
 <div
-    class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+    class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+    transition:fade={{ duration: 120 }}
+    onclick={onClose}
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
 >
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <div
-        class="bg-white dark:bg-gray-800 w-full max-w-md rounded-xl shadow-2xl flex flex-col"
+        class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-xl shadow-2xl flex flex-col border border-slate-200 dark:border-slate-800 overflow-hidden"
+        transition:scale={{ duration: 150, start: 0.97 }}
+        onclick={(event) => event.stopPropagation()}
+        role="document"
+        tabindex="-1"
     >
         <div
-            class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center"
+            class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50/70 dark:bg-slate-900/80"
         >
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                {tagToEdit ? "Edit Tag" : "New Tag"}
-            </h2>
+            <div class="flex items-center gap-2">
+                <TagIcon size={16} class="text-indigo-500" />
+                <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {tagToEdit ? "编辑标签" : "新建标签"}
+                </h2>
+            </div>
             <button
+                type="button"
                 onclick={onClose}
-                class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                class="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                title="关闭"
+                aria-label="关闭"
             >
-                <X size={20} />
+                <X size={16} />
             </button>
         </div>
 
-        <div class="p-6 space-y-4">
+        <div class="p-5 space-y-3.5">
             <div>
                 <label
-                    class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300"
-                    >Name</label
+                    for="tag-modal-name"
+                    class="block text-xs font-semibold mb-1 text-slate-700 dark:text-slate-300"
                 >
+                    标签名称
+                </label>
                 <input
+                    id="tag-modal-name"
                     type="text"
                     bind:value={name}
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 outline-none"
-                    placeholder="e.g. Work"
+                    class="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-1 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none text-xs"
+                    placeholder="例如：开发、写作、测试"
+                    onkeydown={(e) => e.key === "Enter" && handleSave()}
                 />
             </div>
             <div>
                 <label
-                    class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300"
-                    >Parent Tag</label
+                    for="tag-modal-parent"
+                    class="block text-xs font-semibold mb-1 text-slate-700 dark:text-slate-300"
                 >
+                    父级标签
+                </label>
                 <select
+                    id="tag-modal-parent"
                     bind:value={parentId}
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 outline-none"
+                    class="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-1 focus:ring-indigo-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none text-xs"
                 >
-                    <option value={null}>None (Top Level)</option>
+                    <option value={null}>无（顶级标签）</option>
                     {#each promptStore.tags as tag}
-                        <option value={tag.id}
-                            >{"--".repeat(tag.level)} {tag.name}</option
-                        >
+                        {#if !tagToEdit || tag.id !== tagToEdit.id}
+                            <option value={tag.id}>
+                                {"--".repeat(tag.level)} {tag.name}
+                            </option>
+                        {/if}
                     {/each}
                 </select>
             </div>
         </div>
 
         <div
-            class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3"
+            class="px-5 py-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2 bg-slate-50/40 dark:bg-slate-900/40"
         >
             <button
+                type="button"
                 onclick={onClose}
-                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                class="px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors"
             >
-                Cancel
+                取消
             </button>
             <button
+                type="button"
                 onclick={handleSave}
-                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-md transition-colors"
+                class="px-3.5 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 shadow-2xs text-xs font-semibold transition-colors"
             >
-                Save
+                保存
             </button>
         </div>
     </div>

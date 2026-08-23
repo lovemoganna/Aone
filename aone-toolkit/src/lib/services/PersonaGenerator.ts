@@ -30,7 +30,7 @@ JSON Schema:
 
 Rules:
 1. Output ONLY valid JSON. No markdown, no commentary.
-2. The "systemPrompt" should be high-quality and instruction-tuned.
+2. The "systemPrompt" should be high-quality, instruction-tuned, and mandate concise, direct, conclusion-first reasoning (AI 输出克制铁律).
 3. "rationality" + "creativity" + "empathy" should reflect the character.
 4. "suggestedColor" and "suggestedAvatar" must match the allowed list.
 `;

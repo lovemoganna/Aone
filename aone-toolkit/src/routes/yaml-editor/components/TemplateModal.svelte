@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Button, Input, Panel } from "$lib/components/ui";
+    import { Button, Input } from "$lib/components/ui";
 
     interface Props {
         open: boolean;
@@ -19,17 +19,22 @@
 
     let name = $state("");
     let content = $state("");
+    let error = $state("");
 
     $effect(() => {
         if (open) {
             name = initialName;
             content = initialContent;
+            error = "";
         }
     });
 
     function handleSave() {
-        if (!name.trim()) return alert("Name is required");
-        onSave(name, content);
+        if (!name.trim()) {
+            error = "模板名称是必填项。";
+            return;
+        }
+        onSave(name.trim(), content);
         onClose();
     }
 </script>
@@ -47,12 +52,12 @@
                 <h3
                     class="text-lg font-semibold text-slate-800 dark:text-slate-200"
                 >
-                    {initialName ? "Edit Template" : "New Template"}
+                    {initialName ? "编辑模板" : "新建模板"}
                 </h3>
                 <button
                     onclick={onClose}
                     class="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                    aria-label="Close"
+                    aria-label="关闭"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -75,21 +80,21 @@
                     <div
                         class="text-sm font-medium text-slate-700 dark:text-slate-300"
                     >
-                        Name
+                        模板名称
                     </div>
-                    <Input bind:value={name} placeholder="Template Name" />
+                    <Input bind:value={name} placeholder="输入模板名称..." />
                 </div>
 
                 <div class="space-y-1.5 flex flex-col h-64">
                     <div
                         class="text-sm font-medium text-slate-700 dark:text-slate-300"
                     >
-                        Content
+                        模板内容
                     </div>
                     <textarea
                         bind:value={content}
                         class="flex-1 w-full p-2 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        placeholder="YAML Content..."
+                        placeholder="YAML 内容..."
                     ></textarea>
                 </div>
             </div>
@@ -97,9 +102,18 @@
             <div
                 class="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2"
             >
-                <Button variant="ghost" onclick={onClose}>Cancel</Button>
-                <Button onclick={handleSave}>Save</Button>
+                <Button variant="ghost" onclick={onClose}>取消</Button>
+                <Button onclick={handleSave}>保存</Button>
             </div>
+
+            {#if error}
+                <div
+                    class="px-4 pb-4 text-sm text-red-600 dark:text-red-400"
+                    role="alert"
+                >
+                    {error}
+                </div>
+            {/if}
         </div>
     </div>
 {/if}

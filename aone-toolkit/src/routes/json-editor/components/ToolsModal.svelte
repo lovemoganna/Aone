@@ -9,14 +9,13 @@
     }
 
     let { isOpen, jsonData, onUpdate, onClose }: Props = $props();
+    let toolStatus = $state<{ text: string; type: "success" | "warning" | "error" } | null>(null);
 
-    // --- Logic ---
-
-    // 1. Recursive Sort Keys
     function sortKeys(obj: any): any {
         if (Array.isArray(obj)) {
             return obj.map(sortKeys);
-        } else if (obj !== null && typeof obj === "object") {
+        }
+        if (obj !== null && typeof obj === "object") {
             return Object.keys(obj)
                 .sort()
                 .reduce((acc: any, key) => {
@@ -27,17 +26,15 @@
         return obj;
     }
 
-    // 2. Clean Data (Remove null/undefined)
     function cleanData(obj: any): any {
         if (Array.isArray(obj)) {
-            return obj
-                .map(cleanData)
-                .filter((v) => v !== null && v !== undefined);
-        } else if (obj !== null && typeof obj === "object") {
+            return obj.map(cleanData).filter((value) => value !== null && value !== undefined);
+        }
+        if (obj !== null && typeof obj === "object") {
             return Object.keys(obj).reduce((acc: any, key) => {
-                const val = cleanData(obj[key]);
-                if (val !== null && val !== undefined) {
-                    acc[key] = val;
+                const value = cleanData(obj[key]);
+                if (value !== null && value !== undefined) {
+                    acc[key] = value;
                 }
                 return acc;
             }, {});
@@ -45,39 +42,41 @@
         return obj;
     }
 
-    // 3. CSV Export (Simple Flatten)
     function downloadCsv() {
-        if (!jsonData) return;
+        if (jsonData === null || jsonData === undefined) {
+            toolStatus = { text: "没有可导出的 JSON 数据。", type: "error" };
+            return;
+        }
 
-        let data = Array.isArray(jsonData) ? jsonData : [jsonData];
-        if (data.length === 0) return;
+        const data = Array.isArray(jsonData) ? jsonData : [jsonData];
+        if (data.length === 0) {
+            toolStatus = { text: "JSON 数组为空。", type: "error" };
+            return;
+        }
 
-        // Flatten first level logic or robust flatten?
-        // Let's do simple logic: Get all unique headers from all objects
         const headers = Array.from(
             new Set(
-                data.flatMap((row) =>
-                    row && typeof row === "object" ? Object.keys(row) : [],
-                ),
+                data.flatMap((row) => (row && typeof row === "object" ? Object.keys(row) : [])),
             ),
         );
 
+        if (headers.length === 0) {
+            toolStatus = { text: "CSV 导出需要顶层为包含键的对象。", type: "error" };
+            return;
+        }
+
         const csvRows = [
             headers.join(","),
-            ...data.map((row) => {
-                return headers
+            ...data.map((row) =>
+                headers
                     .map((header) => {
-                        const val = row[header];
-                        if (val === null || val === undefined) return "";
-                        const str =
-                            typeof val === "object"
-                                ? JSON.stringify(val)
-                                : String(val);
-                        // Escape quotes
+                        const value = row[header];
+                        if (value === null || value === undefined) return "";
+                        const str = typeof value === "object" ? JSON.stringify(value) : String(value);
                         return `"${str.replace(/"/g, '""')}"`;
                     })
-                    .join(",");
-            }),
+                    .join(","),
+            ),
         ];
 
         const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
@@ -87,103 +86,86 @@
         a.download = "export.csv";
         a.click();
         URL.revokeObjectURL(url);
-        onClose();
+        toolStatus = { text: "已成功下载 CSV 导出文件。", type: "success" };
     }
 
-    // 4. Escape/Unescape (Copy to Clipboard)
-    function copyEscaped() {
-        const str = JSON.stringify(jsonData);
-        // JSON.stringify already escapes quotes, but let's make it code-string ready (escape backslashes again?)
-        // Usually, users want the content of a string literal.
-        // Simple JSON.stringify is usually enough for "Paste into JSON string".
-        // But if pasting into Java/JS string `const x = "..."`, needs extra escaping of "
+    async function copyEscaped() {
+        if (jsonData === null || jsonData === undefined) {
+            toolStatus = { text: "没有可复制的 JSON 数据。", type: "error" };
+            return;
+        }
+
         const escaped = JSON.stringify(JSON.stringify(jsonData));
-        // Remove first and last quote added by the second stringify to get the inner content
         const content = escaped.slice(1, -1);
-        navigator.clipboard.writeText(content);
-        alert("Escaped JSON copied to clipboard!");
-        onClose();
+        try {
+            await navigator.clipboard.writeText(content);
+            toolStatus = { text: "已复制转义后的 JSON 字符串。", type: "success" };
+        } catch {
+            toolStatus = { text: "访问剪贴板失败。", type: "error" };
+        }
     }
 
     function handleUpdate(action: "sort" | "clean") {
-        let newData = jsonData;
-        if (action === "sort") newData = sortKeys(jsonData);
-        if (action === "clean") newData = cleanData(jsonData);
+        if (jsonData === null || jsonData === undefined) {
+            toolStatus = { text: "没有可更新的 JSON 数据。", type: "error" };
+            return;
+        }
+
+        const newData = action === "sort" ? sortKeys(jsonData) : cleanData(jsonData);
         onUpdate(newData);
+        toolStatus = {
+            text: action === "sort" ? "已递归排序所有键名。" : "已成功移除所有 null 和 undefined 值。",
+            type: "success",
+        };
         onClose();
     }
 </script>
 
 {#if isOpen}
-    <div
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-    >
-        <div
-            class="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-md"
-        >
-            <div
-                class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between"
-            >
-                <h3
-                    class="text-lg font-semibold text-slate-900 dark:text-white"
-                >
-                    JSON Tools
-                </h3>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-md">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-white">JSON 实用工具</h3>
                 <button
                     onclick={onClose}
                     class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    aria-label="关闭 JSON 实用工具"
+                    title="关闭"
                 >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        class="lucide lucide-x"
-                        ><path d="M18 6 6 18" /><path d="m6 6 18 18" /></svg
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 6 6 18" /><path d="m6 6 18 18" />
+                    </svg>
                 </button>
             </div>
 
             <div class="p-4 grid grid-cols-1 gap-3">
-                <h4 class="text-xs font-semibold text-slate-500 uppercase mt-1">
-                    Structure
-                </h4>
-                <Button
-                    variant="secondary"
-                    onclick={() => handleUpdate("sort")}
-                    class="justify-start"
-                >
-                    <span class="mr-2">🔤</span> Sort Keys (Recursive)
+                {#if toolStatus}
+                    <div
+                        class="rounded-md px-3 py-2 text-sm {toolStatus.type === 'error'
+                            ? 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300'
+                            : toolStatus.type === 'warning'
+                              ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300'
+                              : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300'}"
+                        role={toolStatus.type === "error" ? "alert" : "status"}
+                    >
+                        {toolStatus.text}
+                    </div>
+                {/if}
+
+                <h4 class="text-xs font-semibold text-slate-500 uppercase mt-1">数据结构</h4>
+                <Button variant="secondary" onclick={() => handleUpdate("sort")} class="justify-start">
+                    <span class="mr-2">A-Z</span> 键名排序 (递归)
                 </Button>
-                <Button
-                    variant="secondary"
-                    onclick={() => handleUpdate("clean")}
-                    class="justify-start"
-                >
-                    <span class="mr-2">🧹</span> Clean Data (Remove Nulls)
+                <Button variant="secondary" onclick={() => handleUpdate("clean")} class="justify-start">
+                    <span class="mr-2">--</span> 数据清洗 (移除空值)
                 </Button>
 
-                <h4 class="text-xs font-semibold text-slate-500 uppercase mt-2">
-                    Export / Util
-                </h4>
-                <Button
-                    variant="secondary"
-                    onclick={downloadCsv}
-                    class="justify-start"
-                >
-                    <span class="mr-2">📊</span> Download as CSV
+                <h4 class="text-xs font-semibold text-slate-500 uppercase mt-2">数据导出 / 实用功能</h4>
+                <Button variant="secondary" onclick={downloadCsv} class="justify-start">
+                    <span class="mr-2">CSV</span> 下载为 CSV
                 </Button>
-                <Button
-                    variant="secondary"
-                    onclick={copyEscaped}
-                    class="justify-start"
-                >
-                    <span class="mr-2">📋</span> Copy Escaped String
+                <Button variant="secondary" onclick={copyEscaped} class="justify-start">
+                    <span class="mr-2">\"</span> 复制转义字符串
                 </Button>
             </div>
         </div>

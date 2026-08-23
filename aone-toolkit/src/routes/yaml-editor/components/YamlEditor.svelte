@@ -2,6 +2,7 @@
     import { onMount, tick } from "svelte";
     import * as jsyaml from "js-yaml";
     import { Panel } from "$lib/components/ui";
+    import { toastStore } from "$lib/stores/toastStore.svelte";
     import EditorPane from "./EditorPane.svelte";
     import YamlPreview from "./YamlPreview.svelte";
     import Toolbar from "./Toolbar.svelte";
@@ -48,6 +49,9 @@
     // Hidden file input
     let fileInput: HTMLInputElement;
 
+    import { dataBridge } from "$lib/stores/dataBridge";
+    import { safeYamlParse } from "$lib/utils/parsers/safeParser";
+
     onMount(() => {
         // Dark mode detection
         if (
@@ -62,17 +66,33 @@
                 isDark = event.matches;
             });
 
-        // Load from local storage
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
+        // Check dataBridge handoff
+        const handoff = dataBridge.consume("/yaml-editor");
+        if (handoff && handoff.payload) {
             try {
-                data = JSON.parse(saved);
+                if (handoff.dataType === "json") {
+                    data = JSON.parse(handoff.payload);
+                } else {
+                    const res = safeYamlParse(handoff.payload);
+                    if (res.ok) data = res.data;
+                }
             } catch (e) {
-                console.error("Failed to load state", e);
+                console.error("Failed to parse handoff data", e);
+            }
+        } else {
+            // Load from local storage
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    data = JSON.parse(saved);
+                } catch (e) {
+                    console.error("Failed to load state", e);
+                }
             }
         }
         updateYamlString();
     });
+
 
     // Snapshot for history
     function snapshot() {
@@ -192,10 +212,7 @@
             }
         } catch (e) {
             console.error("Failed to parse YAML from code view", e);
-            // Alert user?
-            alert("Cannot switch to visual view: Invalid YAML");
-            // Prevent switch? We can't prevent easily here as it's called after.
-            // Better to check before switching.
+            toastStore.error("无法切换到可视化视图：YAML 格式无效");
         }
     }
 
@@ -209,14 +226,12 @@
                     data = {};
                 } else if (typeof parsed !== "object" || parsed === null) {
                     // primitives are valid yaml but our tree expects object/array
-                    // allow it? Our tree might break.
-                    // Assuming object/array for now.
                 } else {
                     pushHistory();
                     data = processArrays(parsed);
                 }
             } catch (e) {
-                alert("Fix YAML errors before switching to Visual Mode.");
+                toastStore.error("切换到可视化模式前请先修复 YAML 语法错误");
                 return;
             }
         } else if (mode === "code" && viewMode === "visual") {
@@ -435,13 +450,17 @@
 
         const isArrayParent = Array.isArray(parent);
 
-        if (!isArrayParent && !newKey.trim()) return alert("Key is required");
+        if (!isArrayParent && !newKey.trim()) {
+            toastStore.warning("键名不能为空");
+            return;
+        }
         if (
             !isArrayParent &&
             (!isEditing || newKey !== modalKey) &&
             newKey in parent
         ) {
-            return alert("Key already exists");
+            toastStore.warning("键名已存在");
+            return;
         }
 
         let finalValue = newValue;
@@ -520,13 +539,13 @@
 
     function handleCopy() {
         navigator.clipboard.writeText(yamlString);
-        alert("Copied YAML to clipboard!");
+        toastStore.success("已复制 YAML 到剪贴板");
     }
 
     function handleCopyJSON() {
         const jsonStr = JSON.stringify(data, null, 2);
         navigator.clipboard.writeText(jsonStr);
-        alert("Copied JSON to clipboard!");
+        toastStore.success("已复制 JSON 到剪贴板");
     }
 
     function handleImport() {
@@ -545,8 +564,9 @@
             data = processArrays(parsed) || {};
             updateYamlString();
             batchModalOpen = false;
+            toastStore.success("批量导入成功");
         } catch (err) {
-            alert("YAML Parse Error: " + err);
+            toastStore.error("YAML 解析错误: " + err);
         }
     }
 
@@ -564,8 +584,9 @@
                 pushHistory();
                 data = processArrays(parsed) || {};
                 updateYamlString();
+                toastStore.success("文件导入成功");
             } catch (err) {
-                alert("Invalid YAML file");
+                toastStore.error("无效的 YAML 文件");
             }
         };
         reader.readAsText(file);
@@ -588,8 +609,9 @@
             if (viewMode === "visual") {
                 data = processArrays(parsed) || {};
             }
+            toastStore.success("格式化完成");
         } catch (err) {
-            alert("Cannot format: Invalid YAML. " + err);
+            toastStore.error("无法格式化：YAML 语法错误 " + err);
         }
     }
 
@@ -669,7 +691,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="h-[calc(100vh-2rem)] flex flex-col pt-2 max-w-[1600px] mx-auto">
+<div class="h-full flex flex-col pt-2 max-w-[1600px] mx-auto">
     <!-- View Switcher Tabs -->
     <div
         class="flex items-center space-x-1 border-b border-slate-200 dark:border-slate-800 mb-0 px-2"

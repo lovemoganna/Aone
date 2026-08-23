@@ -1,6 +1,7 @@
 <script lang="ts">
     import { diagramStore } from "../../lib/store.svelte";
-    import { X, Type, Minus, Plus, Monitor } from "lucide-svelte";
+    import { pingPlantUMLServer } from "../../lib/plantuml";
+    import { X, Minus, Plus, Monitor, Activity, CheckCircle2, AlertCircle, Loader2 } from "lucide-svelte";
 
     let { isOpen = $bindable(false), onClose } = $props<{
         isOpen: boolean;
@@ -14,6 +15,9 @@
         { name: "Consolas", value: "Consolas, monospace" },
     ];
 
+    let isTestingServer = $state(false);
+    let pingResult = $state<{ ok: boolean; latencyMs: number; error?: string } | null>(null);
+
     function increaseFont() {
         if (diagramStore.fontSize < 32) diagramStore.fontSize++;
     }
@@ -21,122 +25,174 @@
     function decreaseFont() {
         if (diagramStore.fontSize > 8) diagramStore.fontSize--;
     }
+
+    async function testServerConnection() {
+        isTestingServer = true;
+        pingResult = null;
+        try {
+            const res = await pingPlantUMLServer(diagramStore.plantumlServerUrl);
+            pingResult = res;
+        } catch (e: any) {
+            pingResult = { ok: false, latencyMs: 0, error: e?.message || 'Connection failed' };
+        } finally {
+            isTestingServer = false;
+        }
+    }
 </script>
 
 {#if isOpen}
     <div
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
         onclick={onClose}
+        onkeydown={(event) => {
+            if (event.key === "Escape") {
+                onClose();
+            }
+        }}
+        role="button"
+        tabindex="0"
+        aria-label="Close editor settings"
     >
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
         <div
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden"
+            class="bg-white dark:bg-[#0b0f17] border border-slate-200 dark:border-slate-800 rounded-lg shadow-2xl w-full max-w-md overflow-hidden"
             onclick={(e) => e.stopPropagation()}
+            onkeydown={(e) => e.stopPropagation()}
+            role="document"
+            tabindex="-1"
         >
             <!-- Header -->
             <div
-                class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700"
+                class="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40"
             >
                 <h3
-                    class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+                    class="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2"
                 >
-                    <Monitor size={20} class="text-indigo-500" />
-                    Editor Settings
+                    <Monitor size={15} class="text-slate-700 dark:text-slate-300" />
+                    Editor & Engine Settings
                 </h3>
                 <button
-                    class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                    class="p-1 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                     onclick={onClose}
+                    title="Close editor settings"
+                    aria-label="Close editor settings"
                 >
-                    <X size={20} />
+                    <X size={15} />
                 </button>
             </div>
 
             <!-- Body -->
-            <div class="p-6 space-y-6">
+            <div class="p-4 space-y-4">
                 <!-- Font Size -->
                 <div>
-                    <label
-                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
-                        >Font Size</label
+                    <span
+                        class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5"
                     >
-                    <div class="flex items-center gap-4">
+                        Font Size
+                    </span>
+                    <div class="flex items-center gap-2">
                         <button
-                            class="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                            class="p-1.5 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
                             onclick={decreaseFont}
+                            title="Decrease font size"
                         >
-                            <Minus size={18} />
+                            <Minus size={14} />
                         </button>
-                        <span class="text-xl font-mono w-12 text-center"
+                        <span class="text-sm font-mono w-12 text-center font-bold text-slate-800 dark:text-slate-200"
                             >{diagramStore.fontSize}px</span
                         >
                         <button
-                            class="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                            class="p-1.5 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
                             onclick={increaseFont}
+                            title="Increase font size"
                         >
-                            <Plus size={18} />
+                            <Plus size={14} />
                         </button>
                     </div>
                 </div>
 
                 <!-- Font Family -->
                 <div>
-                    <label
-                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
-                        >Font Family</label
+                    <span
+                        class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5"
                     >
-                    <div class="space-y-2">
+                        Font Family
+                    </span>
+                    <div class="grid grid-cols-2 gap-1.5">
                         {#each FONTS as font}
                             <button
-                                class="w-full text-left px-3 py-2 rounded-lg border transition-all flex items-center justify-between {diagramStore.fontFamily ===
+                                class="w-full text-left px-2.5 py-1.5 rounded border text-xs transition-colors flex items-center justify-between {diagramStore.fontFamily ===
                                 font.value
-                                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'}"
+                                    ? 'border-slate-900 dark:border-slate-100 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-semibold shadow-xs'
+                                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-300 hover:border-slate-400'}"
                                 onclick={() =>
                                     (diagramStore.fontFamily = font.value)}
                             >
                                 <span style="font-family: {font.value}"
                                     >{font.name}</span
                                 >
-                                {#if diagramStore.fontFamily === font.value}
-                                    <div
-                                        class="w-2 h-2 rounded-full bg-indigo-500"
-                                    ></div>
-                                {/if}
                             </button>
                         {/each}
                     </div>
                 </div>
 
-                <!-- PlantUML Server -->
-                <div>
+                <!-- PlantUML Server & Ping -->
+                <div class="pt-3 border-t border-slate-200 dark:border-slate-800">
                     <label
-                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
-                        >PlantUML Server URL</label
+                        for="diagram-plantuml-server"
+                        class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5"
                     >
-                    <input
-                        type="text"
-                        bind:value={diagramStore.plantumlServerUrl}
-                        placeholder="https://www.plantuml.com/plantuml"
-                        class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 outline-none"
-                    />
-                    <p class="mt-1 text-xs text-gray-500">
-                        Use a custom server or invalid proxy if you have privacy
-                        concerns.
-                    </p>
+                        PlantUML Server Endpoint
+                    </label>
+                    <div class="flex gap-2">
+                        <input
+                            id="diagram-plantuml-server"
+                            type="text"
+                            bind:value={diagramStore.plantumlServerUrl}
+                            placeholder="https://www.plantuml.com/plantuml"
+                            class="flex-1 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-slate-100 outline-none"
+                        />
+                        <button
+                            class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 transition-colors shrink-0"
+                            onclick={testServerConnection}
+                            disabled={isTestingServer}
+                        >
+                            {#if isTestingServer}
+                                <Loader2 size={13} class="animate-spin text-slate-500" />
+                                <span>Testing...</span>
+                            {:else}
+                                <Activity size={13} class="text-slate-500" />
+                                <span>Ping</span>
+                            {/if}
+                        </button>
+                    </div>
+
+                    {#if pingResult}
+                        <div class="mt-2 p-2 rounded text-xs flex items-center gap-2 {pingResult.ok ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60' : 'bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60'}">
+                            {#if pingResult.ok}
+                                <CheckCircle2 size={14} />
+                                <span>Server reachable! Latency: <strong>{pingResult.latencyMs}ms</strong></span>
+                            {:else}
+                                <AlertCircle size={14} />
+                                <span>Unreachable ({pingResult.error})</span>
+                            {/if}
+                        </div>
+                    {/if}
                 </div>
             </div>
 
             <!-- Footer -->
             <div
-                class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-end"
+                class="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex justify-end"
             >
                 <button
-                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
+                    class="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded text-xs font-semibold transition-colors shadow-xs"
                     onclick={() => {
                         diagramStore.saveState();
                         onClose();
                     }}
                 >
-                    Done
+                    Save & Close
                 </button>
             </div>
         </div>

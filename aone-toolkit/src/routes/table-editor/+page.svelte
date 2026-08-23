@@ -1,816 +1,755 @@
 <script lang="ts">
-    import FileDropZone from "./components/FileDropZone.svelte";
-    import TextInputPane from "./components/TextInputPane.svelte";
-    import TablePreview from "./components/TablePreview.svelte";
-    import FormatConverter from "./components/FormatConverter.svelte";
-    import OutputPane from "./components/OutputPane.svelte";
-    import FullscreenPreview from "./components/FullscreenPreview.svelte";
-    import { Button } from "$lib/components/ui";
+  import { onMount } from "svelte";
+  import FileDropZone from "./components/FileDropZone.svelte";
+  import TextInputPane from "./components/TextInputPane.svelte";
+  import FormatConverter from "./components/FormatConverter.svelte";
+  import OutputPane from "./components/OutputPane.svelte";
+  import TablePreview from "./components/TablePreview.svelte";
+  import FullscreenPreview from "./components/FullscreenPreview.svelte";
+  import Button from "$lib/components/ui/Button.svelte";
+  import { dataBridge } from "$lib/stores/dataBridge";
+  import HandoffDropdown from "$lib/components/ui/HandoffDropdown.svelte";
+  import { FORMAT_CONFIG, type TableData, type InputFormat, type OutputFormat, type StatusInfo } from "./lib/types";
+  import { autoDetectAndParse, parseByFormat } from "./lib/parsers";
+  import { toMarkdown, toCSV, toHTML, toOrgMode, toObjectJSON } from "./lib/converters";
+  import { toExcelBlob } from "./lib/excel";
+  import { generateSQL, type SQLDialect } from "./lib/sql";
+  import ExportDropdown from "./components/ExportDropdown.svelte";
+  import { Download, FileSpreadsheet, FileCode, FileText, Database } from "lucide-svelte";
 
-    import type {
-        TableData,
-        InputFormat,
-        OutputFormat,
-        StatusInfo,
-    } from "./lib/types";
-    import { FORMAT_CONFIG } from "./lib/types";
-    import { autoDetectAndParse, parseByFormat } from "./lib/parsers";
-    import { toMarkdown, toCSV, toHTML, toOrgMode } from "./lib/converters";
-    import { toExcelBlob } from "./lib/excel";
-    import { generateSQL, type SQLDialect } from "./lib/sql";
+  let inputValue = $state("");
+  let inputFormat = $state<InputFormat>("auto");
+  let tableData = $state<TableData>([]);
+  let currentOutput = $state("");
+  let currentFormat = $state<OutputFormat | null>(null);
+  let activeRightTab = $state<"all" | "preview" | "converter" | "output">("all");
+  let status = $state<StatusInfo>({
+    text: "就绪。粘贴表格、上传文件或加载 SQL 模板开始。",
+    type: "success",
+  });
+  let isProcessing = $state(false);
+  let tableName = $state("data_table");
+  let showDBModal = $state(false);
+  let showFullscreen = $state(false);
+  let selectedSQLDialect = $state<SQLDialect>("mysql");
+  let history = $state<TableData[]>([]);
+  let historyIndex = $state(-1);
 
-    // State
-    let inputValue = $state("");
-    let inputFormat = $state<InputFormat>("auto");
-    let tableData = $state<TableData>([]);
-    let currentOutput = $state("");
-    let currentFormat = $state<OutputFormat | null>(null);
-    let isProcessing = $state(false);
-    let fullscreenOpen = $state(false);
-    let shortcutsOpen = $state(false);
+  const outputFormats: OutputFormat[] = ["markdown", "csv", "json", "excel", "html", "orgmode", "sql-mysql", "sql-pg", "sql-duckdb"];
 
-    // DB Designer State
-    let tableName = $state("abnormal_spot_events");
+  const hasTable = $derived(tableData.length > 0);
+  const hasOutput = $derived(currentOutput.trim().length > 0);
+  const canUndo = $derived(historyIndex > 0);
+  const canRedo = $derived(historyIndex < history.length - 1);
+  const convertDisabledReason = $derived(
+    isProcessing
+      ? "解析仍在运行中。表格就绪后将解锁转换功能。"
+      : "请在选择输出格式前先解析表格。",
+  );
 
-    // History for undo
-    let history = $state<{ input: string; data: TableData }[]>([]);
-    let historyIndex = $state(-1);
+  onMount(() => {
+    const handoff = dataBridge.consume("/table-editor");
+    if (handoff && handoff.payload) {
+      inputValue = handoff.payload;
+      inputFormat = "auto";
+      void handleParse();
+      updateStatus(`已从 ${handoff.sourceTool} 载入表格数据并自动解析。`, "success");
+    }
+  });
 
-    // Status
-    let status = $state<StatusInfo>({ text: "就绪", type: "success" });
 
-    // Derived
-    let hasTable = $derived(tableData.length > 0);
-    let hasOutput = $derived(currentOutput.length > 0);
-    let canUndo = $derived(historyIndex > 0);
-    let canRedo = $derived(historyIndex < history.length - 1);
+  function updateStatus(text: string, type: StatusInfo["type"] = "success") {
+    status = { text, type };
+  }
 
-    // Actions
-    function handleFileLoad(content: string, filename: string) {
-        inputValue = content;
-        handleParse();
+  function cleanTableName() {
+    return (tableName.trim() || "data_table").replace(/[^a-zA-Z0-9_-]/g, "_");
+  }
+
+  function sqlDialectForFormat(format: OutputFormat): SQLDialect {
+    if (format === "sql-pg") return "postgresql";
+    if (format === "sql-duckdb") return "duckdb";
+    return "mysql";
+  }
+
+  function normalizeParsedTable(data: TableData): TableData {
+    const rows = data
+      .map((row) => row.map((cell) => String(cell ?? "").trim()))
+      .filter((row) => row.some(Boolean));
+
+    if (rows.length === 0) return [];
+
+    const width = Math.max(...rows.map((row) => row.length));
+    return rows.map((row) => [...row, ...Array(Math.max(0, width - row.length)).fill("")]);
+  }
+
+  function describeTable(data: TableData) {
+    const bodyRows = Math.max(0, data.length - 1);
+    const columns = data[0]?.length ?? 0;
+    return `${bodyRows} 行数据和 ${columns} 列`;
+  }
+
+  function saveHistory() {
+    if (tableData.length === 0) return;
+
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(JSON.parse(JSON.stringify(tableData)));
+    history = newHistory.slice(-50);
+    historyIndex = history.length - 1;
+  }
+
+  function setParsedTable(data: TableData, sourceLabel: string) {
+    const normalized = normalizeParsedTable(data);
+
+    if (normalized.length === 0) {
+      tableData = [];
+      currentOutput = "";
+      currentFormat = null;
+      updateStatus("未找到表格行。请添加标题行和至少一行数据，然后重新解析。", "error");
+      return false;
     }
 
-    function handleParse() {
-        if (!inputValue.trim()) {
-            updateStatus("请输入表格数据或上传文件", "error");
-            return;
+    tableData = normalized;
+    currentOutput = "";
+    currentFormat = null;
+    saveHistory();
+    updateStatus(`已从 ${sourceLabel} 解析 ${describeTable(normalized)}。`, "success");
+    return true;
+  }
+
+  async function handleFileLoad(content: string, filename: string) {
+    inputValue = content;
+    updateStatus(`已加载 ${filename}。正在解析表格...`, "warning");
+    await handleParse();
+  }
+
+  async function handleParse() {
+    if (!inputValue.trim()) {
+      tableData = [];
+      currentOutput = "";
+      currentFormat = null;
+      updateStatus("没有要解析的输入。请先粘贴表格数据或上传文件。", "error");
+      return;
+    }
+
+    isProcessing = true;
+    try {
+      const parsed = inputFormat === "auto" ? autoDetectAndParse(inputValue) : { data: parseByFormat(inputValue, inputFormat), detectedFormat: inputFormat };
+      const sourceLabel = inputFormat === "auto" ? `自动识别的 ${parsed.detectedFormat.toUpperCase()} 格式` : inputFormat.toUpperCase();
+      setParsedTable(parsed.data, sourceLabel);
+    } catch (error) {
+      tableData = [];
+      currentOutput = "";
+      currentFormat = null;
+      updateStatus(error instanceof Error ? error.message : "解析失败。请检查输入格式并重试。", "error");
+    } finally {
+      isProcessing = false;
+    }
+  }
+
+  async function handleConvert(format: OutputFormat) {
+    if (!hasTable) {
+      updateStatus("请在转换前先解析表格。", "error");
+      return;
+    }
+
+    isProcessing = true;
+    currentFormat = format;
+
+    try {
+      switch (format) {
+        case "markdown":
+          currentOutput = toMarkdown(tableData);
+          break;
+        case "csv":
+          currentOutput = toCSV(tableData);
+          break;
+        case "html":
+          currentOutput = toHTML(tableData);
+          break;
+        case "orgmode":
+          currentOutput = toOrgMode(tableData);
+          break;
+        case "json":
+          currentOutput = toObjectJSON(tableData);
+          break;
+        case "sql-mysql":
+        case "sql-pg":
+        case "sql-duckdb":
+          currentOutput = generateSQL(tableData, sqlDialectForFormat(format), cleanTableName());
+          break;
+        case "excel":
+          currentOutput = "";
+          await handleDownloadExcel();
+          return;
+      }
+
+      updateStatus(`已成功转换为 ${FORMAT_CONFIG[format].label}。`, "success");
+    } catch (error) {
+      currentOutput = "";
+      updateStatus(error instanceof Error ? error.message : `无法转换为 ${FORMAT_CONFIG[format].label}。`, "error");
+    } finally {
+      isProcessing = false;
+    }
+  }
+
+  async function handleCopy() {
+    if (!hasOutput) {
+      updateStatus("尚无转换后的输出可供复制。", "error");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(currentOutput);
+      updateStatus("已将转换后的输出复制到剪贴板。", "success");
+    } catch {
+      updateStatus("访问剪贴板失败。请选择输出文本并手动复制。", "error");
+    }
+  }
+
+  function handleDownload() {
+    if (!hasOutput || !currentFormat) {
+      updateStatus("请在下载文本输出前先转换表格。", "error");
+      return;
+    }
+
+    const config = FORMAT_CONFIG[currentFormat];
+    const blob = new Blob([currentOutput], { type: config.mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${cleanTableName()}${config.ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    updateStatus(`已成功下载 ${config.label} 输出文件 (${cleanTableName()}${config.ext})。`, "success");
+  }
+
+  async function handleDownloadExcel() {
+    if (!hasTable) {
+      updateStatus("请在下载 Excel 文件前先解析表格。", "error");
+      return;
+    }
+
+    try {
+      const blob = await toExcelBlob(tableData, cleanTableName());
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${cleanTableName()}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      currentFormat = "excel";
+      updateStatus(`已成功下载 Excel 工作簿 (${cleanTableName()}.xlsx)。`, "success");
+    } catch (error) {
+      updateStatus(error instanceof Error ? error.message : "无法创建 Excel 工作簿。", "error");
+    }
+  }
+
+  async function downloadAsFormat(format: OutputFormat) {
+    if (!hasTable) {
+      updateStatus("请在下载前先解析表格。", "error");
+      return;
+    }
+
+    if (format === "excel") {
+      await handleDownloadExcel();
+      return;
+    }
+
+    try {
+      let outputText = "";
+      switch (format) {
+        case "markdown":
+          outputText = toMarkdown(tableData);
+          break;
+        case "csv":
+          outputText = toCSV(tableData);
+          break;
+        case "html":
+          outputText = toHTML(tableData);
+          break;
+        case "orgmode":
+          outputText = toOrgMode(tableData);
+          break;
+        case "json":
+          outputText = toObjectJSON(tableData);
+          break;
+        case "sql-mysql":
+        case "sql-pg":
+        case "sql-duckdb":
+          outputText = generateSQL(tableData, sqlDialectForFormat(format), cleanTableName());
+          break;
+      }
+
+      const config = FORMAT_CONFIG[format];
+      const blob = new Blob([outputText], { type: config.mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${cleanTableName()}${config.ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      updateStatus(`已成功下载 ${config.label} 文件 (${cleanTableName()}${config.ext})。`, "success");
+    } catch (error) {
+      updateStatus(error instanceof Error ? error.message : `下载 ${FORMAT_CONFIG[format].label} 失败。`, "error");
+    }
+  }
+
+  function handleDataChange(newData: TableData) {
+    const normalized = normalizeParsedTable(newData);
+    if (normalized.length === 0) {
+      tableData = [];
+      currentOutput = "";
+      currentFormat = null;
+      updateStatus("可编辑表格目前为空。", "warning");
+      return;
+    }
+
+    saveHistory();
+    tableData = normalized;
+    if (currentFormat && currentFormat !== "excel") {
+      handleConvert(currentFormat);
+    } else {
+      currentOutput = "";
+    }
+    updateStatus(`已将表格更新为 ${describeTable(normalized)}。`, "success");
+  }
+
+  function undo() {
+    if (!canUndo) return;
+    historyIndex--;
+    tableData = JSON.parse(JSON.stringify(history[historyIndex]));
+    currentOutput = "";
+    updateStatus("已撤销上一次表格编辑。", "success");
+  }
+
+  function handleRedo() {
+    if (!canRedo) return;
+    historyIndex++;
+    tableData = JSON.parse(JSON.stringify(history[historyIndex]));
+    currentOutput = "";
+    updateStatus("已重做表格编辑。", "success");
+  }
+
+  function handleDBTemplate() {
+    const templates: Record<SQLDialect, string> = {
+      mysql: `CREATE TABLE users (\n  id INT PRIMARY KEY AUTO_INCREMENT,\n  name VARCHAR(100) NOT NULL,\n  email VARCHAR(255) UNIQUE,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);`,
+      postgresql: `CREATE TABLE products (\n  id SERIAL PRIMARY KEY,\n  name VARCHAR(200) NOT NULL,\n  price DECIMAL(10,2),\n  category VARCHAR(50),\n  in_stock BOOLEAN DEFAULT true\n);`,
+      duckdb: `CREATE TABLE orders (\n  id INTEGER PRIMARY KEY,\n  customer_name VARCHAR NOT NULL,\n  product VARCHAR,\n  quantity INTEGER,\n  order_date DATE\n);`,
+      sqlite: `CREATE TABLE orders (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  customer_name TEXT NOT NULL,\n  product TEXT,\n  quantity INTEGER,\n  order_date TEXT\n);`,
+    };
+
+    inputValue = templates[selectedSQLDialect];
+    inputFormat = "auto";
+    showDBModal = false;
+    updateStatus(`已加载 ${selectedSQLDialect.toUpperCase()} SQL 模板。`, "success");
+    handleParse();
+  }
+
+  function handleBatchLoad(files: { content: string; filename: string }[]) {
+    if (files.length === 0) {
+      updateStatus("未选择任何文件。", "error");
+      return;
+    }
+
+    if (files.length === 1) {
+      handleFileLoad(files[0].content, files[0].filename);
+      return;
+    }
+
+    try {
+      const parsedTables = files.map((file) => ({ file, parsed: autoDetectAndParse(file.content) }));
+      const firstTable = normalizeParsedTable(parsedTables[0].parsed.data);
+
+      if (firstTable.length === 0) {
+        updateStatus(`第一个文件 ${parsedTables[0].file.filename} 未包含有效表格。`, "error");
+        return;
+      }
+
+      const headers = firstTable[0];
+      const mergedData: TableData = [headers, ...firstTable.slice(1)];
+      const skipped: string[] = [];
+
+      for (let i = 1; i < parsedTables.length; i++) {
+        const normalized = normalizeParsedTable(parsedTables[i].parsed.data);
+        const rowHeaders = normalized[0] ?? [];
+        const sameHeader = headers.length === rowHeaders.length && headers.every((h, index) => h === rowHeaders[index]);
+
+        if (!sameHeader) {
+          skipped.push(parsedTables[i].file.filename);
+          continue;
         }
 
-        isProcessing = true;
-        updateStatus("解析中...", "warning");
+        mergedData.push(...normalized.slice(1));
+      }
 
-        try {
-            // Save to history
-            saveHistory();
+      inputValue = toCSV(mergedData);
+      inputFormat = "csv";
+      tableData = mergedData;
+      currentOutput = "";
+      currentFormat = null;
+      saveHistory();
 
-            // Parse based on format
-            let result: TableData;
-            if (inputFormat === "auto") {
-                const parseResult = autoDetectAndParse(inputValue);
-                result = parseResult.data;
-            } else {
-                result = parseByFormat(inputValue, inputFormat);
-            }
+      const skippedSuffix = skipped.length ? ` 已跳过 ${skipped.length} 个表头不同的文件: ${skipped.join(", ")}。` : "";
+      updateStatus(`已将 ${files.length - skipped.length} 个文件合并为 ${describeTable(mergedData)}。${skippedSuffix}`, skipped.length ? "warning" : "success");
+    } catch (error) {
+      updateStatus(error instanceof Error ? error.message : "批量导入失败。", "error");
+    }
+  }
 
-            if (result.length === 0) {
-                throw new Error("未能解析出有效的表格数据");
-            }
-
-            tableData = result;
-            currentOutput = "";
-            currentFormat = null;
-            updateStatus("解析成功", "success");
-        } catch (e) {
-            updateStatus(
-                `解析失败: ${e instanceof Error ? e.message : "未知错误"}`,
-                "error",
-            );
-        } finally {
-            isProcessing = false;
-        }
+  function handleDeduplicate() {
+    if (!hasTable) {
+      updateStatus("请在移除重复行前先解析表格。", "error");
+      return;
     }
 
-    function handleConvert(format: OutputFormat) {
-        if (tableData.length === 0) return;
+    saveHistory();
+    const seen = new Set<string>();
+    const header = tableData[0];
+    const uniqueRows = tableData.slice(1).filter((row) => {
+      const key = JSON.stringify(row);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
-        try {
-            let output = "";
-            switch (format) {
-                case "markdown":
-                    output = toMarkdown(tableData);
-                    break;
-                case "csv":
-                    output = toCSV(tableData);
-                    break;
-                case "html":
-                    output = toHTML(tableData);
-                    break;
-                case "orgmode":
-                    output = toOrgMode(tableData);
-                    break;
-                case "excel":
-                    // Excel is handled differently (direct download)
-                    handleDownloadExcel();
-                    return;
-                case "sql-mysql":
-                    output = generateSQL(tableData, "mysql", tableName);
-                    break;
-                case "sql-pg":
-                    output = generateSQL(tableData, "postgresql", tableName);
-                    break;
-                case "sql-duckdb":
-                    output = generateSQL(tableData, "duckdb", tableName);
-                    break;
-            }
+    const removed = tableData.length - 1 - uniqueRows.length;
+    tableData = [header, ...uniqueRows];
+    currentOutput = "";
+    updateStatus(`已成功移除 ${removed} 行重复数据。`, removed > 0 ? "success" : "warning");
+  }
 
-            currentOutput = output;
-            currentFormat = format;
-            updateStatus(`已转换为 ${FORMAT_CONFIG[format].label}`, "success");
-        } catch (e) {
-            updateStatus(
-                `转换失败: ${e instanceof Error ? e.message : "未知错误"}`,
-                "error",
-            );
-        }
+  function handleKeyDown(event: KeyboardEvent) {
+    if (event.ctrlKey || event.metaKey) {
+      switch (event.key) {
+        case "z":
+          event.preventDefault();
+          undo();
+          break;
+        case "y":
+          event.preventDefault();
+          handleRedo();
+          break;
+        case "s":
+          event.preventDefault();
+          handleDownload();
+          break;
+      }
     }
-
-    function handleCopy() {
-        if (!currentOutput) return;
-        navigator.clipboard
-            .writeText(currentOutput)
-            .then(() => {
-                updateStatus("已复制到剪贴板", "success");
-            })
-            .catch(() => {
-                updateStatus("复制失败", "error");
-            });
-    }
-
-    function handleDownload() {
-        if (!currentOutput || !currentFormat) return;
-
-        const config = FORMAT_CONFIG[currentFormat];
-        const blob = new Blob([currentOutput], { type: config.mime });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `table${config.ext}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        updateStatus(`已下载 table${config.ext}`, "success");
-    }
-
-    function handleDownloadExcel() {
-        try {
-            const blob = toExcelBlob(tableData);
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "table.xlsx";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            currentFormat = "excel";
-            updateStatus("已下载 table.xlsx", "success");
-        } catch (e) {
-            updateStatus(
-                `Excel导出失败: ${e instanceof Error ? e.message : "未知错误"}`,
-                "error",
-            );
-        }
-    }
-
-    function saveHistory() {
-        history = [
-            ...history.slice(0, historyIndex + 1),
-            { input: inputValue, data: [...tableData] },
-        ];
-        historyIndex = history.length - 1;
-    }
-
-    function handleUndo() {
-        if (historyIndex > 0) {
-            historyIndex--;
-            const prev = history[historyIndex];
-            inputValue = prev.input;
-            tableData = prev.data;
-            currentOutput = "";
-            currentFormat = null;
-            updateStatus("已撤销", "success");
-        }
-    }
-
-    function handleDataChange(newData: TableData) {
-        saveHistory();
-        tableData = newData;
-        currentOutput = "";
-        currentFormat = null;
-        updateStatus("表格已更新", "success");
-    }
-
-    function handleRedo() {
-        if (historyIndex < history.length - 1) {
-            historyIndex++;
-            const next = history[historyIndex];
-            inputValue = next.input;
-            tableData = next.data;
-            currentOutput = "";
-            currentFormat = null;
-            updateStatus("已重做", "success");
-        }
-    }
-
-    function handleDBTemplate() {
-        saveHistory();
-        // Standard Schema Template
-        tableData = [
-            ["Field", "Type", "Length", "PK", "NotNull", "Comment"],
-            ["event_id", "BIGINT", "", "Y", "Y", "Primary Event ID"],
-            ["symbol", "VARCHAR", "32", "", "Y", "Trading Symbol"],
-            ["created_at", "DATETIME", "", "", "Y", "Creation Time"],
-        ];
-
-        // Update input to reflect new table (using CSV format)
-        inputValue = toCSV(tableData);
-        inputFormat = "csv";
-        tableName = "abnormal_spot_events";
-
-        updateStatus("已应用数据库设计模板 (v2)", "success");
-    }
-
-    function handleBatchLoad(files: { content: string; filename: string }[]) {
-        if (files.length === 0) return;
-
-        if (files.length === 1) {
-            handleFileLoad(files[0].content, files[0].filename);
-            return;
-        }
-
-        updateStatus("正在合并文件...", "warning");
-
-        try {
-            let mergedData: TableData = [];
-            let headers: string[] = [];
-            let successCount = 0;
-            let skipCount = 0;
-
-            for (let i = 0; i < files.length; i++) {
-                const parseResult = autoDetectAndParse(files[i].content);
-                const data = parseResult.data;
-
-                if (data.length === 0) {
-                    skipCount++;
-                    continue;
-                }
-
-                if (i === 0) {
-                    headers = data[0];
-                    mergedData = [...data]; // Header + Rows
-                    successCount++;
-                } else {
-                    // Check headers
-                    if (JSON.stringify(data[0]) === JSON.stringify(headers)) {
-                        mergedData.push(...data.slice(1));
-                        successCount++;
-                    } else {
-                        skipCount++;
-                        console.warn(
-                            `File ${files[i].filename} headers mismatch`,
-                        );
-                    }
-                }
-            }
-
-            if (successCount > 0) {
-                // Convert merged data to CSV for consistency and editability
-                const csvContent = toCSV(mergedData);
-                inputValue = csvContent;
-                inputFormat = "csv";
-
-                // Trigger parse to update tableData from inputValue (ensures consistency)
-                handleParse();
-
-                updateStatus(
-                    `成功合并 ${successCount} 个文件 (跳过 ${skipCount} 个)`,
-                    "success",
-                );
-            } else {
-                updateStatus("未找到可合并的有效文件", "error");
-            }
-        } catch (e) {
-            updateStatus("合并失败: " + (e as Error).message, "error");
-        }
-    }
-
-    function handleDeduplicate() {
-        if (tableData.length <= 1) return;
-
-        saveHistory();
-        const header = tableData[0];
-        const body = tableData.slice(1);
-
-        const seen = new Set();
-        const uniqueBody = [];
-
-        for (const row of body) {
-            const rowStr = JSON.stringify(row);
-            if (!seen.has(rowStr)) {
-                seen.add(rowStr);
-                uniqueBody.push(row);
-            }
-        }
-
-        const removed = body.length - uniqueBody.length;
-        if (removed > 0) {
-            tableData = [header, ...uniqueBody];
-            currentOutput = "";
-            // Update input value to reflect deduped data, keeping CSV format for consistency
-            inputValue = toCSV(tableData);
-            inputFormat = "csv";
-            updateStatus(`已移除 ${removed} 行重复数据`, "success");
-        } else {
-            updateStatus("未发现重复数据", "success");
-        }
-    }
-
-    function updateStatus(text: string, type: "success" | "warning" | "error") {
-        status = { text, type };
-    }
-
-    function handleKeyDown(e: KeyboardEvent) {
-        if (e.ctrlKey || e.metaKey) {
-            if (e.key === "z" && !e.shiftKey) {
-                e.preventDefault();
-                handleUndo();
-            }
-            if (e.key === "y" || (e.key === "z" && e.shiftKey)) {
-                e.preventDefault();
-                handleRedo();
-            }
-        }
-        if (e.key === "F11" && hasTable) {
-            e.preventDefault();
-            fullscreenOpen = !fullscreenOpen;
-        }
-        if (e.key === "?" && e.target !== document.querySelector("textarea")) {
-            e.preventDefault();
-            shortcutsOpen = !shortcutsOpen;
-        }
-    }
+  }
 </script>
 
 <svelte:window onkeydown={handleKeyDown} />
 
-<div class="container">
-    <!-- Header -->
-    <header class="header">
-        <h1>全能表格转换器</h1>
-        <p class="subtitle">
-            专业级表格格式转换工具 - 支持 HTML、Markdown、CSV、Excel
+<svelte:head>
+  <title>表格编辑器 - Aone 工作台</title>
+</svelte:head>
+
+<div class="h-full overflow-y-auto px-4 sm:px-6 lg:px-8 py-6">
+  <div class="mx-auto max-w-7xl space-y-6">
+    <!-- Header & Top Actions -->
+    <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+          表格编辑器
+        </h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          多维数据表格解析、批量清洗与 CSV / Excel / SQL / JSON 双向互转
         </p>
+      </div>
+
+      <div class="flex items-center gap-1.5 flex-wrap justify-start sm:justify-end">
+        <ExportDropdown
+          disabled={!hasTable}
+          tableName={cleanTableName()}
+          onExport={downloadAsFormat}
+          label="导出文件"
+          size="sm"
+        />
+        <HandoffDropdown
+          sourceTool="表格编辑器"
+          dataType="csv"
+          getData={() => (hasTable ? toCSV(tableData) : inputValue)}
+        />
+        <div class="h-4 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
+        <Button variant="secondary" size="sm" onclick={undo} disabled={!canUndo} title="撤销表格编辑">撤销</Button>
+        <Button variant="secondary" size="sm" onclick={handleRedo} disabled={!canRedo} title="重做表格编辑">重做</Button>
+        <Button variant="secondary" size="sm" onclick={handleDeduplicate} disabled={!hasTable} title="移除重复数据行">数据去重</Button>
+        <Button variant="secondary" size="sm" onclick={() => (showDBModal = true)} title="加载 SQL 样例数据">SQL 模板</Button>
+      </div>
     </header>
 
-    <!-- Status & Toolbar -->
-    <div class="toolbar">
-        <div class="status-indicator status-{status.type}">
-            {status.text}
-        </div>
-        <div class="toolbar-group">
-            <Button
-                variant="ghost"
-                size="sm"
-                onclick={() => (shortcutsOpen = true)}
-                title="快捷键帮助 (?)"
-            >
-                <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                >
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                    <line x1="12" x2="12.01" y1="17" y2="17" />
-                </svg>
-                帮助
-            </Button>
-            <Button
-                variant="ghost"
-                size="sm"
-                onclick={handleUndo}
-                disabled={!canUndo}
-                title="撤销 (Ctrl+Z)"
-            >
-                <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                >
-                    <path d="M3 7v6h6" />
-                    <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
-                </svg>
-                撤销
-            </Button>
-            <Button
-                variant="ghost"
-                size="sm"
-                onclick={handleRedo}
-                disabled={!canRedo}
-                title="重做 (Ctrl+Y)"
-            >
-                <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                >
-                    <path d="M21 7v6h-6" />
-                    <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" />
-                </svg>
-                重做
-            </Button>
-            <div class="separator"></div>
-            <Button
-                variant="ghost"
-                size="sm"
-                onclick={handleDeduplicate}
-                disabled={!hasTable}
-                title="移除重复行"
-            >
-                <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                >
-                    <path d="M3 6h18" />
-                    <path d="M19 6v14c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V6" />
-                    <path d="M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2" />
-                    <line x1="10" y1="11" x2="10" y2="17" />
-                    <line x1="14" y1="11" x2="14" y2="17" />
-                </svg>
-                去重
-            </Button>
-            <Button
-                variant="ghost"
-                size="sm"
-                onclick={handleDBTemplate}
-                title="新建数据库设计模板"
-            >
-                <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                >
-                    <path d="M4 6h16" />
-                    <path d="M4 12h16" />
-                    <path d="M4 18h16" />
-                    <circle cx="2" cy="6" r="1" fill="currentColor" />
-                    <circle cx="2" cy="12" r="1" fill="currentColor" />
-                    <circle cx="2" cy="18" r="1" fill="currentColor" />
-                </svg>
-                DB设计
-            </Button>
-            <div class="separator"></div>
-        </div>
+    <!-- Discreet Status Banner -->
+    <div
+      class="rounded-lg border px-3.5 py-2 text-xs flex items-center justify-between gap-2 font-mono {status.type === 'error'
+        ? 'border-red-200/80 bg-red-50/80 text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300'
+        : status.type === 'warning'
+          ? 'border-amber-200/80 bg-amber-50/80 text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300'
+          : 'border-slate-200/80 bg-white dark:border-slate-800/80 dark:bg-slate-900 text-slate-600 dark:text-slate-300'}"
+      role={status.type === "error" ? "alert" : "status"}
+    >
+      <div class="flex items-center gap-2 truncate">
+        <span class="flex h-1.5 w-1.5 rounded-full {status.type === 'error' ? 'bg-red-500' : status.type === 'warning' ? 'bg-amber-500' : 'bg-emerald-500'}"></span>
+        <span class="truncate">{status.text}</span>
+      </div>
+      <div class="hidden sm:flex items-center gap-2 shrink-0 text-[11px] text-slate-400">
+        {#if hasTable}
+          <span>{describeTable(tableData)}</span>
+        {/if}
+      </div>
     </div>
 
-    <!-- Input Area -->
-    <div class="grid-2">
-        <div class="card">
-            <h2>📁 文件输入</h2>
-            <FileDropZone onBatchLoad={handleBatchLoad} />
-        </div>
-        <div class="card">
-            <h2>📝 文本输入</h2>
-            <TextInputPane
-                value={inputValue}
-                {inputFormat}
-                {isProcessing}
-                onParse={handleParse}
-                onValueChange={(v) => (inputValue = v)}
-                onFormatChange={(f) => (inputFormat = f)}
-            />
-        </div>
-    </div>
-
-    <!-- Table Preview -->
-    {#if hasTable}
-        <div class="card">
-            <TablePreview
-                data={tableData}
-                onFullscreen={() => (fullscreenOpen = true)}
-                onDataChange={handleDataChange}
-            />
+    <!-- Main Workspace Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <!-- Left Column: Input Source Section -->
+      <section class="space-y-4">
+        <!-- File Import Card -->
+        <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              文件导入 (File Drop)
+            </h2>
+          </div>
+          <FileDropZone onFileLoad={handleFileLoad} onBatchLoad={handleBatchLoad} />
         </div>
 
-        <!-- Format Converter -->
-        <div class="card">
-            <div
-                style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;"
-            >
-                <label for="tableName" style="font-weight: 500;"
-                    >表名 (Table Name):</label
+        <!-- Text Input Card -->
+        <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              文本输入 (Raw Text)
+            </h2>
+          </div>
+          <TextInputPane
+            value={inputValue}
+            inputFormat={inputFormat}
+            {isProcessing}
+            onValueChange={(value) => (inputValue = value)}
+            onFormatChange={(format) => (inputFormat = format)}
+            onParse={handleParse}
+          />
+        </div>
+      </section>
+
+      <!-- Right Column: Output & Transformation Section -->
+      <section class="space-y-4">
+        <!-- Sticky Export & Quick Action Bar -->
+        {#if hasTable}
+          <div class="sticky top-2 z-20 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-3 shadow-xs">
+            <div class="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-slate-100 dark:border-slate-800/80">
+              <div class="flex items-center gap-2">
+                <span class="flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                <span class="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  已解析表格 ({Math.max(0, tableData.length - 1)} 行 × {tableData[0]?.length || 0} 列)
+                </span>
+              </div>
+              
+              <!-- Quick View Switcher Tabs -->
+              <div class="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-md text-xs">
+                <button
+                  type="button"
+                  onclick={() => (activeRightTab = "all")}
+                  class="px-2 py-1 rounded transition-colors cursor-pointer {activeRightTab === 'all' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-medium shadow-2xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}"
                 >
-                <input
-                    id="tableName"
-                    type="text"
-                    bind:value={tableName}
-                    style="padding: 0.25rem 0.5rem; border: 1px solid var(--border-color, #d1d5db); border-radius: 0.25rem;"
-                    placeholder="Enter table name"
-                />
+                  全部
+                </button>
+                <button
+                  type="button"
+                  onclick={() => (activeRightTab = "preview")}
+                  class="px-2 py-1 rounded transition-colors cursor-pointer {activeRightTab === 'preview' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-medium shadow-2xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}"
+                >
+                  网格
+                </button>
+                <button
+                  type="button"
+                  onclick={() => (activeRightTab = "converter")}
+                  class="px-2 py-1 rounded transition-colors cursor-pointer {activeRightTab === 'converter' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-medium shadow-2xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}"
+                >
+                  矩阵
+                </button>
+                <button
+                  type="button"
+                  onclick={() => (activeRightTab = "output")}
+                  class="px-2 py-1 rounded transition-colors cursor-pointer {activeRightTab === 'output' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-medium shadow-2xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}"
+                >
+                  输出 {#if hasOutput}<span class="text-emerald-500 font-bold">•</span>{/if}
+                </button>
+              </div>
             </div>
-            <FormatConverter
-                disabled={!hasTable}
-                activeFormat={currentFormat}
-                onConvert={handleConvert}
-            />
-        </div>
-    {/if}
 
-    <!-- Output -->
-    {#if hasOutput}
-        <div class="card">
-            <OutputPane
+            <!-- Direct 1-Click Fast Download Buttons (Restrained Engineering Palette) -->
+            <div class="mt-2.5 flex items-center gap-1.5 flex-wrap">
+              <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500 mr-1 flex items-center gap-1">
+                <Download class="h-3 w-3 text-slate-400" />
+                直出:
+              </span>
+              <button
+                type="button"
+                onclick={() => downloadAsFormat("excel")}
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors cursor-pointer"
+                title="一键直接下载 Excel (.xlsx)"
+              >
+                <FileSpreadsheet class="h-3 w-3 text-emerald-500" />
+                <span>Excel (.xlsx)</span>
+              </button>
+              <button
+                type="button"
+                onclick={() => downloadAsFormat("csv")}
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors cursor-pointer"
+                title="一键直接下载 CSV (.csv)"
+              >
+                <FileSpreadsheet class="h-3 w-3 text-slate-400" />
+                <span>CSV</span>
+              </button>
+              <button
+                type="button"
+                onclick={() => downloadAsFormat("json")}
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors cursor-pointer"
+                title="一键直接下载 JSON (.json)"
+              >
+                <FileCode class="h-3 w-3 text-amber-500" />
+                <span>JSON</span>
+              </button>
+              <button
+                type="button"
+                onclick={() => downloadAsFormat("markdown")}
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors cursor-pointer"
+                title="一键直接下载 Markdown (.md)"
+              >
+                <FileText class="h-3 w-3 text-slate-400" />
+                <span>Markdown</span>
+              </button>
+              <button
+                type="button"
+                onclick={() => downloadAsFormat("sql-mysql")}
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors cursor-pointer"
+                title="一键直接下载 MySQL (.sql)"
+              >
+                <Database class="h-3 w-3 text-sky-500" />
+                <span>MySQL</span>
+              </button>
+              <ExportDropdown
+                disabled={!hasTable}
+                tableName={cleanTableName()}
+                onExport={downloadAsFormat}
+                label="更多 ▾"
+                size="sm"
+              />
+            </div>
+          </div>
+        {/if}
+
+        {#if hasTable && (activeRightTab === "all" || activeRightTab === "preview")}
+          <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs">
+            <TablePreview
+              data={tableData}
+              tableName={cleanTableName()}
+              onFullscreen={() => (showFullscreen = true)}
+              onDataChange={handleDataChange}
+              onExport={downloadAsFormat}
+            />
+          </div>
+        {/if}
+
+        {#if activeRightTab === "all" || activeRightTab === "converter"}
+          <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs space-y-3">
+            <div class="flex items-center justify-between gap-3 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                转换设置 (Format Matrix)
+              </h2>
+              <div class="flex items-center gap-2">
+                <label for="table-name" class="text-xs text-slate-500 dark:text-slate-400">表名:</label>
+                <input
+                  id="table-name"
+                  bind:value={tableName}
+                  placeholder="data_table"
+                  class="px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-400"
+                />
+              </div>
+            </div>
+
+            <FormatConverter
+              formats={outputFormats}
+              activeFormat={currentFormat}
+              disabled={!hasTable || isProcessing}
+              disabledReason={convertDisabledReason}
+              onConvert={handleConvert}
+              onDownloadFormat={downloadAsFormat}
+            />
+          </div>
+        {/if}
+
+        {#if activeRightTab === "all" || activeRightTab === "output"}
+          {#if hasOutput}
+            <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs">
+              <OutputPane
                 content={currentOutput}
                 format={currentFormat}
+                tableName={cleanTableName()}
                 onCopy={handleCopy}
                 onDownload={handleDownload}
-            />
-        </div>
-    {/if}
-
-    <!-- Fullscreen Preview -->
-    <FullscreenPreview
-        open={fullscreenOpen}
-        data={tableData}
-        onClose={() => (fullscreenOpen = false)}
-    />
-
-    <!-- Shortcuts Modal -->
-    {#if shortcutsOpen}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="modal-overlay" onclick={() => (shortcutsOpen = false)}>
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div class="shortcuts-panel" onclick={(e) => e.stopPropagation()}>
-                <div class="shortcuts-header">
-                    <h3>⌨️ 快捷键</h3>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onclick={() => (shortcutsOpen = false)}
-                    >
-                        <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                        >
-                            <line x1="18" x2="6" y1="6" y2="18" />
-                            <line x1="6" x2="18" y1="6" y2="18" />
-                        </svg>
-                    </Button>
-                </div>
-                <div class="shortcuts-grid">
-                    <div class="shortcut">
-                        <span>粘贴数据</span><kbd>Ctrl+V</kbd>
-                    </div>
-                    <div class="shortcut">
-                        <span>全屏预览</span><kbd>F11</kbd>
-                    </div>
-                    <div class="shortcut">
-                        <span>退出全屏</span><kbd>Esc</kbd>
-                    </div>
-                    <div class="shortcut">
-                        <span>撤销操作</span><kbd>Ctrl+Z</kbd>
-                    </div>
-                    <div class="shortcut">
-                        <span>重做操作</span><kbd>Ctrl+Y</kbd>
-                    </div>
-                    <div class="shortcut">
-                        <span>显示帮助</span><kbd>?</kbd>
-                    </div>
-                    <div class="shortcut">
-                        <span>编辑单元格</span><kbd>双击</kbd>
-                    </div>
-                    <div class="shortcut">
-                        <span>行列操作</span><kbd>右键</kbd>
-                    </div>
-                    <div class="shortcut">
-                        <span>点击表头</span><kbd>排序</kbd>
-                    </div>
-                </div>
+                onDownloadOtherFormat={downloadAsFormat}
+              />
             </div>
+          {:else}
+            <div class="rounded-lg border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-8 text-center text-xs text-slate-400">
+              {#if hasTable}
+                在上方选择目标格式以预览或下载转换结果。
+              {:else}
+                解析输入后即可解锁多格式转换与预览。
+              {/if}
+            </div>
+          {/if}
+        {/if}
+      </section>
+    </div>
+
+    <!-- SQL Template Modal -->
+    {#if showDBModal}
+      <div
+        class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50"
+        onclick={() => (showDBModal = false)}
+        role="presentation"
+      >
+        <div
+          class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 max-w-sm w-full shadow-xl space-y-4"
+          onclick={(e) => e.stopPropagation()}
+          onkeydown={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="db-template-title"
+          tabindex="-1"
+        >
+          <div class="flex items-center justify-between">
+            <h3 id="db-template-title" class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              加载 SQL 样例模板
+            </h3>
+            <button
+              type="button"
+              onclick={() => (showDBModal = false)}
+              class="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              关闭
+            </button>
+          </div>
+
+          <div class="space-y-2">
+            {#each ["mysql", "postgresql", "duckdb", "sqlite"] as dialect}
+              <label class="flex items-center gap-2.5 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors text-xs text-slate-800 dark:text-slate-200">
+                <input type="radio" bind:group={selectedSQLDialect} value={dialect} class="text-slate-900" />
+                <span class="font-medium uppercase">{dialect}</span>
+              </label>
+            {/each}
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <Button variant="secondary" size="sm" onclick={() => (showDBModal = false)}>取消</Button>
+            <Button size="sm" onclick={handleDBTemplate}>载入模板</Button>
+          </div>
         </div>
+      </div>
     {/if}
+
+    <FullscreenPreview open={showFullscreen} data={tableData} onClose={() => (showFullscreen = false)} />
+  </div>
 </div>
-
-<style>
-    .container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 1rem;
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-    }
-
-    .header {
-        text-align: center;
-        margin-bottom: 0.5rem;
-    }
-
-    .header h1 {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-        background: linear-gradient(135deg, #5d5cde, #8b5cf6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .subtitle {
-        color: #6b7280;
-        font-size: 1.125rem;
-    }
-
-    .toolbar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .toolbar-group {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .separator {
-        width: 1px;
-        height: 1.5rem;
-        background-color: var(--border-color, #d1d5db);
-        margin: 0 0.25rem;
-    }
-
-    :global(.dark) .separator {
-        background-color: #4b5563;
-    }
-
-    .status-indicator {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 0.75rem;
-        border-radius: 0.5rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-    }
-
-    .status-success {
-        background: rgba(16, 185, 129, 0.1);
-        color: #10b981;
-    }
-
-    .status-warning {
-        background: rgba(245, 158, 11, 0.1);
-        color: #f59e0b;
-    }
-
-    .status-error {
-        background: rgba(239, 68, 68, 0.1);
-        color: #ef4444;
-    }
-
-    .grid-2 {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1.5rem;
-    }
-
-    @media (max-width: 768px) {
-        .grid-2 {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    .card {
-        background: var(--bg-primary, #ffffff);
-        border-radius: 0.75rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        padding: 1.5rem;
-        border: 1px solid transparent;
-        transition: all 0.3s ease;
-    }
-
-    :global(.dark) .card {
-        background: #1f2937;
-        border-color: #4b5563;
-    }
-
-    .card:hover {
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        transform: translateY(-1px);
-    }
-
-    .card h2 {
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-        color: var(--text-primary, #111827);
-    }
-
-    :global(.dark) .card h2 {
-        color: #f9fafb;
-    }
-
-    /* Shortcuts Modal */
-    .modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1001;
-    }
-
-    .shortcuts-panel {
-        background: var(--bg-primary, #ffffff);
-        border: 1px solid var(--border-color, #d1d5db);
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        min-width: 300px;
-    }
-
-    :global(.dark) .shortcuts-panel {
-        background: #1f2937;
-        border-color: #4b5563;
-    }
-
-    .shortcuts-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-    }
-
-    .shortcuts-header h3 {
-        font-size: 1.125rem;
-        font-weight: 600;
-        margin: 0;
-    }
-
-    .shortcuts-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .shortcut {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.25rem 0;
-    }
-
-    kbd {
-        background: #f3f4f6;
-        border: 1px solid #d1d5db;
-        border-radius: 0.25rem;
-        padding: 0.125rem 0.5rem;
-        font-family: monospace;
-        font-size: 0.75rem;
-    }
-
-    :global(.dark) kbd {
-        background: #374151;
-        border-color: #4b5563;
-    }
-</style>

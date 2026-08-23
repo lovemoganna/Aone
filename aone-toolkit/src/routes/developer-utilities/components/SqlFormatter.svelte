@@ -59,41 +59,54 @@
     }
 </script>
 
-<div class="h-full flex flex-col gap-4">
-    <div class="flex-1 flex flex-col gap-2">
-        <label
-            for="sql-input"
-            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
-        >
-            SQL Query
-        </label>
+<div class="h-full flex flex-col gap-6">
+    <div class="flex-1 flex flex-col gap-3 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-sm">
+        <div class="flex justify-between items-center">
+            <label
+                for="sql-input"
+                class="label-section"
+            >
+                SQL Query
+            </label>
+            <span class="text-[11px] text-slate-400 font-mono">{input.length} chars</span>
+        </div>
         <textarea
             id="sql-input"
             bind:value={input}
-            class="flex-1 min-h-[200px] p-4 font-mono text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none resize-none focus:ring-2 focus:ring-primary-500/20 transition-all placeholder:text-slate-400"
+            class="textarea-editor flex-1"
             placeholder="SELECT * FROM users WHERE id = 1"
         ></textarea>
     </div>
 
-    <div class="flex justify-end gap-2">
-        <Button variant="secondary" size="sm" onclick={minify} class="gap-2">
+    <div class="flex justify-end gap-2 shrink-0">
+        <Button variant="secondary" size="sm" onclick={minify} class="btn btn-ghost text-sm">
             <Minimize2 size={16} /> Minify
         </Button>
-        <Button size="sm" onclick={format} class="gap-2">
+        <Button size="sm" onclick={format} class="btn btn-ghost text-sm">
             <Maximize2 size={16} /> Format
         </Button>
     </div>
 
-    <div class="flex-1 flex flex-col gap-2 relative">
+    <div class="flex-1 flex flex-col gap-3 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-sm relative">
         <div class="flex justify-between items-center">
             <label
                 for="sql-result"
-                class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+                class="label-section"
             >
                 Result
             </label>
+            <span class="text-[11px] text-slate-400 font-mono">{output.length} chars</span>
+        </div>
+        <div class="relative flex-1 min-h-[350px]">
+            <textarea
+                id="sql-result"
+                value={output}
+                readonly
+                class="textarea-editor w-full"
+                placeholder="Formatted SQL will appear here..."
+            ></textarea>
             {#if output}
-                <div class="absolute top-0 right-0 z-10">
+                <div class="absolute top-3 right-3">
                     <Button
                         variant="ghost"
                         size="sm"
@@ -104,12 +117,5 @@
                 </div>
             {/if}
         </div>
-        <textarea
-            id="sql-result"
-            value={output}
-            readonly
-            class="flex-1 min-h-[200px] p-4 font-mono text-sm bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none resize-none text-slate-700 dark:text-slate-300"
-            placeholder="Formatted SQL will appear here..."
-        ></textarea>
     </div>
 </div>

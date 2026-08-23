@@ -52,7 +52,7 @@
     }
 </script>
 
-<div class="max-w-xl mx-auto space-y-8 py-8">
+<div class="space-y-8 py-8 w-full">
     <!-- Display -->
     <div
         class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex items-center gap-4"
@@ -96,11 +96,11 @@
                 max="64"
                 bind:value={length}
                 oninput={generate}
-                class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+                class="input text-sm w-full"
             />
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <label
                 class="flex items-center gap-3 p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer hover:border-primary-500 transition-colors"
             >
@@ -108,7 +108,7 @@
                     type="checkbox"
                     bind:checked={useUpper}
                     onchange={generate}
-                    class="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                    class="rounded text-primary-600 focus:ring-primary-500 w-4 h-4 cursor-pointer"
                 />
                 <span
                     class="text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -122,7 +122,7 @@
                     type="checkbox"
                     bind:checked={useLower}
                     onchange={generate}
-                    class="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                    class="rounded text-primary-600 focus:ring-primary-500 w-4 h-4 cursor-pointer"
                 />
                 <span
                     class="text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -136,7 +136,7 @@
                     type="checkbox"
                     bind:checked={useNumbers}
                     onchange={generate}
-                    class="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                    class="rounded text-primary-600 focus:ring-primary-500 w-4 h-4 cursor-pointer"
                 />
                 <span
                     class="text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -150,7 +150,7 @@
                     type="checkbox"
                     bind:checked={useSymbols}
                     onchange={generate}
-                    class="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                    class="rounded text-primary-600 focus:ring-primary-500 w-4 h-4 cursor-pointer"
                 />
                 <span
                     class="text-sm font-medium text-slate-700 dark:text-slate-300"

@@ -12,9 +12,9 @@
 
   let { onDelete, onMove, onTag, onExport }: Props = $props();
 
-  let selectedCount = $derived($selectionStore.selectedItems.length);
-  let totalCount = $derived($selectionStore.items.length);
-  let allSelected = $derived($selectionStore.allSelected);
+  let selectedCount = $derived($selectionStore.filter(item => item.selected).length);
+  let totalCount = $derived($selectionStore.length);
+  let allSelected = $derived($selectionStore.length > 0 && $selectionStore.every(item => item.selected));
 
   function handleSelectAll() {
     if (allSelected) {

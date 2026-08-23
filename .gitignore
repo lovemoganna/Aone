@@ -1,0 +1,45 @@
+﻿# Dependencies
+node_modules/
+package-lock.json
+
+# Build & Output
+.output/
+.vercel/
+.netlify/
+.wrangler/
+.svelte-kit/
+build/
+dist/
+
+# Logs & Temporary debug files
+*.log
+*.log.*
+check_output.txt
+test-results/
+.playwright-mcp/
+
+# Archive & zip
+*.zip
+archive/
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.cursor/
+.idea/
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite / Scratch
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+.agent/scratch/
+*.orig
+*.bak

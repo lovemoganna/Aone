@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { settingsStore } from "$lib/stores/settingsStore.svelte";
+    import { settingsStore, type RestraintLevel, DEFAULT_AI_RESTRAINT_RULE } from "$lib/stores/settingsStore.svelte";
     import { PROVIDERS } from "$lib/constants/providers";
     import {
         Settings,
@@ -14,6 +14,11 @@
         Hash,
         Zap,
         Timer,
+        ShieldCheck,
+        Scale,
+        RotateCcw,
+        FileText,
+        Sliders,
     } from "lucide-svelte";
 
     let { open = $bindable(false) }: { open?: boolean } = $props();
@@ -42,6 +47,9 @@
         onclick={handleBackdropClick}
     >
         <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settings-modal-title"
             class="w-full max-w-lg max-h-[85vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl"
         >
             <!-- Header -->
@@ -50,26 +58,29 @@
             >
                 <div class="flex items-center gap-3">
                     <div
-                        class="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center"
+                        class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center shadow-xs"
                     >
                         <Settings class="w-4.5 h-4.5 text-white" />
                     </div>
                     <div>
                         <h2
-                            class="text-lg font-semibold text-slate-900 dark:text-white"
+                            class="text-base font-bold text-slate-900 dark:text-white"
                         >
-                            AI Configuration
+                            模型与推理配置 (AI Configuration)
                         </h2>
                         <p class="text-xs text-slate-500">
-                            Provider, model & generation settings
+                            提供商、大模型基座与生成参数调优
                         </p>
                     </div>
                 </div>
+                <!-- [02] 为关闭按钮增加 type="button" 与 focus-visible 焦点轮廓 -->
                 <button
+                    type="button"
                     onclick={() => (open = false)}
-                    class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-red-500 hover:text-white transition-all cursor-pointer"
+                    class="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    aria-label="关闭设置"
                 >
-                    <X class="w-4 h-4" />
+                    <X class="w-5 h-5" />
                 </button>
             </div>
 
@@ -77,26 +88,28 @@
             <div class="p-5 space-y-6">
                 <!-- Provider Selection -->
                 <section>
-                    <label
-                        class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3"
+                    <div
+                        class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-3"
                     >
-                        Provider
-                    </label>
-                    <div class="grid grid-cols-4 gap-2">
+                        模型服务提供商 (Provider)
+                    </div>
+                    <!-- [02] 提供商网格在 375px 移动端适配为 2 列并在更大屏幕自适应为 4 列 -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {#each providerEntries as p}
                             <button
+                                type="button"
                                 onclick={() =>
                                     settingsStore.setProvider(p.key as any)}
-                                class="flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all cursor-pointer
+                                class="flex flex-col items-center gap-1.5 p-3 rounded-2xl border transition-all cursor-pointer shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500
                                     {settingsStore.provider === p.key
-                                    ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-950/30 ring-1 ring-cyan-500/30'
-                                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500'}"
+                                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 ring-1 ring-indigo-500/30'
+                                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'}"
                             >
                                 <span class="text-xl">{p.icon}</span>
                                 <span
                                     class="text-xs font-medium truncate w-full text-center {settingsStore.provider ===
                                     p.key
-                                        ? 'text-cyan-700 dark:text-cyan-400'
+                                        ? 'text-indigo-700 dark:text-indigo-300 font-bold'
                                         : 'text-slate-600 dark:text-slate-400'}"
                                 >
                                     {p.name}
@@ -123,7 +136,7 @@
                                 settingsStore.setApiKey(
                                     (e.target as HTMLInputElement).value,
                                 )}
-                            placeholder="Enter your API key..."
+                            placeholder="输入您的 API 密钥..."
                             class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono"
                         />
                     </section>
@@ -146,7 +159,7 @@
                                 settingsStore.setCustomBaseUrl(
                                     (e.target as HTMLInputElement).value,
                                 )}
-                            placeholder="https://api.example.com/v1"
+                            placeholder="输入接口地址，如 https://api.openai.com/v1"
                             class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono"
                         />
                     </section>
@@ -172,7 +185,7 @@
                         >
                             {#if settingsStore.availableModels.length === 0}
                                 <option value=""
-                                    >Click refresh to fetch models</option
+                                    >点击右侧刷新获取模型列表</option
                                 >
                             {:else}
                                 {#each settingsStore.availableModels as model}
@@ -221,7 +234,7 @@
                         class="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2"
                     >
                         <Zap class="w-4 h-4 text-amber-500" />
-                        Generation
+                        内容生成设置 (Generation)
                     </h3>
 
                     <!-- Temperature -->
@@ -231,7 +244,7 @@
                                 class="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1.5"
                             >
                                 <Thermometer class="w-3.5 h-3.5" />
-                                Temperature
+                                采样温度 (Temperature)
                             </label>
                             <span
                                 class="text-xs font-mono text-cyan-600 dark:text-cyan-400"
@@ -262,7 +275,7 @@
                                 class="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1.5"
                             >
                                 <Hash class="w-3.5 h-3.5" />
-                                Max Tokens
+                                最大词数限制 (Max Tokens)
                             </label>
                             <span
                                 class="text-xs font-mono text-cyan-600 dark:text-cyan-400"
@@ -295,7 +308,7 @@
                             <span
                                 class="text-xs text-slate-600 dark:text-slate-400"
                             >
-                                Stream
+                                流式输出 (Stream)
                             </span>
                             <button
                                 onclick={() =>
@@ -322,7 +335,7 @@
                                 class="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1"
                             >
                                 <Timer class="w-3 h-3" />
-                                Delay
+                                单步延迟 (Delay)
                             </label>
                             <input
                                 type="number"
@@ -343,6 +356,103 @@
                     </div>
                 </section>
 
+                <!-- AI Output Restraint Iron Rule Section -->
+                <section class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 space-y-3.5">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <div class="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                                <ShieldCheck class="w-4 h-4" />
+                            </div>
+                            <div class="min-w-0">
+                                <div class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                    <span>AI 输出克制铁律</span>
+                                    <span class="text-[10px] px-1.5 py-0.5 rounded font-mono font-normal {settingsStore.enableOutputRestraint && settingsStore.restraintLevel !== 'off' ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'}">
+                                        {settingsStore.enableOutputRestraint && settingsStore.restraintLevel !== 'off' ? '已强制生效' : '已暂停'}
+                                    </span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                    短、准、直接、高信息密度 · 结论优先 > 信息密度 > 清晰度
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Main Restraint Toggle -->
+                        <button
+                            type="button"
+                            onclick={() => settingsStore.setEnableOutputRestraint(!settingsStore.enableOutputRestraint)}
+                            class="relative w-10 h-5 rounded-full transition-colors cursor-pointer shrink-0 {settingsStore.enableOutputRestraint
+                                ? 'bg-indigo-600'
+                                : 'bg-slate-300 dark:bg-slate-600'}"
+                            aria-label="切换 AI 输出克制原则"
+                        >
+                            <span
+                                class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-transform {settingsStore.enableOutputRestraint
+                                    ? 'translate-x-5'
+                                    : ''}"
+                            ></span>
+                        </button>
+                    </div>
+
+                    {#if settingsStore.enableOutputRestraint}
+                        <!-- Level Selector -->
+                        <div class="space-y-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                            <div class="text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                                克制控制级别 (Restraint Level)
+                            </div>
+                            <div class="grid grid-cols-4 gap-1.5 text-xs">
+                                {#each [
+                                    { id: 'standard', label: '标准高密度', desc: '默认铁律' },
+                                    { id: 'strict', label: '极致严格', desc: '≤3要点' },
+                                    { id: 'relaxed', label: '宽松高效', desc: '允许背景' },
+                                    { id: 'custom', label: '自定义', desc: '自由微调' }
+                                ] as lvl}
+                                    <button
+                                        type="button"
+                                        onclick={() => settingsStore.setRestraintLevel(lvl.id as RestraintLevel)}
+                                        class="px-2 py-1.5 rounded-xl border text-center transition-all cursor-pointer {settingsStore.restraintLevel === lvl.id
+                                            ? 'border-indigo-500 bg-white dark:bg-slate-900 font-bold text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                                            : 'border-transparent hover:bg-slate-200/60 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-400'}"
+                                    >
+                                        <div class="text-[11px] truncate">{lvl.label}</div>
+                                        <div class="text-[9px] opacity-70 truncate">{lvl.desc}</div>
+                                    </button>
+                                {/each}
+                            </div>
+                        </div>
+
+                        <!-- Rule Editor / Preview -->
+                        <div class="space-y-1.5">
+                            <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                                <span>{settingsStore.restraintLevel === 'custom' ? '自定义铁律规则文本' : '当前注入 Agent 的生效指令'}</span>
+                                {#if settingsStore.restraintLevel === 'custom'}
+                                    <button
+                                        type="button"
+                                        onclick={() => settingsStore.resetRestraintRuleToDefault()}
+                                        class="inline-flex items-center gap-1 text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                                    >
+                                        <RotateCcw class="w-2.5 h-2.5" />
+                                        <span>重置为默认</span>
+                                    </button>
+                                {/if}
+                            </div>
+
+                            {#if settingsStore.restraintLevel === 'custom'}
+                                <textarea
+                                    value={settingsStore.customRestraintRule}
+                                    oninput={(e) => settingsStore.setCustomRestraintRule((e.target as HTMLTextAreaElement).value)}
+                                    rows="5"
+                                    class="w-full text-xs font-mono p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none leading-relaxed"
+                                    placeholder="输入自定义输出克制原则..."
+                                ></textarea>
+                            {:else}
+                                <div class="text-[11px] font-mono p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white/70 dark:bg-slate-900/70 text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed max-h-36 overflow-y-auto">
+                                    {settingsStore.activeRestraintRule}
+                                </div>
+                            {/if}
+                        </div>
+                    {/if}
+                </section>
+
                 <!-- Connection Test -->
                 <section>
                     <button
@@ -357,7 +467,7 @@
                     >
                         {#if settingsStore.connectionStatus === "testing"}
                             <Loader2 class="w-4 h-4 animate-spin" />
-                            <span>Testing...</span>
+                            <span>正在测试连接...</span>
                         {:else if settingsStore.connectionStatus === "connected"}
                             <Check class="w-4 h-4" />
                             <span>{settingsStore.connectionMessage}</span>
@@ -366,7 +476,7 @@
                             <span>{settingsStore.connectionMessage}</span>
                         {:else}
                             <Wifi class="w-4 h-4" />
-                            <span>Test Connection</span>
+                            <span>测试 API 连接</span>
                         {/if}
                     </button>
                 </section>

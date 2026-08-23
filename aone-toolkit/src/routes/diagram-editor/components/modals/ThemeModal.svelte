@@ -60,93 +60,109 @@
 
 {#if isOpen}
     <div
-        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
         onclick={onClose}
-        transition:fade={{ duration: 300 }}
+        onkeydown={(event) => {
+            if (event.key === "Escape" || event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onClose();
+            }
+        }}
+        role="button"
+        tabindex="0"
+        aria-label="Close theme modal"
+        transition:fade={{ duration: 100 }}
     >
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-            class="glass-pro rounded-2xl w-full max-w-sm overflow-hidden flex flex-col transition-all duration-700"
+            class="bg-white dark:bg-[#0b0f17] border border-slate-200 dark:border-slate-800 rounded-lg w-full max-w-sm overflow-hidden flex flex-col shadow-2xl"
             onclick={(e) => e.stopPropagation()}
-            transition:fly={{ y: 20, duration: 400 }}
+            transition:fly={{ y: 10, duration: 120 }}
         >
             <!-- Header -->
             <div
-                class="flex items-center justify-between p-4 border-b border-white/10"
+                class="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40"
             >
                 <h3
-                    class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+                    class="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2"
                 >
-                    <div class="p-1.5 bg-indigo-500/20 rounded-lg glow-premium">
-                        <Palette size={18} class="text-indigo-400" />
-                    </div>
-                    Theme Engine
+                    <Palette size={15} class="text-slate-700 dark:text-slate-300" />
+                    Theme Selector
                 </h3>
                 <button
-                    class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                    class="p-1 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                     onclick={onClose}
+                    title="Close theme modal"
+                    aria-label="Close theme modal"
                 >
-                    <X size={20} />
+                    <X size={15} />
                 </button>
             </div>
 
             <!-- Body -->
             <div
-                class="p-6 space-y-6 max-h-[60vh] overflow-y-auto no-scrollbar"
+                class="p-4 space-y-4 max-h-[60vh] overflow-y-auto"
             >
                 <!-- Theme Select -->
                 <div>
-                    <label
-                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                        >Base Theme</label
-                    >
-                    <div class="grid grid-cols-2 gap-2">
+                    <span
+                        class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2"
+                    >Base Theme</span>
+                    <div class="grid grid-cols-2 gap-1.5">
                         {#each THEMES as theme}
                             <button
-                                class="px-3 py-2 text-xs rounded-lg border text-left flex items-center justify-between {selectedTheme ===
+                                class="px-2.5 py-1.5 text-xs rounded border text-left flex items-center justify-between transition-colors {selectedTheme ===
                                 theme.value
-                                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 dark:text-gray-400'}"
+                                    ? 'border-slate-900 dark:border-slate-100 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-semibold shadow-xs'
+                                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 hover:border-slate-400'}"
                                 onclick={() => (selectedTheme = theme.value)}
                             >
-                                {theme.name}
-                                {#if selectedTheme === theme.value}<Check
-                                        size={12}
-                                    />{/if}
+                                <span>{theme.name}</span>
+                                {#if selectedTheme === theme.value}
+                                    <Check size={12} strokeWidth={2.5} />
+                                {/if}
                             </button>
                         {/each}
                     </div>
                 </div>
 
                 <!-- Custom Colors -->
-                <div class="space-y-4 pt-2">
+                <div class="space-y-2.5 pt-2 border-t border-slate-200 dark:border-slate-800">
+                    <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Color Overrides
+                    </span>
                     <div class="flex items-center justify-between">
-                        <label class="text-xs font-medium text-gray-500"
+                        <label for="diagram-theme-background" class="text-xs text-slate-600 dark:text-slate-300 font-medium"
                             >Background</label
                         >
                         <input
+                            id="diagram-theme-background"
                             type="color"
                             bind:value={bgColor}
-                            class="w-8 h-8 rounded border-none cursor-pointer bg-transparent"
+                            class="w-6 h-6 rounded border border-slate-300 dark:border-slate-700 cursor-pointer bg-transparent"
                         />
                     </div>
                     <div class="flex items-center justify-between">
-                        <label class="text-xs font-medium text-gray-500"
+                        <label for="diagram-theme-border" class="text-xs text-slate-600 dark:text-slate-300 font-medium"
                             >Border Color</label
                         >
                         <input
+                            id="diagram-theme-border"
                             type="color"
                             bind:value={borderColor}
-                            class="w-8 h-8 rounded border-none cursor-pointer bg-transparent"
+                            class="w-6 h-6 rounded border border-slate-300 dark:border-slate-700 cursor-pointer bg-transparent"
                         />
                     </div>
                     <div class="flex items-center justify-between">
-                        <label class="text-xs font-medium text-gray-500"
+                        <label for="diagram-theme-font" class="text-xs text-slate-600 dark:text-slate-300 font-medium"
                             >Default Font</label
                         >
                         <input
+                            id="diagram-theme-font"
                             type="color"
                             bind:value={fontColor}
-                            class="w-8 h-8 rounded border-none cursor-pointer bg-transparent"
+                            class="w-6 h-6 rounded border border-slate-300 dark:border-slate-700 cursor-pointer bg-transparent"
                         />
                     </div>
                 </div>
@@ -154,20 +170,20 @@
 
             <!-- Footer -->
             <div
-                class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-between gap-3"
+                class="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex justify-between gap-2"
             >
                 <button
-                    class="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                     onclick={onClose}
                 >
                     Cancel
                 </button>
                 <button
-                    class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all glow-premium active:scale-95"
+                    class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-xs"
                     onclick={applyTheme}
                 >
-                    <RefreshCw size={16} />
-                    Apply Changes
+                    <RefreshCw size={13} />
+                    <span>Apply Theme</span>
                 </button>
             </div>
         </div>

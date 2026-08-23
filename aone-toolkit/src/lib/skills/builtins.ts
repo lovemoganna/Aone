@@ -12,21 +12,21 @@ export const builtInSkills: SkillDefinition[] = [
         name: '拆问题',
         description: '把一个大而模糊的困境拆成多个小而具体的子问题，按紧急度和可控度排优先级',
         oneLiner: '把一团乱麻拆成编号的清单',
-        
+
         type: 'analysis',
-        
+
         io: {
             input: '用户的自然语言描述（任何领域）',
             output: '结构化的问题清单，每个问题标注类型、紧急度、可控度',
             format: 'Markdown 格式的编号列表'
         },
-        
+
         trigger: {
             keywords: ['问题太多', '一团乱', '不知道从哪', '理不清', '说不清'],
-            patterns: [/.*[一二三多]件.*事.*/],
+            patterns: ['.*[一二三多]件.*事.*'],
             conditions: ['用户描述的问题里缠绕着两件以上的事']
         },
-        
+
         steps: [
             { order: 1, description: '提取所有独立子问题', action: 'extract_subproblems' },
             { order: 2, description: '标注每个问题的类型', action: 'label_types', outputKey: 'types' },
@@ -34,7 +34,7 @@ export const builtInSkills: SkillDefinition[] = [
             { order: 4, description: '按"紧急+可控"排序', action: 'prioritize' },
             { order: 5, description: '标注依赖关系', action: 'identify_dependencies' }
         ],
-        
+
         outputTemplate: `
 ━━━ 问题拆解 ━━━
 
@@ -51,24 +51,24 @@ export const builtInSkills: SkillDefinition[] = [
 
 你觉得这个拆法对吗？
         `.trim(),
-        
+
         exceptions: [
             { condition: '描述过于简短', response: '能再多说几句吗？比如最让你头疼的那一个点是什么？' },
             { condition: '只有一个问题', response: '好的，这个问题我们直接来分析。' },
             { condition: '超过7个子问题', response: '有点多，我们合并同类项，控制在5个以内。' }
         ],
-        
+
         visual: {
             color: '#3B82F6',
             icon: '🔍',
             gradient: 'from-blue-500 to-cyan-500'
         },
-        
+
         compatibleAgents: ['decomposer', 'calculator', 'pathfinder', 'stress_tester', 'closer'],
         recommendedAgents: ['decomposer'],
-        
+
         tags: ['拆解', '分析', '分类', '优先级'],
-        
+
         version: '2.0',
         isBuiltIn: true
     },
@@ -79,21 +79,21 @@ export const builtInSkills: SkillDefinition[] = [
         name: '摆天平',
         description: '把多个选项和多个关心维度列成矩阵，加权打分，看清真实偏好',
         oneLiner: '把纠结变成可比较的数字',
-        
+
         type: 'quantitative',
-        
+
         io: {
             input: '选项列表 + 用户在乎的因素',
             output: '加权决策矩阵表，显示各选项在各维度的得分和总分',
             format: 'Markdown 表格'
         },
-        
+
         trigger: {
             keywords: ['犹豫', '选哪个', '利弊', '比较', '纠结'],
-            patterns: [/.*A.*还是.*B.*/],
+            patterns: ['.*A.*还是.*B.*'],
             conditions: ['用户在两个或更多选项间犹豫']
         },
-        
+
         steps: [
             { order: 1, description: '列出所有选项（含"维持现状"）', action: 'list_options' },
             { order: 2, description: '引导列出评估维度', action: 'define_dimensions' },
@@ -102,7 +102,7 @@ export const builtInSkills: SkillDefinition[] = [
             { order: 5, description: '计算加权总分', action: 'calculate_scores' },
             { order: 6, description: '分析真实偏好', action: 'analyze_preference' }
         ],
-        
+
         outputTemplate: `
 ━━━ 决策天平 ━━━
 
@@ -119,24 +119,24 @@ export const builtInSkills: SkillDefinition[] = [
 注意: 分数不是答案。
 但如果你看到分数后心里有了倾向，那个倾向通常就是答案。
         `.trim(),
-        
+
         exceptions: [
             { condition: '分数差极小', response: '这几个选项对你来说差别不大，真正的决定因素可能不在这张表里。' },
             { condition: '打分犹豫', response: '不用精确，凭直觉打就行，差1-2分不影响结论。' },
             { condition: '维度过多', response: '有点多，我们合并同类维度，控制在7个以内。' }
         ],
-        
+
         visual: {
             color: '#14B8A6',
             icon: '⚖️',
             gradient: 'from-teal-500 to-emerald-500'
         },
-        
+
         compatibleAgents: ['calculator', 'pathfinder', 'closer'],
         recommendedAgents: ['calculator'],
-        
+
         tags: ['量化', '对比', '决策', '权重'],
-        
+
         version: '2.0',
         isBuiltIn: true
     },
@@ -147,21 +147,21 @@ export const builtInSkills: SkillDefinition[] = [
         name: '翻底牌',
         description: '对用户最恐惧的结果做一次完整推演——发生概率多大、发生了有多糟、你有什么牌可打',
         oneLiner: '把恐惧变成可评估的风险',
-        
+
         type: 'evaluation',
-        
+
         io: {
             input: '用户害怕的那个选择 + 具体恐惧',
             output: '推演结果，包含概率评估、损失分析、底牌盘点',
             format: 'Markdown 结构化报告'
         },
-        
+
         trigger: {
             keywords: ['怕', '万一', '不敢', '担心', '焦虑', '恐惧'],
-            patterns: [/万一.*怎么办/, /如果.*失败/],
+            patterns: ['万一.*怎么办', '如果.*失败'],
             conditions: ['用户因恐惧不敢决定/行动，或反复说"万一..."']
         },
-        
+
         steps: [
             { order: 1, description: '具象化最坏结果', action: 'visualize_worst' },
             { order: 2, description: '评估真实发生概率', action: 'assess_probability' },
@@ -169,7 +169,7 @@ export const builtInSkills: SkillDefinition[] = [
             { order: 4, description: '盘点底牌（经济/能力/社会/退路）', action: 'inventory_resources' },
             { order: 5, description: '给出判断', action: 'make_judgment' }
         ],
-        
+
         outputTemplate: `
 ━━━ 底牌推演 ━━━
 
@@ -192,24 +192,24 @@ export const builtInSkills: SkillDefinition[] = [
 
 你真正需要盯着的风险可能不是这个，而是 [真实风险点]。
         `.trim(),
-        
+
         exceptions: [
             { condition: '说不出怕什么', response: '想象你做了这个决定，三个月后最差的画面是什么？' },
             { condition: '最坏情况确实严重', response: '那我们来看怎么降低这个概率，或者有没有更安全的路径。' },
             { condition: '多重恐惧', response: '我们一个一个来，先说最让你担心的那一个。' }
         ],
-        
+
         visual: {
             color: '#8B5CF6',
             icon: '🃏',
             gradient: 'from-violet-500 to-purple-500'
         },
-        
+
         compatibleAgents: ['stress_tester', 'calculator', 'closer'],
         recommendedAgents: ['stress_tester'],
-        
+
         tags: ['推演', '风险', '预案', '韧性'],
-        
+
         version: '2.0',
         isBuiltIn: true
     },
@@ -220,21 +220,21 @@ export const builtInSkills: SkillDefinition[] = [
         name: '算家底',
         description: '盘清用户手里到底有什么资源——不只是钱，还有时间、技能、人脉、注意力',
         oneLiner: '看看你到底有多少家底',
-        
+
         type: 'quantitative',
-        
+
         io: {
             input: '用户对自身资源的描述（或上传的财务数据文件）',
             output: '五类资源清单，标注评估结果和隐藏资源',
             format: 'Markdown 结构化列表'
         },
-        
+
         trigger: {
             keywords: ['没有资源', '我没钱', '能力不足', '没人脉', '时间不够'],
-            patterns: [/我什么都没有/, /资源不够/],
+            patterns: ['我什么都没有', '资源不够'],
             conditions: ['用户说"我什么都没有"或需要评估可行性']
         },
-        
+
         steps: [
             { order: 1, description: '盘点经济资源', action: 'check_financial', outputKey: 'financial' },
             { order: 2, description: '盘点时间资源', action: 'check_time', outputKey: 'time' },
@@ -243,7 +243,7 @@ export const builtInSkills: SkillDefinition[] = [
             { order: 5, description: '盘点注意力资源', action: 'check_attention', outputKey: 'attention' },
             { order: 6, description: '找出隐藏资源和漏洞', action: 'find_hidden' }
         ],
-        
+
         outputTemplate: `
 ━━━ 家底盘点 ━━━
 
@@ -270,23 +270,23 @@ export const builtInSkills: SkillDefinition[] = [
 
 结论: 用你现有的资源做这件事，[可行/需要补X/暂时不可行]
         `.trim(),
-        
+
         exceptions: [
             { condition: '用户坚持"什么都没有"', response: '我们逐项来想，你肯定有一些资源的。' },
             { condition: '财务数据不清楚', response: '大概数就行，我们只是做个估算。' }
         ],
-        
+
         visual: {
             color: '#F59E0B',
             icon: '💎',
             gradient: 'from-amber-500 to-orange-500'
         },
-        
+
         compatibleAgents: ['calculator', 'stress_tester', 'pathfinder'],
         recommendedAgents: ['calculator'],
-        
+
         tags: ['资源', '盘点', '财务', '时间'],
-        
+
         version: '2.0',
         isBuiltIn: true
     },
@@ -297,28 +297,28 @@ export const builtInSkills: SkillDefinition[] = [
         name: '换框架',
         description: '改变看问题的角度——把"死局"变成"没看到的活路"，把"二选一"变成"第三种可能"',
         oneLiner: '换个角度，世界大不同',
-        
+
         type: 'exploration',
-        
+
         io: {
             input: '用户认为的困局描述 + 已知约束条件',
             output: '新框架 + 新路径列表',
             format: 'Markdown 结构化分析'
         },
-        
+
         trigger: {
             keywords: ['没有选择', '只能这样', '没办法', '死局', '无路可走'],
-            patterns: [/要么.*要么.*/, /只能.*了/],
+            patterns: ['要么.*要么.*', '只能.*了'],
             conditions: ['用户被困在二元对立里']
         },
-        
+
         steps: [
             { order: 1, description: '识别隐含假设', action: 'identify_assumptions' },
             { order: 2, description: '检验假设真伪', action: 'test_assumptions' },
             { order: 3, description: '区分硬约束和软约束', action: 'distinguish_constraints' },
             { order: 4, description: '生成新路径', action: 'generate_paths' }
         ],
-        
+
         outputTemplate: `
 ━━━ 换个框架看 ━━━
 
@@ -341,23 +341,23 @@ export const builtInSkills: SkillDefinition[] = [
 ② [路径描述] — 验证方式: [最小实验]
 ③ [路径描述] — 验证方式: [最小实验]
         `.trim(),
-        
+
         exceptions: [
             { condition: '用户坚持"没有别的路"', response: '有没有其他人面对过类似的情况但走了不同的路？' },
             { condition: '所有假设都经检验为真', response: '那我们来看在这些硬约束下，能做的最优解是什么。' }
         ],
-        
+
         visual: {
             color: '#EAB308',
             icon: '🔄',
             gradient: 'from-yellow-500 to-amber-500'
         },
-        
+
         compatibleAgents: ['pathfinder', 'decomposer', 'calculator'],
         recommendedAgents: ['pathfinder'],
-        
+
         tags: ['重构', '假设', '可能性', '创新'],
-        
+
         version: '2.0',
         isBuiltIn: true
     },
@@ -368,20 +368,20 @@ export const builtInSkills: SkillDefinition[] = [
         name: '出清单',
         description: '把所有分析结论转化为带时间节点的具体行动清单，每个动作都可验证',
         oneLiner: '把想法变成今天就能做的动作',
-        
+
         type: 'generation',
-        
+
         io: {
             input: '当前对话中产生的所有结论和建议',
             output: '分档行动清单（今天/这周/本月）',
             format: 'Markdown 任务列表'
         },
-        
+
         trigger: {
             keywords: ['怎么办', '要做什么', '下一步', '行动', '开始'],
             conditions: ['对话接近尾声，或用户问"该怎么办"']
         },
-        
+
         steps: [
             { order: 1, description: '提取所有可执行建议', action: 'extract_actions' },
             { order: 2, description: '过滤非动作项', action: 'filter_vague' },
@@ -389,7 +389,7 @@ export const builtInSkills: SkillDefinition[] = [
             { order: 4, description: '分档（今天/这周/本月）', action: 'categorize' },
             { order: 5, description: '标注第一个动作', action: 'mark_first' }
         ],
-        
+
         outputTemplate: `
 ━━━ 行动清单 ━━━
 
@@ -412,24 +412,24 @@ export const builtInSkills: SkillDefinition[] = [
 ⭐ 从第1件开始。现在就可以做。
 做完了回来告诉我们，我们推进下一步。
         `.trim(),
-        
+
         exceptions: [
             { condition: '可执行建议不足', response: '根据我们聊的，你觉得最想先动哪一件？' },
             { condition: '用户说"都做不到"', response: '我们继续拆小，直到找出一个5分钟能做的动作。' },
             { condition: '用户说"这些我早想过了"', response: '想过和做过之间差一个动作，你最接近做的是哪一件？' }
         ],
-        
+
         visual: {
             color: '#22C55E',
             icon: '✅',
             gradient: 'from-green-500 to-emerald-500'
         },
-        
+
         compatibleAgents: ['closer', 'decomposer', 'calculator', 'pathfinder', 'stress_tester'],
         recommendedAgents: ['closer'],
-        
+
         tags: ['行动', '清单', '执行', '时间管理'],
-        
+
         version: '2.0',
         isBuiltIn: true
     }

@@ -56,40 +56,32 @@
     }
 </script>
 
-<div class="p-4 space-y-6">
+<div class="p-3 space-y-4 text-xs">
     {#if diagramStore.mode === "graphviz"}
         <!-- Variant Browser Trigger -->
         <button
-            class="w-full py-3 px-4 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-700 hover:from-indigo-500 hover:to-violet-600 text-white shadow-lg shadow-indigo-500/20 flex flex-col items-center gap-1 transition-all active:scale-95 group mb-2"
+            class="w-full py-2 px-3 rounded border border-slate-200 dark:border-slate-800 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center gap-1.5 transition-colors font-semibold shadow-xs"
             onclick={() => (isVariantOpen = true)}
         >
-            <div class="flex items-center gap-2 font-bold text-xs">
-                <Wand2
-                    size={16}
-                    class="group-hover:rotate-12 transition-transform"
-                />
-                Explore Topology Variants
-            </div>
-            <p class="text-[9px] opacity-70">
-                Generate 15+ variations of your graph
-            </p>
+            <Wand2 size={14} class="text-slate-600 dark:text-slate-400" />
+            <span>Explore Topology Variants</span>
         </button>
         <VariantBrowser bind:isOpen={isVariantOpen} />
 
         <!-- Engine Presets -->
-        <div class="space-y-3">
-            <h4
+        <div class="space-y-2">
+            <span
                 class="text-[10px] uppercase font-bold text-slate-400 block tracking-widest"
             >
-                Layout presets
-            </h4>
-            <div class="grid grid-cols-3 gap-2">
+                Layout Presets
+            </span>
+            <div class="grid grid-cols-3 gap-1.5">
                 {#each presets as preset}
                     <button
-                        class="py-1.5 text-[10px] font-bold rounded border transition-all
+                        class="py-1 text-[11px] font-semibold rounded border transition-colors
                         {diagramStore.layoutParams.nodesep === preset.nodesep
-                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg'
-                            : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}"
+                            ? 'bg-slate-900 dark:bg-slate-100 border-slate-900 dark:border-slate-100 text-white dark:text-slate-900 shadow-xs'
+                            : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 hover:border-slate-400'}"
                         onclick={() => applyPreset(preset)}
                     >
                         {preset.name}
@@ -100,20 +92,20 @@
     {/if}
 
     <!-- Direction -->
-    <div class="space-y-3">
-        <h4
-            class="text-[10px] uppercase font-bold text-slate-400 block tracking-widest flex items-center gap-2"
+    <div class="space-y-2">
+        <span
+            class="text-[10px] uppercase font-bold text-slate-400 block tracking-widest flex items-center gap-1.5"
         >
-            <AlignJustify size={10} /> Flow Direction
-        </h4>
-        <div class="grid grid-cols-3 gap-2">
+            <AlignJustify size={11} /> Flow Direction
+        </span>
+        <div class="grid grid-cols-3 gap-1.5">
             {#each rankdirs as dir}
                 {@const DirIcon = dir.icon}
                 <button
-                    class="flex flex-col items-center gap-1.5 p-2 rounded border transition-all
+                    class="flex flex-col items-center gap-1 p-1.5 rounded border transition-colors
                     {diagramStore.layoutParams.rankdir === dir.id
-                        ? 'bg-indigo-50 dark:bg-indigo-900/40 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-400'
-                        : 'border-slate-100 dark:border-slate-800 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}"
+                        ? 'bg-slate-900 dark:bg-slate-100 border-slate-900 dark:border-slate-100 text-white dark:text-slate-900 shadow-xs font-semibold'
+                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 hover:border-slate-400'}"
                     onclick={() => {
                         updateParam("rankdir", dir.id);
                         if (diagramStore.mode === "plantuml")
@@ -121,14 +113,14 @@
                     }}
                 >
                     <DirIcon
-                        size={14}
+                        size={13}
                         class={diagramStore.layoutParams.rankdir === dir.id
                             ? dir.id === "LR"
                                 ? "rotate-90"
                                 : ""
                             : ""}
                     />
-                    <span class="text-[9px] font-medium">{dir.label}</span>
+                    <span class="text-[10px] font-medium">{dir.label}</span>
                 </button>
             {/each}
         </div>
@@ -136,16 +128,16 @@
 
     {#if diagramStore.mode === "graphviz"}
         <!-- Sliders -->
-        <div class="space-y-4 pt-2">
+        <div class="space-y-3 pt-1 border-t border-slate-200 dark:border-slate-800">
             <!-- Node Sep -->
-            <div class="space-y-2">
-                <div class="flex justify-between items-center text-[10px]">
+            <div class="space-y-1.5">
+                <div class="flex justify-between items-center text-[11px]">
                     <span
-                        class="text-slate-500 uppercase font-bold flex items-center gap-1"
+                        class="text-slate-500 font-semibold flex items-center gap-1"
                     >
-                        <Move size={10} /> Node Spacing
+                        <Move size={11} /> Node Spacing
                     </span>
-                    <span class="text-indigo-500 font-mono font-bold"
+                    <span class="text-slate-900 dark:text-slate-100 font-mono font-bold"
                         >{diagramStore.layoutParams.nodesep}</span
                     >
                 </div>
@@ -155,7 +147,7 @@
                     max="2"
                     step="0.1"
                     value={diagramStore.layoutParams.nodesep}
-                    class="w-full accent-indigo-500 h-1"
+                    class="w-full accent-slate-900 dark:accent-slate-100 h-1"
                     onchange={(e) =>
                         updateParam(
                             "nodesep",
@@ -165,14 +157,14 @@
             </div>
 
             <!-- Rank Sep -->
-            <div class="space-y-2">
-                <div class="flex justify-between items-center text-[10px]">
+            <div class="space-y-1.5">
+                <div class="flex justify-between items-center text-[11px]">
                     <span
-                        class="text-slate-500 uppercase font-bold flex items-center gap-1"
+                        class="text-slate-500 font-semibold flex items-center gap-1"
                     >
-                        <Layers size={10} /> Layer Spacing
+                        <Layers size={11} /> Layer Spacing
                     </span>
-                    <span class="text-indigo-500 font-mono font-bold"
+                    <span class="text-slate-900 dark:text-slate-100 font-mono font-bold"
                         >{diagramStore.layoutParams.ranksep}</span
                     >
                 </div>
@@ -182,7 +174,7 @@
                     max="2"
                     step="0.1"
                     value={diagramStore.layoutParams.ranksep}
-                    class="w-full accent-indigo-500 h-1"
+                    class="w-full accent-slate-900 dark:accent-slate-100 h-1"
                     onchange={(e) =>
                         updateParam(
                             "ranksep",

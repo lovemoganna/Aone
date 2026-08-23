@@ -43,37 +43,37 @@
 
 {#if isOpen}
     <div
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-all"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs transition-all"
     >
         <div
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col border border-gray-200 dark:border-gray-700"
+            class="bg-white dark:bg-[#0b0f17] rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col border border-slate-200 dark:border-slate-800"
         >
             <!-- Header -->
             <div
-                class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700"
+                class="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40"
             >
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                     Diagram Templates
                 </h3>
                 <button
-                    class="p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    class="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded transition-colors"
                     onclick={() => (isOpen = false)}
                 >
-                    <X size={20} />
+                    <X size={15} />
                 </button>
             </div>
 
             <!-- Category Chips -->
             <div
-                class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex gap-2 overflow-x-auto no-scrollbar scroll-smooth"
+                class="px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex gap-1.5 overflow-x-auto"
             >
                 {#each categories as cat}
                     <button
                         onclick={() => (selectedCategory = cat)}
-                        class="px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border
+                        class="px-2.5 py-1 rounded text-xs font-semibold whitespace-nowrap transition-colors border
                         {selectedCategory === cat
-                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-                            : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}"
+                            ? 'bg-slate-900 dark:bg-slate-100 border-slate-900 dark:border-slate-100 text-white dark:text-slate-900 shadow-xs'
+                            : 'bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}"
                     >
                         {cat}
                     </button>
@@ -82,39 +82,39 @@
 
             <!-- Search -->
             <div
-                class="p-4 border-b border-gray-200 dark:border-gray-700 flex gap-4"
+                class="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800"
             >
                 <input
                     type="text"
                     placeholder="Search name, code, or category..."
                     bind:value={searchQuery}
-                    class="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                    class="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-800 dark:text-slate-200 outline-none"
                 />
             </div>
 
             <!-- List -->
             <div
-                class="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-4"
+                class="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-3"
             >
                 {#each filteredTemplates as template}
                     <button
-                        class="text-left p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-indigo-500 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all group flex flex-col gap-2"
+                        class="text-left p-3 rounded border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 hover:border-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-all flex flex-col gap-1.5"
                         onclick={() => loadTemplate(template)}
                     >
                         <div class="flex items-center justify-between w-full">
                             <span
-                                class="font-medium text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                                class="text-xs font-semibold text-slate-900 dark:text-white"
                             >
                                 {template.name}
                             </span>
                             <span
-                                class="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500"
+                                class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
                             >
                                 {template.mode}
                             </span>
                         </div>
                         <div
-                            class="text-xs text-gray-500 line-clamp-3 bg-gray-50 dark:bg-gray-900/50 p-2 rounded font-mono w-full"
+                            class="text-[11px] text-slate-500 line-clamp-3 bg-white dark:bg-slate-950 p-2 rounded border border-slate-200/60 dark:border-slate-800 font-mono w-full"
                         >
                             {template.code}
                         </div>
@@ -122,7 +122,7 @@
                 {/each}
 
                 {#if filteredTemplates.length === 0}
-                    <div class="col-span-full text-center py-8 text-gray-500">
+                    <div class="col-span-full text-center py-8 text-slate-500">
                         No templates found.
                     </div>
                 {/if}

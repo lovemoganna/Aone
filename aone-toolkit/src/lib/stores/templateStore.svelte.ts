@@ -171,7 +171,6 @@ function createTemplateStore() {
     return createTemplate({
       ...template,
       name: newName || `${template.name} (副本)`,
-      id: undefined as any,
     });
   }
 

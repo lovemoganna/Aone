@@ -1,4 +1,3 @@
-
 import { findDefinitions, type DiagramMode } from './parser';
 
 /**
@@ -9,11 +8,9 @@ export function injectColor(code: string, id: string, color: string, mode: Diagr
     const def = definitions.get(id);
 
     if (!def || (mode === 'graphviz' && !def.isExplicit)) {
-        // Fallback: Append new definition if implicit or missing
         if (mode === 'plantuml') {
             return appendNewDefinition(code, mode, `${id} ${color}`);
         } else {
-            // Graphviz default: assumption it's a node
             return appendNewDefinition(code, mode, `${id} [fillcolor="${color}", style="filled"];`);
         }
     }
@@ -22,17 +19,12 @@ export function injectColor(code: string, id: string, color: string, mode: Diagr
     let line = lines[def.line];
 
     if (mode === 'plantuml') {
-        // Regex to find existing color: #current
-        // We match # followed by word or hex.
-        // Be careful not to replace random words, look for #
         const existingColorRegex = /#(\w+|[0-9a-fA-F]{3,6})/;
         const match = line.match(existingColorRegex);
 
         if (match) {
-            // Replace existing color
             line = line.replace(match[0], color ? `${color}` : '');
         } else if (color) {
-            // Add new color
             const splitRegex = /(\s*)(\{|$|<<)/;
             const splitMatch = line.match(splitRegex);
 
@@ -43,8 +35,6 @@ export function injectColor(code: string, id: string, color: string, mode: Diagr
             }
         }
     } else {
-        // Graphviz: specific ID matching
-        // Match: (start/space/semi) (ID or "ID") (space) (optional [attrs])
         const idRegex = new RegExp(`(?:^|[\\s;])(?:(${id})|"(${id})")\\s*(?:\\[(.*?)\\])?`);
         const match = line.match(idRegex);
 
@@ -54,14 +44,11 @@ export function injectColor(code: string, id: string, color: string, mode: Diagr
             const content = match[3] || "";
 
             let newContent = content;
-            // Match color or fillcolor, handling quotes or no quotes
             const colorPropRegex = /\b(fillcolor|color)\s*=\s*(?:"[^"]*"|[^,\s\]]+)/g;
 
             if (colorPropRegex.test(content)) {
-                // Replace all instances of color/fillcolor
                 newContent = content.replace(colorPropRegex, `fillcolor="${color}"`);
             } else {
-                // Append new color
                 let stylePart = '';
                 if (!/\bstyle\s*=/.test(content)) {
                     stylePart = ', style="filled"';
@@ -74,39 +61,18 @@ export function injectColor(code: string, id: string, color: string, mode: Diagr
                 }
             }
 
-            // Reconstruct the part
             if (hasAttrs) {
-                // We matched [ ... ]
-                // Reconstruct exact match string but replace content
-                // Be careful: start of match might have ; or space
-                // We can't just replace `[${content}]` because content might appear elsewhere?
-                // Safest: match[0] contains the whole thing.
-                // It ends with `]`. So last `]` corresponds to end.
-                // Or simplified: use the captured groups to reconstruct.
-                // But we don't know exact spacing unless we capture it?
-                // Simpler: Replace the `[${content}]` in `fullMatch` with `[${newContent}]`.
-                // BUT content might be integer or something that regex replaces wrongly?
-                // Better: find `[` index in `fullMatch`.
                 const openBracketIndex = fullMatch.lastIndexOf('[');
                 if (openBracketIndex !== -1) {
                     const before = fullMatch.slice(0, openBracketIndex);
-                    // The ] should be at the end of match[0] usually? NOT GUARANTEED if non-greedy `.*?` stopped early?
-                    // In parser we used `[^\]]*`. Here we used `.*?`? parser used `[^\]]*`.
-                    // Let's use `[^\]]*` in RegExp as well for safety.
                     const newPart = `${before}[${newContent}]`;
                     line = line.replace(fullMatch, newPart);
                 }
             } else {
-                // No attributes. Insert them.
-                // fullMatch is just the ID (with leading junk).
-                // Append ` [attrs]` to it.
                 const newPart = `${fullMatch} [${newContent}]`;
                 line = line.replace(fullMatch, newPart);
             }
         } else {
-            // Should not happen if parser found it?
-            // But valid if parser logic differs slightly.
-            // Fallback: append
             const splitRegex = /(\s*)(;|$)/;
             const splitMatch = line.match(splitRegex);
             if (splitMatch && splitMatch.index !== undefined) {
@@ -119,13 +85,33 @@ export function injectColor(code: string, id: string, color: string, mode: Diagr
     return lines.join('\n');
 }
 
+/**
+ * Batch applies color to multiple elements.
+ */
+export function injectBatchColor(code: string, ids: string[], color: string, mode: DiagramMode): string {
+    let updatedCode = code;
+    for (const id of ids) {
+        updatedCode = injectColor(updatedCode, id, color, mode);
+    }
+    return updatedCode;
+}
+
+/**
+ * Batch applies shape to multiple elements.
+ */
+export function injectBatchShape(code: string, ids: string[], shape: string, mode: DiagramMode): string {
+    let updatedCode = code;
+    for (const id of ids) {
+        updatedCode = injectShape(updatedCode, id, shape, mode);
+    }
+    return updatedCode;
+}
+
 function appendNewDefinition(code: string, mode: DiagramMode, newLine: string): string {
     const lines = code.split('\n');
     let insertIdx = lines.length;
 
     if (mode === 'plantuml') {
-        // Find @enduml
-        // Search from end
         for (let i = lines.length - 1; i >= 0; i--) {
             if (lines[i].trim() === '@enduml') {
                 insertIdx = i;
@@ -133,7 +119,6 @@ function appendNewDefinition(code: string, mode: DiagramMode, newLine: string): 
             }
         }
     } else {
-        // Find closing brace '}'
         for (let i = lines.length - 1; i >= 0; i--) {
             if (lines[i].trim() === '}') {
                 insertIdx = i;
@@ -142,15 +127,11 @@ function appendNewDefinition(code: string, mode: DiagramMode, newLine: string): 
         }
     }
 
-    // Indent?
-    const indent = '    '; // 4 spaces
+    const indent = '    ';
     lines.splice(insertIdx, 0, indent + newLine);
     return lines.join('\n');
 }
 
-/**
- * Updates the label of a specific element.
- */
 /**
  * Updates the label of a specific element.
  */
@@ -159,9 +140,6 @@ export function injectLabel(code: string, id: string, label: string, mode: Diagr
     const def = definitions.get(id);
     if (!def || (mode === 'graphviz' && !def.isExplicit)) {
         if (mode === 'plantuml') {
-            // Assume it is a class/component if not defined? 
-            // Or just `ID : "Label"` (valid for objects/actors often)
-            // Safest fallback: `component ${id} [${label}]`
             return appendNewDefinition(code, mode, `${id} : "${label}"`);
         } else {
             return appendNewDefinition(code, mode, `${id} [label="${label}"];`);
@@ -219,7 +197,6 @@ export function injectLabel(code: string, id: string, label: string, mode: Diagr
 
 /**
  * Updates the Shape (type) of a specific element.
- * Only works well for PlantUML where type is explicit (rectangle vs database).
  */
 export function injectShape(code: string, id: string, shape: string, mode: DiagramMode): string {
     const definitions = findDefinitions(code, mode);
@@ -236,14 +213,11 @@ export function injectShape(code: string, id: string, shape: string, mode: Diagr
     let line = lines[def.line];
 
     if (mode === 'plantuml') {
-        // Type is at the start usually: "class Foo ..."
         const typeRegex = new RegExp(`^(\\s*)${def.type}\\b`);
-
         if (typeRegex.test(line)) {
             line = line.replace(typeRegex, `$1${shape}`);
         }
     } else {
-        // Graphviz: specific ID matching
         const idRegex = new RegExp(`(?:^|[\\s;])(?:(${id})|"(${id})")\\s*(?:\\[(.*?)\\])?`);
         const match = line.match(idRegex);
 
@@ -291,10 +265,8 @@ export function injectShape(code: string, id: string, shape: string, mode: Diagr
 
 /**
  * Updates the Position of a specific element (Graphviz only).
- * Injects pos="x,y!" attribute.
  */
 export function injectPosition(code: string, id: string, x: number, y: number, mode: DiagramMode): string {
-    // Only Graphviz supports pos nicely
     if (mode !== 'graphviz') return code;
 
     const definitions = findDefinitions(code, mode);
@@ -308,10 +280,7 @@ export function injectPosition(code: string, id: string, x: number, y: number, m
     const lines = code.split('\n');
     let line = lines[def.line];
 
-    // Graphviz pos regex
     const posRegex = /pos\s*=\s*(?:"[^"]*"|[^,\s\]]+)/;
-
-    // Check if attributes exist
     const attrBlockRegex = /\[(.*?)\]/;
     const blockMatch = line.match(attrBlockRegex);
 
@@ -337,4 +306,57 @@ export function injectPosition(code: string, id: string, x: number, y: number, m
 
     lines[def.line] = line;
     return lines.join('\n');
+}
+
+/**
+ * Injects document metadata header and visual color legend into the code.
+ */
+export function injectMetadataAndLegend(
+    code: string,
+    metadata: { title?: string; author?: string; version?: string; date?: string },
+    legendItems: { label: string; color: string }[],
+    mode: DiagramMode
+): string {
+    if (mode === 'plantuml') {
+        let metaBlock = '';
+        if (metadata.title) metaBlock += `title ${metadata.title}\n`;
+        if (metadata.author || metadata.version || metadata.date) {
+            metaBlock += `header\n  Author: ${metadata.author || 'Architecture Team'}\n  Version: ${metadata.version || 'v1.0'}\n  Date: ${metadata.date || new Date().toISOString().slice(0, 10)}\nendheader\n`;
+        }
+
+        let legendBlock = '';
+        if (legendItems.length > 0) {
+            legendBlock += '\nlegend right\n';
+            for (const item of legendItems) {
+                legendBlock += `  <back:${item.color}>   </back> ${item.label}\n`;
+            }
+            legendBlock += 'endlegend\n';
+        }
+
+        let cleanCode = code.replace(/\btitle\s+[^\n]+\n/g, '').replace(/header[\s\S]*?endheader\n/g, '').replace(/legend[\s\S]*?endlegend\n/g, '');
+        const startMatch = cleanCode.match(/@start\w+/);
+        if (startMatch) {
+            cleanCode = cleanCode.slice(0, startMatch.index! + startMatch[0].length) + '\n' + metaBlock + cleanCode.slice(startMatch.index! + startMatch[0].length);
+        } else {
+            cleanCode = metaBlock + cleanCode;
+        }
+
+        const endMatch = cleanCode.match(/@enduml/);
+        if (endMatch) {
+            cleanCode = cleanCode.slice(0, endMatch.index!) + legendBlock + cleanCode.slice(endMatch.index!);
+        } else {
+            cleanCode += legendBlock;
+        }
+
+        return cleanCode;
+    } else {
+        // Graphviz mode
+        let labelItems: string[] = [];
+        if (metadata.title) labelItems.push(metadata.title);
+        if (metadata.version) labelItems.push(`Version: ${metadata.version}`);
+        if (metadata.author) labelItems.push(`Author: ${metadata.author}`);
+
+        const graphLabel = labelItems.length > 0 ? `labelloc="t";\n    label="${labelItems.join(' | ')}";\n` : '';
+        return code.replace(/(digraph|graph)\s+\w*\s*\{/i, `$&\n    ${graphLabel}`);
+    }
 }

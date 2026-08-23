@@ -298,39 +298,29 @@ export const cognitiveChain = {
         agent_pathfinder: ['agent_calculator', 'agent_stress_tester', 'agent_closer'],
         agent_stress_tester: ['agent_calculator', 'agent_closer'],
         agent_closer: []  // 结束
-    },
-
-    // 入口关键词匹配
-    entranceKeywords: {
-        '理不清': 'agent_decomposer',
-        '一团乱': 'agent_decomposer',
-        '说不清': 'agent_decomposer',
-        '选不了': 'agent_calculator',
-        '犹豫': 'agent_calculator',
-        '纠结': 'agent_calculator',
-        '找不到路': 'agent_pathfinder',
-        '没选择': 'agent_pathfinder',
-        '死局': 'agent_pathfinder',
-        '不敢动': 'agent_stress_tester',
-        '怕': 'agent_stress_tester',
-        '万一': 'agent_stress_tester',
-        '想好了但没动': 'agent_closer',
-        '不动': 'agent_closer',
-        '行动': 'agent_closer'
     }
 };
 
 // ============== 工具函数 ==============
 
 /**
- * 根据入口关键词匹配认知Agent
+ * Dynamically match agent by inspecting agent metadata (perspective, coreBelief, oneLiner, whenToUse, abilityTags)
  */
 export function matchAgentByKeyword(keyword: string): string | null {
-    const lowerKeyword = keyword.toLowerCase();
-    
-    for (const [key, agentId] of Object.entries(cognitiveChain.entranceKeywords)) {
-        if (lowerKeyword.includes(key)) {
-            return agentId;
+    if (!keyword || !keyword.trim()) return null;
+    const lowerKeyword = keyword.toLowerCase().trim();
+
+    // Dynamically match against cognitive agents definitions
+    for (const agent of cognitiveAgents) {
+        if (
+            (agent.name && agent.name.toLowerCase().includes(lowerKeyword)) ||
+            (agent.perspective && agent.perspective.toLowerCase().includes(lowerKeyword)) ||
+            (agent.coreBelief && agent.coreBelief.toLowerCase().includes(lowerKeyword)) ||
+            (agent.oneLiner && agent.oneLiner.toLowerCase().includes(lowerKeyword)) ||
+            (Array.isArray(agent.whenToUse) && agent.whenToUse.some(w => w.toLowerCase().includes(lowerKeyword))) ||
+            (Array.isArray(agent.visual?.abilityTags) && agent.visual.abilityTags.some(t => t.toLowerCase().includes(lowerKeyword)))
+        ) {
+            return agent.id;
         }
     }
     

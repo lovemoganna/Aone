@@ -58,7 +58,7 @@
     };
     
     // Skill 数据
-    export let skill: {
+    type SkillCardSkill = {
         id: string;
         name: string;
         description: string;
@@ -77,16 +77,23 @@
     };
     
     // 是否可拖拽
-    export let draggable: boolean = true;
+    let {
+        skill,
+        draggable = true,
+        selected = false,
+    } = $props<{
+        skill: SkillCardSkill;
+        draggable?: boolean;
+        selected?: boolean;
+    }>();
     
     // 是否选中
-    export let selected: boolean = false;
     
     // 状态
     let isHovered = $state(false);
     
     // 获取类型配置
-    $: typeConfig = skillTypeConfig[skill.type] || skillTypeConfig.generation;
+    let typeConfig = $derived(skillTypeConfig[skill.type] || skillTypeConfig.generation);
     
     // 获取图标组件
     function getTypeIcon(type: string) {
@@ -224,6 +231,7 @@
     .line-clamp-1 {
         display: -webkit-box;
         -webkit-line-clamp: 1;
+        line-clamp: 1;
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
@@ -231,6 +239,7 @@
     .line-clamp-2 {
         display: -webkit-box;
         -webkit-line-clamp: 2;
+        line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
     }

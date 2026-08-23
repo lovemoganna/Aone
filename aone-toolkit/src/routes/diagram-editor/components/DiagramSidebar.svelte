@@ -23,29 +23,40 @@
         Wrench,
         Layers,
         Layout,
+        FolderTree,
+        Folder,
+        Box as BoxIcon
     } from "lucide-svelte";
+    import { parseHierarchicalTree, type TreeNode } from "../lib/parser";
     import LayoutManager from "./LayoutManager.svelte";
     import { RefactorService } from "../lib/refactorService";
     import { lintingService } from "../lib/lintingService.svelte";
     import { fade, slide } from "svelte/transition";
 
-    let { isCollapsed = $bindable(false), onDiff } = $props<{
+    let {
+        isCollapsed = $bindable(true),
+        onToggle,
+        onDiff
+    } = $props<{
         isCollapsed?: boolean;
+        onToggle?: (collapsed: boolean) => void;
         onDiff?: (code: string) => void;
     }>();
 
+    function setCollapsed(val: boolean) {
+        isCollapsed = val;
+        onToggle?.(val);
+    }
+
     let activeTab = $state<
-        | "templates"
-        | "snippets"
-        | "ai"
-        | "history"
-        | "layout"
-        | "style"
-        | "quality"
-        | "refactor"
-    >("templates");
+        "outline" | "templates" | "snippets" | "diagnostics" | "refactor"
+    >("outline");
+
+    let outlineTree = $derived(
+        parseHierarchicalTree(diagramStore.code, diagramStore.mode)
+    );
     let searchQuery = $state("");
-    let newSnippetName = $state(""); // State for new snippet input
+    let newSnippetName = $state("");
     let selectedCategory = $state("All");
 
     function handleDragStart(e: DragEvent, code: string) {
@@ -79,50 +90,6 @@
         diagramStore.render();
     }
 
-    // AI Logic (Placeholder for now)
-    let aiPrompt = $state("");
-    let isGenerating = $state(false);
-
-    async function handleAiGenerate() {
-        if (!aiPrompt.trim()) return;
-        isGenerating = true;
-        await diagramStore.generateFromPrompt(aiPrompt);
-        isGenerating = false;
-        aiPrompt = ""; // Clear after generation
-    }
-
-    let activeDoc = $derived(
-        diagramStore.documents.find(
-            (d) => d.id === diagramStore.activeDocumentId,
-        ),
-    );
-
-    function restoreHistory(code: string) {
-        diagramStore.code = code;
-        diagramStore.render();
-    }
-
-    function applyTheme(theme: string) {
-        if (diagramStore.mode !== "plantuml") return;
-        const code = diagramStore.code;
-        const themeMap: Record<string, string> = {
-            Sketchy: "sketchy-outline",
-            Technical: "bluegray",
-            Modern: "mimeograph",
-            Minimalist: "plain",
-        };
-        const themeName = themeMap[theme];
-        const themeLine = `!theme ${themeName}\n`;
-
-        let newCode = code;
-        if (code.includes("!theme")) {
-            newCode = code.replace(/!theme .*\n?/, themeLine);
-        } else {
-            newCode = code.replace("@startuml\n", `@startuml\n${themeLine}`);
-        }
-        diagramStore.code = newCode;
-        diagramStore.render();
-    }
     function applyRefactor(type: "wrap" | "c4") {
         if (type === "wrap") {
             const name = prompt("Enter container name:", "NewContainer");
@@ -139,131 +106,127 @@
             diagramStore.render();
         }
     }
+
+    let lintData = $derived(
+        lintingService.lint(diagramStore.code, diagramStore.mode)
+    );
 </script>
 
 <aside
-    class="h-[calc(100%-32px)] m-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl shadow-2xl flex transition-all duration-300 relative group spatial-tilt border border-white/20 dark:border-gray-700/30 overflow-hidden"
-    style="width: {isCollapsed ? '48px' : '300px'}"
+    class="h-full flex-shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0b0f17] flex select-none overflow-hidden transition-[width] duration-200 z-10"
+    style="width: {isCollapsed ? 48 : 288}px;"
 >
-    <!-- Tab Icons (Collapsed Mode) -->
+    <!-- Tab Icons (Docked Activity Bar) -->
     <div
-        class="w-14 border-r border-gray-100/50 dark:border-gray-700/30 flex flex-col items-center py-4 gap-4 shrink-0 bg-gray-50/30 dark:bg-gray-900/20 z-10"
+        class="w-11 border-r border-slate-200 dark:border-slate-800 flex flex-col items-center py-2.5 gap-1.5 shrink-0 bg-slate-50/60 dark:bg-slate-900/60 z-10"
     >
         <button
-            class="p-2.5 rounded-xl transition-all hover:scale-110 active:scale-95 {activeTab ===
-            'templates'
-                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 shadow-sm'
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100/50'}"
+            type="button"
+            class="p-2 rounded-md transition-colors {activeTab === 'outline' && !isCollapsed
+                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/70 dark:hover:bg-slate-800'}"
             onclick={() => {
-                activeTab = "templates";
-                isCollapsed = false;
+                if (activeTab === 'outline' && !isCollapsed) {
+                    setCollapsed(true);
+                } else {
+                    activeTab = 'outline';
+                    setCollapsed(false);
+                }
             }}
-            title="Templates"
+            title="Component Outline Tree"
+            aria-label="Component Outline Tree"
         >
-            <LayoutTemplate size={20} />
-        </button>
-        <button
-            class="p-2 rounded-lg transition-colors {activeTab === 'snippets'
-                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600'
-                : 'text-gray-400 hover:text-gray-600'}"
-            onclick={() => {
-                activeTab = "snippets";
-                isCollapsed = false;
-            }}
-            title="Snippets"
-        >
-            <Book size={20} />
-        </button>
-        <button
-            class="p-2 rounded-lg transition-colors {activeTab === 'ai'
-                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600'
-                : 'text-gray-400 hover:text-gray-600'}"
-            onclick={() => {
-                activeTab = "ai";
-                isCollapsed = false;
-            }}
-            title="AI Assistant"
-        >
-            <Sparkles size={20} />
-        </button>
-        <button
-            class="p-2 rounded-lg transition-colors {activeTab === 'history'
-                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600'
-                : 'text-gray-400 hover:text-gray-600'}"
-            onclick={() => {
-                activeTab = "history";
-                isCollapsed = false;
-            }}
-            title="Local History"
-        >
-            <History size={20} />
+            <FolderTree size={15} />
         </button>
 
-        {#if diagramStore.mode === "graphviz"}
+        <button
+            type="button"
+            class="p-2 rounded-md transition-colors {activeTab === 'templates' && !isCollapsed
+                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/70 dark:hover:bg-slate-800'}"
+            onclick={() => {
+                if (activeTab === 'templates' && !isCollapsed) {
+                    setCollapsed(true);
+                } else {
+                    activeTab = 'templates';
+                    setCollapsed(false);
+                }
+            }}
+            title="Architecture Templates"
+            aria-label="Architecture Templates"
+        >
+            <LayoutTemplate size={15} />
+        </button>
+
+        <button
+            type="button"
+            class="p-2 rounded-md transition-colors {activeTab === 'snippets' && !isCollapsed
+                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/70 dark:hover:bg-slate-800'}"
+            onclick={() => {
+                if (activeTab === 'snippets' && !isCollapsed) {
+                    setCollapsed(true);
+                } else {
+                    activeTab = 'snippets';
+                    setCollapsed(false);
+                }
+            }}
+            title="Code Snippets"
+            aria-label="Code Snippets"
+        >
+            <Book size={15} />
+        </button>
+
+        <button
+            type="button"
+            class="p-2 rounded-md transition-colors {activeTab === 'diagnostics' && !isCollapsed
+                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/70 dark:hover:bg-slate-800'}"
+            onclick={() => {
+                if (activeTab === 'diagnostics' && !isCollapsed) {
+                    setCollapsed(true);
+                } else {
+                    activeTab = 'diagnostics';
+                    setCollapsed(false);
+                }
+            }}
+            title="Syntax & Lint Diagnostics"
+            aria-label="Syntax & Lint Diagnostics"
+        >
+            <Activity size={15} />
+        </button>
+
+        <button
+            type="button"
+            class="p-2 rounded-md transition-colors {activeTab === 'refactor' && !isCollapsed
+                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/70 dark:hover:bg-slate-800'}"
+            onclick={() => {
+                if (activeTab === 'refactor' && !isCollapsed) {
+                    setCollapsed(true);
+                } else {
+                    activeTab = 'refactor';
+                    setCollapsed(false);
+                }
+            }}
+            title="Refactoring Tools"
+            aria-label="Refactoring Tools"
+        >
+            <Wrench size={15} />
+        </button>
+
+        <div class="mt-auto pt-2 border-t border-slate-200 dark:border-slate-800 w-full flex justify-center">
             <button
-                class="p-2 rounded-lg transition-colors {activeTab === 'layout'
-                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600'
-                    : 'text-gray-400 hover:text-gray-600'}"
-                onclick={() => {
-                    activeTab = "layout";
-                    isCollapsed = false;
-                }}
-                title="Layout Parameters"
-            >
-                <Settings2 size={20} />
-            </button>
-        {/if}
-
-        <button
-            class="p-2 rounded-lg transition-colors {activeTab === 'style'
-                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600'
-                : 'text-gray-400 hover:text-gray-600'}"
-            onclick={() => {
-                activeTab = "style";
-                isCollapsed = false;
-            }}
-            title="Skins & Themes"
-        >
-            <Palette size={20} />
-        </button>
-
-        <button
-            class="p-2.5 rounded-xl transition-all hover:scale-110 active:scale-95 {activeTab ===
-            'quality'
-                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 shadow-sm'
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100/50'}"
-            onclick={() => {
-                activeTab = "quality";
-                isCollapsed = false;
-            }}
-            title="Quality & Validation"
-        >
-            <Activity size={20} />
-        </button>
-
-        <button
-            class="p-2.5 rounded-xl transition-all hover:scale-110 active:scale-95 {activeTab ===
-            'refactor'
-                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 shadow-sm'
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100/50'}"
-            onclick={() => {
-                activeTab = "refactor";
-                isCollapsed = false;
-            }}
-            title="Expert Refactoring"
-        >
-            <Wrench size={20} />
-        </button>
-
-        <div class="mt-auto">
-            <button
-                class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"
-                onclick={() => (isCollapsed = !isCollapsed)}
+                type="button"
+                class="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-md hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors"
+                onclick={() => setCollapsed(!isCollapsed)}
+                title={isCollapsed ? "Expand Sidebar" : "Hide Sidebar"}
+                aria-label={isCollapsed ? "Expand Sidebar" : "Hide Sidebar"}
             >
                 {#if isCollapsed}
-                    <ChevronRight size={20} />
+                    <ChevronRight size={14} />
                 {:else}
-                    <ChevronLeft size={20} />
+                    <ChevronLeft size={14} />
                 {/if}
             </button>
         </div>
@@ -272,44 +235,52 @@
     <!-- Content (Expanded Mode) -->
     {#if !isCollapsed}
         <div
-            class="flex-1 flex flex-col min-w-0 bg-white/50 dark:bg-gray-800/50"
-            transition:fade={{ duration: 150 }}
+            class="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0b0f17]"
         >
             <div
-                class="p-4 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between"
+                class="h-9 px-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/40 dark:bg-slate-900/30"
             >
-                <h3
-                    class="font-bold text-sm uppercase tracking-wider text-gray-400"
+                <span
+                    class="font-bold text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400"
                 >
                     {activeTab}
-                </h3>
+                </span>
+                <button
+                    type="button"
+                    class="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded transition-colors"
+                    onclick={() => setCollapsed(true)}
+                    title="Hide Sidebar"
+                    aria-label="Hide Sidebar"
+                >
+                    <ChevronLeft size={14} />
+                </button>
             </div>
 
             <div class="flex-1 overflow-y-auto">
                 {#if activeTab === "templates"}
-                    <div class="p-3 space-y-3">
+                    <div class="p-2.5 space-y-2.5">
                         <div class="relative">
                             <Search
-                                size={14}
-                                class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                size={13}
+                                class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
                             />
                             <input
                                 type="text"
-                                placeholder="Search templates..."
+                                placeholder="Filter templates..."
                                 bind:value={searchQuery}
-                                class="w-full pl-9 pr-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
+                                class="w-full pl-8 pr-2.5 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-xs focus:ring-1 focus:ring-slate-400 outline-none placeholder:text-slate-400 text-slate-800 dark:text-slate-200"
                             />
                         </div>
 
                         <div
-                            class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1"
+                            class="flex gap-1 overflow-x-auto no-scrollbar pb-0.5"
                         >
                             {#each categories as cat}
                                 <button
-                                    class="px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap border transition-all
+                                    class="px-2 py-0.5 rounded text-[10px] font-medium whitespace-nowrap border transition-colors
                                     {selectedCategory === cat
-                                        ? 'bg-indigo-600 border-indigo-600 text-white'
-                                        : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500'}"
+                                        ? 'bg-slate-900 dark:bg-slate-100 border-slate-900 dark:border-slate-100 text-white dark:text-slate-900 font-semibold'
+                                        : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}"
                                     onclick={() => (selectedCategory = cat)}
                                 >
                                     {cat}
@@ -317,10 +288,10 @@
                             {/each}
                         </div>
 
-                        <div class="space-y-2">
+                        <div class="space-y-1">
                             {#each filteredTemplates as t}
                                 <div
-                                    class="w-full text-left p-2 rounded-lg border border-transparent hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all group relative cursor-grab active:cursor-grabbing"
+                                    class="w-full text-left p-2 rounded border border-slate-200/70 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-400 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group relative cursor-pointer"
                                     role="button"
                                     tabindex="0"
                                     draggable="true"
@@ -331,27 +302,19 @@
                                         e.key === "Enter" && loadTemplate(t)}
                                 >
                                     <div
-                                        class="flex items-center justify-between mb-1"
+                                        class="flex items-center justify-between mb-0.5"
                                     >
-                                        <div
-                                            class="flex items-center gap-1.5 overflow-hidden"
-                                        >
-                                            <GripVertical
-                                                size={12}
-                                                class="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            />
-                                            <span
-                                                class="text-xs font-semibold text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 truncate"
-                                                >{t.name}</span
-                                            >
-                                        </div>
                                         <span
-                                            class="text-[9px] uppercase px-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-400"
+                                            class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate"
+                                            >{t.name}</span
+                                        >
+                                        <span
+                                            class="text-[9px] uppercase px-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 font-mono"
                                             >{t.mode}</span
                                         >
                                     </div>
                                     <p
-                                        class="text-[10px] text-gray-400 line-clamp-1 font-mono pl-4"
+                                        class="text-[10px] text-slate-400 line-clamp-1 font-mono opacity-80"
                                     >
                                         {t.code}
                                     </p>
@@ -360,25 +323,34 @@
                         </div>
                     </div>
                 {:else if activeTab === "snippets"}
-                    <div class="p-4 h-full flex flex-col">
+                    <div class="p-2.5 h-full flex flex-col">
+                        <div class="flex items-center justify-between mb-2 px-0.5">
+                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                Saved Snippets
+                            </span>
+                            <span class="text-[10px] font-mono text-slate-400">
+                                {diagramStore.snippets.length}
+                            </span>
+                        </div>
+
                         {#if diagramStore.snippets.length === 0}
                             <div
-                                class="flex-1 flex flex-col items-center justify-center text-center text-gray-400"
+                                class="flex-1 flex flex-col items-center justify-center text-center text-slate-400 py-10"
                             >
-                                <Book size={32} class="mb-2 opacity-20" />
-                                <p class="text-xs">No snippets saved yet.</p>
-                                <p class="text-[10px] mt-1 opacity-70">
-                                    Save current code as a snippet.
+                                <Book size={24} class="mb-1.5 opacity-20" />
+                                <p class="text-xs">No snippets saved.</p>
+                                <p class="text-[10px] text-slate-400 mt-0.5 opacity-70">
+                                    Save current code below for quick reuse.
                                 </p>
                             </div>
                         {:else}
-                            <div class="flex-1 overflow-y-auto space-y-2">
+                            <div class="flex-1 overflow-y-auto space-y-1">
                                 {#each diagramStore.snippets as snippet}
                                     <div
-                                        class="group relative rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all"
+                                        class="group relative rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-400 dark:hover:border-slate-600 transition-colors"
                                     >
                                         <div
-                                            class="w-full text-left p-2 pr-8 cursor-grab active:cursor-grabbing"
+                                            class="w-full text-left p-2 pr-7 cursor-pointer"
                                             role="button"
                                             tabindex="0"
                                             draggable="true"
@@ -403,31 +375,20 @@
                                             }}
                                         >
                                             <div
-                                                class="flex items-center justify-between mb-1"
+                                                class="flex items-center justify-between mb-0.5"
                                             >
-                                                <div
-                                                    class="flex items-center gap-1.5 overflow-hidden"
-                                                >
-                                                    <GripVertical
-                                                        size={12}
-                                                        class="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    />
-                                                    <span
-                                                        class="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate"
-                                                        >{snippet.name}</span
-                                                    >
-                                                </div>
                                                 <span
-                                                    class="text-[9px] uppercase px-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-400"
+                                                    class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate"
+                                                    >{snippet.name}</span
+                                                >
+                                                <span
+                                                    class="text-[9px] uppercase px-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-400 font-mono"
                                                     >{snippet.mode}</span
                                                 >
                                             </div>
-                                            <p
-                                                class="text-[10px] text-gray-400 line-clamp-2 font-mono"
-                                            ></p>
                                         </div>
                                         <button
-                                            class="absolute right-1 top-1 p-1.5 text-gray-400 hover:text-red-500 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                            class="absolute right-1 top-1.5 p-1 text-slate-400 hover:text-rose-500 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                                             onclick={(e) => {
                                                 e.stopPropagation();
                                                 diagramStore.deleteSnippet(
@@ -436,7 +397,7 @@
                                             }}
                                             title="Delete Snippet"
                                         >
-                                            <Trash2 size={14} />
+                                            <Trash2 size={12} />
                                         </button>
                                     </div>
                                 {/each}
@@ -444,17 +405,17 @@
                         {/if}
 
                         <div
-                            class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/50"
+                            class="mt-2 pt-2 border-t border-slate-200 dark:border-slate-800"
                         >
-                            <div class="flex gap-2">
+                            <div class="flex gap-1.5">
                                 <input
                                     type="text"
                                     bind:value={newSnippetName}
-                                    placeholder="Snippet Name..."
-                                    class="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
+                                    placeholder="New snippet name..."
+                                    class="flex-1 px-2.5 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-xs focus:ring-1 focus:ring-slate-400 outline-none placeholder:text-slate-400 text-slate-800 dark:text-slate-200"
                                 />
                                 <button
-                                    class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                    class="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     disabled={!newSnippetName.trim()}
                                     onclick={() => {
                                         diagramStore.saveSnippet(
@@ -463,472 +424,187 @@
                                         newSnippetName = "";
                                     }}
                                 >
-                                    <Plus size={16} />
+                                    <Plus size={14} />
                                 </button>
                             </div>
                         </div>
                     </div>
-                {:else if activeTab === "ai"}
-                    <div class="p-4 space-y-4">
-                        <div
-                            class="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border border-indigo-100 dark:border-indigo-900/30"
-                        >
-                            <p
-                                class="text-[11px] text-indigo-700 dark:text-indigo-300"
-                            >
-                                Describe the diagram you want to create in
-                                natural language.
-                            </p>
+                {:else if activeTab === "outline"}
+                    <div class="p-2.5 space-y-2.5">
+                        <div class="flex items-center justify-between px-0.5">
+                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                Architecture Tree
+                            </span>
+                            <span class="text-[10px] font-mono text-slate-400">
+                                {outlineTree.length} Top-level
+                            </span>
                         </div>
-                        <textarea
-                            bind:value={aiPrompt}
-                            placeholder="e.g., A sequence diagram of user login with MFA..."
-                            class="w-full h-32 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
-                        ></textarea>
-                        <button
-                            class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                            onclick={handleAiGenerate}
-                            disabled={isGenerating || !aiPrompt.trim()}
-                        >
-                            {#if isGenerating}
-                                <div
-                                    class="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"
-                                ></div>
-                                Generating...
-                            {:else}
-                                <Sparkles size={14} /> Generate Diagram
-                            {/if}
-                        </button>
-                    </div>
-                {:else if activeTab === "history"}
-                    <div class="p-4 h-full flex flex-col">
-                        {#if !activeDoc || activeDoc.history.length === 0}
-                            <div
-                                class="flex-1 flex flex-col items-center justify-center text-center text-gray-400"
-                            >
-                                <History size={32} class="mb-2 opacity-20" />
-                                <p class="text-xs">No history snapshots.</p>
-                                <p class="text-[10px] mt-1 opacity-70">
-                                    Snapshots are taken after each render.
-                                </p>
+
+                        {#if outlineTree.length === 0}
+                            <div class="p-8 text-center text-slate-400 text-xs">
+                                <FolderTree size={24} class="mx-auto mb-1.5 opacity-30" />
+                                No components detected.
                             </div>
                         {:else}
-                            <div class="flex-1 overflow-y-auto space-y-2">
-                                {#each [...activeDoc.history].reverse() as item}
-                                    <div
-                                        class="p-3 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-800 transition-all group"
+                            <div class="space-y-1 bg-slate-50/50 dark:bg-slate-900/30 rounded p-1.5 border border-slate-200/60 dark:border-slate-800">
+                                {#each outlineTree as node}
+                                    <button
+                                        class="w-full text-left p-1.5 rounded text-xs flex items-center gap-2 hover:bg-white dark:hover:bg-slate-800 transition-colors {diagramStore.selectedElementId === node.id ? 'bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold' : 'text-slate-700 dark:text-slate-300'}"
+                                        onclick={() => {
+                                            diagramStore.selectedElementId = node.id;
+                                            diagramStore.isInspectorOpen = true;
+                                        }}
                                     >
-                                        <div
-                                            class="flex items-center justify-between mb-2"
-                                        >
-                                            <span
-                                                class="text-[10px] font-mono text-gray-500"
-                                            >
-                                                {new Date(
-                                                    item.timestamp,
-                                                ).toLocaleTimeString()}
-                                            </span>
-                                            <button
-                                                class="text-indigo-600 hover:text-indigo-700 text-[10px] font-bold py-1 px-2 rounded bg-indigo-50 dark:bg-indigo-900/30 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                onclick={() =>
-                                                    restoreHistory(item.code)}
-                                            >
-                                                Restore
-                                            </button>
-                                            <button
-                                                class="text-indigo-600 hover:text-indigo-700 text-[10px] font-bold py-1 px-2 rounded bg-indigo-50 dark:bg-indigo-900/30 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
-                                                onclick={() =>
-                                                    onDiff?.(item.code)}
-                                            >
-                                                Compare
-                                            </button>
+                                        {#if node.type === 'container' || node.type === 'cluster'}
+                                            <Folder size={13} class="text-amber-500 shrink-0" />
+                                        {:else}
+                                            <BoxIcon size={13} class="text-slate-400 shrink-0" />
+                                        {/if}
+                                        <span class="truncate">{node.name}</span>
+                                    </button>
+                                    {#if node.children && node.children.length > 0}
+                                        <div class="pl-3 border-l border-slate-200 dark:border-slate-700 space-y-1 ml-2.5 my-1">
+                                            {#each node.children as child}
+                                                <button
+                                                    class="w-full text-left p-1 rounded text-xs flex items-center gap-1.5 hover:bg-white dark:hover:bg-slate-800 transition-colors {diagramStore.selectedElementId === child.id ? 'bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold' : 'text-slate-600 dark:text-slate-400'}"
+                                                    onclick={() => {
+                                                        diagramStore.selectedElementId = child.id;
+                                                        diagramStore.isInspectorOpen = true;
+                                                    }}
+                                                >
+                                                    <BoxIcon size={11} class="text-slate-400 shrink-0" />
+                                                    <span class="truncate">{child.name}</span>
+                                                </button>
+                                            {/each}
                                         </div>
-                                        <p
-                                            class="text-[10px] text-gray-400 line-clamp-2 font-mono bg-gray-50 dark:bg-gray-900/50 p-1.5 rounded"
-                                        >
-                                            {item.code}
-                                        </p>
-                                    </div>
+                                    {/if}
                                 {/each}
                             </div>
                         {/if}
                     </div>
-                {:else if activeTab === "layout"}
-                    <LayoutManager />
-                {:else if activeTab === "style"}
-                    <div class="p-4 space-y-4">
-                        <h4
-                            class="text-[10px] uppercase font-bold text-slate-400 block tracking-widest"
-                        >
-                            Global Themes
-                        </h4>
-                        <div class="grid grid-cols-2 gap-2">
-                            {#each ["Sketchy", "Technical", "Modern", "Minimalist"] as theme}
-                                <button
-                                    class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:border-indigo-500 hover:shadow-md transition-all active:scale-95 group/theme"
-                                    onclick={() => applyTheme(theme)}
-                                >
-                                    <div
-                                        class="w-full h-8 bg-slate-100 dark:bg-slate-900 rounded mb-2 overflow-hidden border border-slate-100 dark:border-slate-800 flex items-center justify-center"
-                                    >
-                                        <Palette
-                                            size={16}
-                                            class="text-slate-300 group-hover/theme:text-indigo-400 transition-colors"
-                                        />
-                                    </div>
-                                    {theme}
-                                </button>
-                            {/each}
+                {:else if activeTab === "diagnostics"}
+                    <div class="p-2.5 space-y-3 h-full flex flex-col">
+                        <div class="flex items-center justify-between px-0.5">
+                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                Health & Quality
+                            </span>
+                            {#if lintData.metrics}
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold {lintData.metrics.score > 80 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400' : lintData.metrics.score > 50 ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400' : 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400'}">
+                                    Score: {lintData.metrics.score}/100
+                                </span>
+                            {/if}
                         </div>
-                        <div
-                            class="p-3 bg-indigo-50/50 dark:bg-indigo-900/20 rounded border border-indigo-100 dark:border-indigo-900/30"
-                        >
-                            <p
-                                class="text-[10px] text-indigo-600 dark:text-indigo-400"
-                            >
-                                Themes for PlantUML apply <code>!theme</code> settings
-                                automatically. Graphviz uses local layout params
-                                instead.
-                            </p>
-                        </div>
-                    </div>
-                {:else if activeTab === "quality"}
-                    <div class="p-4 space-y-6">
-                        {#if lintingService.metrics}
-                            <!-- Score Card -->
-                            <div class="relative pt-2 flex justify-center">
-                                <div
-                                    class="relative w-32 h-32 flex items-center justify-center"
-                                >
-                                    <svg
-                                        class="w-full h-full transform -rotate-90"
-                                    >
-                                        <circle
-                                            cx="64"
-                                            cy="64"
-                                            r="56"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="8"
-                                            class="text-gray-100 dark:text-gray-800"
-                                        />
-                                        <circle
-                                            cx="64"
-                                            cy="64"
-                                            r="56"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="8"
-                                            stroke-dasharray="351.86"
-                                            stroke-dashoffset={351.86 -
-                                                (351.86 *
-                                                    lintingService.metrics
-                                                        .score) /
-                                                    100}
-                                            class="transition-all duration-1000 ease-out {lintingService
-                                                .metrics.score > 80
-                                                ? 'text-green-500'
-                                                : lintingService.metrics.score >
-                                                    50
-                                                  ? 'text-yellow-500'
-                                                  : 'text-red-500'}"
-                                        />
-                                    </svg>
-                                    <div
-                                        class="absolute inset-0 flex flex-col items-center justify-center"
-                                    >
-                                        <span
-                                            class="text-3xl font-bold text-gray-900 dark:text-white"
-                                        >
-                                            {Math.round(
-                                                lintingService.metrics.score,
-                                            )}
-                                        </span>
-                                        <span
-                                            class="text-[10px] uppercase tracking-wider text-gray-400"
-                                            >Quality</span
-                                        >
-                                    </div>
-                                </div>
-                            </div>
 
-                            <!-- Metrics Grid -->
-                            <div class="grid grid-cols-3 gap-2 text-center">
-                                <div
-                                    class="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                                >
-                                    <div class="text-xs text-gray-500">
-                                        Nodes
+                        {#if lintData.metrics}
+                            <!-- Radar & Core Metrics Grid -->
+                            <div class="p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-2">
+                                <div class="grid grid-cols-3 gap-1.5 text-center">
+                                    <div class="p-1.5 rounded bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/50">
+                                        <div class="text-[9px] text-slate-400 font-medium">Nodes</div>
+                                        <div class="text-xs font-bold text-slate-700 dark:text-slate-200">{lintData.metrics.nodeCount}</div>
                                     </div>
-                                    <div class="font-bold">
-                                        {lintingService.metrics.nodeCount}
+                                    <div class="p-1.5 rounded bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/50">
+                                        <div class="text-[9px] text-slate-400 font-medium">Edges</div>
+                                        <div class="text-xs font-bold text-slate-700 dark:text-slate-200">{lintData.metrics.edgeCount}</div>
                                     </div>
-                                </div>
-                                <div
-                                    class="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                                >
-                                    <div class="text-xs text-gray-500">
-                                        Edges
-                                    </div>
-                                    <div class="font-bold">
-                                        {lintingService.metrics.edgeCount}
-                                    </div>
-                                </div>
-                                <div
-                                    class="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                                >
-                                    <div class="text-xs text-gray-500">
-                                        Complex
-                                    </div>
-                                    <div
-                                        class="font-bold capitalize {lintingService
-                                            .metrics.complexity === 'high'
-                                            ? 'text-red-500'
-                                            : 'text-green-500'}"
-                                    >
-                                        {lintingService.metrics.complexity}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Advanced Metrics -->
-                            <div class="space-y-2">
-                                <h4
-                                    class="text-[10px] uppercase font-bold text-slate-400 tracking-widest px-1"
-                                >
-                                    Architectural Metrics
-                                </h4>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div
-                                        class="p-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl"
-                                    >
-                                        <div
-                                            class="flex justify-between items-center mb-1"
-                                        >
-                                            <span
-                                                class="text-[10px] text-gray-400"
-                                                >Coupling</span
-                                            >
-                                            <span
-                                                class="text-xs font-bold {lintingService
-                                                    .metrics.coupling > 0.5
-                                                    ? 'text-red-500'
-                                                    : 'text-indigo-500'}"
-                                                >{lintingService.metrics
-                                                    .coupling}</span
-                                            >
-                                        </div>
-                                        <div
-                                            class="w-full h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"
-                                        >
-                                            <div
-                                                class="h-full bg-indigo-500 transition-all duration-500"
-                                                style="width: {lintingService
-                                                    .metrics.coupling * 100}%"
-                                            ></div>
-                                        </div>
-                                    </div>
-                                    <div
-                                        class="p-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl"
-                                    >
-                                        <div
-                                            class="flex justify-between items-center mb-1"
-                                        >
-                                            <span
-                                                class="text-[10px] text-gray-400"
-                                                >Density</span
-                                            >
-                                            <span
-                                                class="text-xs font-bold text-indigo-500"
-                                                >{lintingService.metrics
-                                                    .density}</span
-                                            >
-                                        </div>
-                                        <div
-                                            class="w-full h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"
-                                        >
-                                            <div
-                                                class="h-full bg-indigo-500 transition-all duration-500"
-                                                style="width: {lintingService
-                                                    .metrics.density * 100}%"
-                                            ></div>
-                                        </div>
+                                    <div class="p-1.5 rounded bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/50">
+                                        <div class="text-[9px] text-slate-400 font-medium">Complexity</div>
+                                        <div class="text-xs font-bold text-slate-700 dark:text-slate-200 capitalize">{lintData.metrics.complexity}</div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Issues List -->
-                            <div class="space-y-3">
-                                <h4
-                                    class="text-[10px] font-bold uppercase tracking-widest text-gray-400"
-                                >
-                                    Issues ({lintingService.metrics.issues
-                                        .length})
-                                </h4>
-
-                                {#if lintingService.metrics.issues.length === 0}
-                                    <div
-                                        class="flex flex-col items-center py-8 text-gray-400"
-                                    >
-                                        <CheckCircle
-                                            size={32}
-                                            class="mb-2 text-green-500"
-                                        />
-                                        <span class="text-sm"
-                                            >No issues found!</span
-                                        >
+                            <div class="flex-1 overflow-y-auto space-y-1.5 pr-0.5">
+                                {#if lintData.metrics.issues.length === 0}
+                                    <div class="p-6 text-center text-slate-400 text-xs">
+                                        <CheckCircle size={20} class="mx-auto mb-1.5 text-emerald-500 opacity-80" />
+                                        Clean syntax & valid architecture
                                     </div>
                                 {:else}
-                                    {#each lintingService.metrics.issues as issue}
-                                        <div
-                                            class="p-3 bg-white dark:bg-gray-800 border rounded-lg shadow-sm
-                                            {issue.severity === 'error'
-                                                ? 'border-red-200 dark:border-red-900/30'
-                                                : issue.severity === 'warning'
-                                                  ? 'border-yellow-200 dark:border-yellow-900/30'
-                                                  : 'border-blue-200 dark:border-blue-900/30'}"
-                                        >
-                                            <div
-                                                class="flex gap-2 items-start mb-1"
-                                            >
-                                                {#if issue.severity === "error"}
-                                                    <AlertTriangle
-                                                        size={14}
-                                                        class="text-red-500 mt-0.5 shrink-0"
-                                                    />
-                                                {:else if issue.severity === "warning"}
-                                                    <AlertTriangle
-                                                        size={14}
-                                                        class="text-yellow-500 mt-0.5 shrink-0"
-                                                    />
+                                    {#each lintData.metrics.issues as issue}
+                                        <div class="p-2 rounded border transition-colors {issue.severity === 'error' ? 'border-rose-200 bg-rose-50/30 dark:border-rose-900/40 dark:bg-rose-950/20' : issue.severity === 'warning' ? 'border-amber-200 bg-amber-50/30 dark:border-amber-900/40 dark:bg-amber-950/20' : 'border-slate-200 bg-slate-50/40 dark:border-slate-800 dark:bg-slate-900/30'}">
+                                            <div class="flex items-start gap-1.5">
+                                                {#if issue.severity === 'error'}
+                                                    <AlertTriangle size={13} class="text-rose-500 shrink-0 mt-0.5" />
+                                                {:else if issue.severity === 'warning'}
+                                                    <AlertTriangle size={13} class="text-amber-500 shrink-0 mt-0.5" />
                                                 {:else}
-                                                    <Info
-                                                        size={14}
-                                                        class="text-blue-500 mt-0.5 shrink-0"
-                                                    />
+                                                    <Info size={13} class="text-sky-500 shrink-0 mt-0.5" />
                                                 {/if}
-                                                <span
-                                                    class="text-xs font-medium text-gray-700 dark:text-gray-300"
-                                                >
-                                                    {issue.message}
-                                                </span>
-                                            </div>
-
-                                            {#if issue.suggestion}
-                                                <div
-                                                    class="text-[10px] text-gray-500 ml-5"
-                                                >
-                                                    {issue.suggestion}
+                                                <div class="flex-1 min-w-0">
+                                                    <div class="text-[11px] font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                                                        <span>{issue.message}</span>
+                                                        {#if issue.line}
+                                                            <span class="text-[9px] font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-1 rounded">L{issue.line}</span>
+                                                        {/if}
+                                                    </div>
+                                                    {#if issue.suggestion}
+                                                        <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{issue.suggestion}</p>
+                                                    {/if}
+                                                    {#if issue.autoFix}
+                                                        <button
+                                                            class="mt-1 px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded text-[10px] font-semibold transition-colors flex items-center gap-1"
+                                                            onclick={() => {
+                                                                if (issue.autoFix) {
+                                                                    diagramStore.code = issue.autoFix(diagramStore.code);
+                                                                    diagramStore.render();
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Sparkles size={10} />
+                                                            Auto-fix
+                                                        </button>
+                                                    {/if}
                                                 </div>
-                                            {/if}
-
-                                            {#if issue.autoFix}
-                                                <button
-                                                    class="mt-2 ml-5 px-2 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-[10px] rounded hover:bg-indigo-100 transition-colors flex items-center gap-1"
-                                                    onclick={() => {
-                                                        if (issue.autoFix) {
-                                                            diagramStore.code =
-                                                                issue.autoFix(
-                                                                    diagramStore.code,
-                                                                );
-                                                            diagramStore.render();
-                                                        }
-                                                    }}
-                                                >
-                                                    <Sparkles size={10} />
-                                                    Auto-fix
-                                                </button>
-                                            {/if}
+                                            </div>
                                         </div>
                                     {/each}
                                 {/if}
                             </div>
                         {:else}
-                            <div
-                                class="flex flex-col items-center justify-center py-20 text-gray-400"
-                            >
-                                <Activity size={32} class="mb-2 opacity-50" />
-                                <span>Analysis pending...</span>
+                            <div class="p-6 text-center text-slate-400 text-xs">
+                                <Activity size={20} class="mx-auto mb-1.5 opacity-30" />
+                                Analyzing syntax...
                             </div>
                         {/if}
                     </div>
                 {:else if activeTab === "refactor"}
-                    <div class="p-4 space-y-6">
-                        <div class="space-y-4">
-                            <h4
-                                class="text-[10px] uppercase font-bold text-slate-400 tracking-widest"
-                            >
-                                Architectural Refactors
-                            </h4>
+                    <div class="p-2.5 space-y-3">
+                        <div class="space-y-2">
+                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                Structural Refactors
+                            </span>
 
                             <button
-                                class="w-full p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-500 transition-all text-left group"
+                                class="w-full p-2.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-400 dark:hover:border-slate-600 transition-colors text-left group"
                                 onclick={() => applyRefactor("wrap")}
                             >
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div
-                                        class="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600"
-                                    >
-                                        <Layers size={18} />
-                                    </div>
-                                    <div>
-                                        <div
-                                            class="text-xs font-bold text-slate-700 dark:text-slate-200"
-                                        >
-                                            Wrap in Container
-                                        </div>
-                                        <div class="text-[10px] text-slate-400">
-                                            Group all nodes into a
-                                            Package/Subgraph
-                                        </div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <Layers size={14} class="text-slate-700 dark:text-slate-300" />
+                                    <div class="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                        Wrap in Container
                                     </div>
                                 </div>
+                                <p class="text-[10px] text-slate-400">
+                                    Group all nodes into a Package/Subgraph
+                                </p>
                             </button>
 
                             <button
-                                class="w-full p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-500 transition-all text-left group"
+                                class="w-full p-2.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-400 dark:hover:border-slate-600 transition-colors text-left group"
                                 onclick={() => applyRefactor("c4")}
                             >
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div
-                                        class="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600"
-                                    >
-                                        <Layout size={18} />
-                                    </div>
-                                    <div>
-                                        <div
-                                            class="text-xs font-bold text-slate-700 dark:text-slate-200"
-                                        >
-                                            Convert to C4 Model
-                                        </div>
-                                        <div class="text-[10px] text-slate-400">
-                                            Transform to C4 Context architecture
-                                        </div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <Layout size={14} class="text-slate-700 dark:text-slate-300" />
+                                    <div class="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                        Convert to C4 Architecture
                                     </div>
                                 </div>
+                                <p class="text-[10px] text-slate-400">
+                                    Transform diagram syntax to C4 Context model
+                                </p>
                             </button>
-                        </div>
-
-                        <div
-                            class="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-900/30"
-                        >
-                            <div
-                                class="flex gap-2 text-amber-600 dark:text-amber-400 mb-1"
-                            >
-                                <AlertTriangle size={14} />
-                                <span
-                                    class="text-[10px] font-bold uppercase tracking-wider"
-                                    >Destructive Warning</span
-                                >
-                            </div>
-                            <p
-                                class="text-[10px] text-amber-700 dark:text-amber-300 opacity-80"
-                            >
-                                Refactoring manipulates the entire diagram
-                                source. It is recommended to save a snapshot in
-                                History before applying major structural
-                                changes.
-                            </p>
                         </div>
                     </div>
                 {/if}

@@ -208,7 +208,7 @@
     }
 </script>
 
-<div class="h-full flex flex-col gap-6 max-w-6xl mx-auto">
+<div class="h-full flex flex-col gap-6 w-full">
     <!-- Toolbar -->
     <div
         class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm"
@@ -220,8 +220,8 @@
                 <button
                     class="px-4 py-2 text-sm font-medium rounded-md transition-all {targetLang ===
                     lang.id
-                        ? 'bg-white dark:bg-slate-700 shadow text-indigo-600 dark:text-indigo-400'
-                        : 'text-slate-500 hover:text-indigo-500'}"
+                        ? 'bg-white dark:bg-slate-700 shadow text-slate-900 dark:text-white'
+                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
                     onclick={() => {
                         targetLang = lang.id as any;
                         triggerConvert();
@@ -244,35 +244,39 @@
 
     <div class="flex-1 flex flex-col lg:flex-row gap-6 min-h-[500px]">
         <!-- Input -->
-        <div class="flex-1 flex flex-col gap-2">
-            <div
-                class="flex items-center gap-2 text-sm font-bold text-slate-500 uppercase tracking-widest pl-2"
-            >
-                <FileJson size={16} /> JSON Input
+        <div class="flex-1 flex flex-col gap-3 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-sm">
+            <div class="flex justify-between items-center">
+                <div
+                    class="flex items-center gap-2 label-section"
+                >
+                    <FileJson size={14} /> JSON Input
+                </div>
+                <span class="text-[11px] text-slate-400 font-mono">{input.length} chars</span>
             </div>
             <textarea
                 bind:value={input}
-                class="flex-1 p-6 font-mono text-sm leading-relaxed bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none resize-none focus:ring-2 focus:ring-indigo-500/50 shadow-sm transition-all text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
+                class="textarea-editor flex-1"
                 placeholder={`{\n  "id": 1,\n  "name": "Project Aone",\n  "features": ["DevTools", "AI"]\n}`}
             ></textarea>
         </div>
 
         <!-- Output -->
-        <div class="flex-1 flex flex-col gap-2">
-            <div class="flex items-center justify-between pl-2">
+        <div class="flex-1 flex flex-col gap-3 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-sm">
+            <div class="flex justify-between items-center">
                 <div
-                    class="flex items-center gap-2 text-sm font-bold text-slate-500 uppercase tracking-widest"
+                    class="flex items-center gap-2 label-section"
                 >
-                    <FileCode size={16} />
-                    {targetLang} Output
+                    <FileCode size={14} /> {targetLang} Output
                 </div>
                 {#if output}
                     <button
-                        class="flex items-center gap-1.5 px-3 py-1 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 rounded-full transition-colors"
+                        class="flex items-center gap-1.5 px-3 py-1 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 rounded-full transition-colors"
                         onclick={() => navigator.clipboard.writeText(output)}
                     >
                         <Copy size={12} /> Copy
                     </button>
+                {:else}
+                    <span class="text-[11px] text-slate-400 font-mono">0 chars</span>
                 {/if}
             </div>
 
@@ -280,7 +284,7 @@
                 <textarea
                     value={output}
                     readonly
-                    class="w-full h-full p-6 font-mono text-sm leading-relaxed bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none resize-none text-slate-600 dark:text-slate-400"
+                    class="textarea-editor w-full"
                     placeholder="Generated types will appear here..."
                 ></textarea>
 

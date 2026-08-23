@@ -39,10 +39,10 @@
 <div class="space-y-6">
     <!-- Controls -->
     <div
-        class="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800"
+        class="flex items-center gap-4 p-5 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-sm"
     >
         <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-slate-600 dark:text-slate-400"
+            <span class="label-section"
                 >Generate</span
             >
             <input
@@ -50,45 +50,45 @@
                 bind:value={count}
                 min="1"
                 max="100"
-                class="w-16 px-2 py-1 text-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md outline-none focus:border-primary-500"
+                class="input text-sm w-20"
             />
-            <span class="text-sm font-medium text-slate-600 dark:text-slate-400"
+            <span class="label-section"
                 >UUIDs</span
             >
         </div>
 
         <Button
             onclick={generate}
-            class="bg-primary-600 hover:bg-primary-700 text-white gap-2"
+            class="btn btn-primary text-sm shadow-sm hover:shadow-md"
         >
             <RefreshCw size={16} /> Generate
         </Button>
 
         <div class="flex-1"></div>
 
-        <Button variant="outline" onclick={copyAll} class="gap-2">
-            <Copy size={16} /> Copy List
+        <Button variant="outline" onclick={copyAll} class="btn btn-secondary text-sm">
+            <Copy size={16} class="mr-1" /> Copy List
         </Button>
     </div>
 
     <!-- Output -->
     <div
-        class="bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800/50"
+        class="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-slate-800/80 shadow-sm divide-y divide-slate-100 dark:divide-slate-800/60 overflow-hidden"
     >
         {#each uuids as uuid, i}
             <div
-                class="p-3 font-mono text-sm text-slate-600 dark:text-slate-300 flex justify-between items-center group hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors"
+                class="px-5 py-3.5 font-mono text-sm text-slate-700 dark:text-slate-300 flex justify-between items-center group hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors"
             >
                 <span
                     class="select-all opacity-0 translate-y-2 animate-[fadeIn_0.3s_ease-out_forwards]"
-                    style="animation-delay: {i * 30}ms">{uuid}</span
+                    style="animation-delay: {i * 20}ms">{uuid}</span
                 >
                 <button
                     onclick={() => navigator.clipboard.writeText(uuid)}
-                    class="p-1 rounded text-slate-400 hover:text-primary-500 hover:bg-white dark:hover:bg-slate-800 opacity-0 group-hover:opacity-100 transition-all"
+                    class="btn btn-secondary text-xs p-1.5 shadow-sm"
                     title="Copy"
                 >
-                    <Copy size={14} />
+                    <Copy size={12} />
                 </button>
             </div>
         {/each}

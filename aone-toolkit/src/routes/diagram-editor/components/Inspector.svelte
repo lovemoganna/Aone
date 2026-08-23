@@ -2,18 +2,19 @@
     import { diagramStore } from "../lib/store.svelte";
     import PropertyRow from "./PropertyRow.svelte";
     import AIExplainer from "./AIExplainer.svelte";
+    import { injectBatchColor, injectBatchShape } from "../lib/modifier";
     import {
         X,
         Search,
         Eye,
-        EyeOff,
         Info,
-        Sparkles,
+        Network,
         Box,
-        Palette,
-        Type,
+        Layers,
         Trash2,
         MousePointer2,
+        Palette,
+        Sliders
     } from "lucide-svelte";
     import { slide } from "svelte/transition";
 
@@ -21,343 +22,341 @@
         isPinned: boolean;
     }>();
 
-    let activeTab = $state<"props" | "ai">("props");
+    let activeTab = $state<"props" | "ai" | "palettes">("props");
 
-    let currentOverride = $derived(
-        diagramStore.selectedElementId
-            ? diagramStore.overrides[diagramStore.selectedElementId] || {}
-            : {},
-    );
+    let isBatchMode = $derived(diagramStore.multiSelection.length > 1);
 
-    function updateOverride(key: string, value: any) {
-        if (!diagramStore.selectedElementId) return;
-        diagramStore.setOverride(diagramStore.selectedElementId, {
-            [key]: value,
-        });
+    function applyColor(color: string) {
+        if (isBatchMode) {
+            diagramStore.code = injectBatchColor(
+                diagramStore.code,
+                diagramStore.multiSelection,
+                color,
+                diagramStore.mode
+            );
+            diagramStore.render();
+        } else if (diagramStore.selectedElementId) {
+            diagramStore.updateElementProperty("color", color);
+            diagramStore.render();
+        }
+    }
+
+    function applyShape(shape: string) {
+        if (!shape) return;
+        if (isBatchMode) {
+            diagramStore.code = injectBatchShape(
+                diagramStore.code,
+                diagramStore.multiSelection,
+                shape,
+                diagramStore.mode
+            );
+            diagramStore.render();
+        } else if (diagramStore.selectedElementId) {
+            diagramStore.updateElementProperty("shape", shape);
+            diagramStore.render();
+        }
     }
 
     function clearOverrides() {
-        if (!diagramStore.selectedElementId) return;
-        diagramStore.clearOverride(diagramStore.selectedElementId);
+        if (diagramStore.selectedElementId) {
+            diagramStore.clearOverride(diagramStore.selectedElementId);
+        }
+        diagramStore.multiSelection.forEach(id => diagramStore.clearOverride(id));
         diagramStore.multiSelection = [];
+        diagramStore.selectedElementId = null;
     }
 
     function selectSimilar() {
         const selectedId = diagramStore.selectedElementId;
         if (!selectedId) return;
 
-        // Scan the rendered SVG for elements that look similar
-        const svgContainer = document.querySelector(
-            ".diagram-preview-container",
-        );
-        if (!svgContainer) return;
-
-        const currentEl = svgContainer.querySelector(
-            `[data-id="${selectedId}"]`,
-        );
-        if (!currentEl) return;
-
-        const isNode = currentEl.classList.contains("node");
-        const type = isNode ? ".node" : ".edge";
-
-        const others = svgContainer.querySelectorAll(type);
-        const similarIds: string[] = [];
-
-        others.forEach((el) => {
-            const id = el.getAttribute("data-id");
-            if (id) similarIds.push(id);
-        });
-
-        diagramStore.multiSelection = similarIds;
-        console.log("Selected", similarIds.length, "similar elements");
+        const allDefs = Array.from(diagramStore.definitions.keys());
+        diagramStore.multiSelection = allDefs;
     }
 </script>
 
 <aside
-    class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border border-white/20 dark:border-white/10 flex flex-col w-80 shadow-2xl z-20 m-4 ml-0 rounded-2xl"
-    transition:slide={{ axis: "x", duration: 300 }}
+    class="bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col w-80 shrink-0 z-20 overflow-hidden select-none"
+    transition:slide={{ axis: "x", duration: 200 }}
 >
     <!-- Header -->
     <div
-        class="p-4 border-b border-white/10 dark:border-white/5 flex items-center justify-between bg-gradient-to-b from-white/50 to-transparent dark:from-white/5 dark:to-transparent"
+        class="h-10 px-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30"
     >
         <div class="flex items-center gap-2">
-            <div
-                class="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)] animate-pulse"
-            ></div>
             <h3
-                class="text-[10px] font-extrabold uppercase tracking-widest text-indigo-900/50 dark:text-indigo-100/50"
+                class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300"
             >
-                Control Deck
+                {isBatchMode
+                    ? `Batch Edit (${diagramStore.multiSelection.length})`
+                    : "Node Properties"}
             </h3>
         </div>
         <div class="flex items-center gap-1">
             {#if diagramStore.selectedElementId}
                 <button
-                    class="p-1 px-2 rounded-lg {diagramStore.multiSelection
+                    type="button"
+                    class="px-2 py-0.5 rounded {diagramStore.multiSelection
                         .length > 0
-                        ? 'bg-indigo-600 text-white shadow-glow-sm'
-                        : 'bg-indigo-500/10 text-indigo-500 dark:text-indigo-400'} hover:bg-indigo-500/20 text-[9px] font-bold flex items-center gap-1 transition-all"
+                        ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 shadow-xs'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'} hover:bg-slate-700 hover:text-white text-[10px] font-semibold flex items-center gap-1 transition-colors"
                     onclick={selectSimilar}
-                    title="Select all nodes with similar properties"
+                    title="Select all nodes"
                 >
-                    <Search size={10} strokeWidth={3} />
-                    {diagramStore.multiSelection.length > 0
+                    <Search size={10} strokeWidth={2.5} />
+                    <span>{diagramStore.multiSelection.length > 0
                         ? `${diagramStore.multiSelection.length} selected`
-                        : "Similar"}
+                        : "Select All"}</span>
                 </button>
             {/if}
             <button
-                class="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                type="button"
+                class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                 onclick={() => (diagramStore.isInspectorOpen = false)}
+                title="Close Inspector"
+                aria-label="Close Inspector"
             >
-                <X size={16} />
+                <X size={14} />
             </button>
         </div>
     </div>
 
-    {#if diagramStore.selectedElementId}
-        <div class="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin">
-            <!-- Focus Mode Toggle -->
-            <div class="flex gap-2">
-                <button
-                    class="flex-1 p-3 rounded-xl border flex items-center justify-center gap-2 transition-all active:scale-95
-                    {diagramStore.focusMode
-                        ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-500'
-                        : 'bg-gray-50/50 dark:bg-gray-800/30 border-gray-200/50 dark:border-gray-700/50 text-gray-400'}"
-                    onclick={() =>
-                        (diagramStore.focusMode = !diagramStore.focusMode)}
-                    title="Toggle Zen Mode"
-                >
-                    <Eye size={14} />
-                    <span
-                        class="text-[10px] font-bold uppercase tracking-widest"
-                        >Zen Mode</span
-                    >
-                </button>
-
-                {#if diagramStore.mode === "plantuml"}
-                    <button
-                        class="flex-1 p-3 rounded-xl border flex items-center justify-center gap-2 transition-all active:scale-95
-                        {diagramStore.overrides[diagramStore.selectedElementId!]
-                            ?.focused
-                            ? 'bg-amber-500/10 border-amber-500/50 text-amber-600'
-                            : 'bg-gray-50/50 dark:bg-gray-800/30 border-gray-200/50 dark:border-gray-700/50 text-gray-400'}"
-                        onclick={() =>
-                            diagramStore.focusOnNode(
-                                diagramStore.selectedElementId!,
-                            )}
-                        title="Isolate this node in the diagram"
-                    >
-                        <Search size={14} />
-                        <span
-                            class="text-[10px] font-bold uppercase tracking-widest"
-                            >Focus Node</span
-                        >
-                    </button>
-                {/if}
-            </div>
-
-            <!-- ID info -->
-            <div>
-                <h4
-                    class="text-[10px] uppercase font-extrabold tracking-widest text-gray-400/80 mb-2 pl-1"
-                >
-                    Context
-                </h4>
-            </div>
-
+    {#if diagramStore.selectedElementId || isBatchMode}
+        <div class="flex-1 overflow-y-auto p-3 space-y-4 scrollbar-thin">
             <!-- Tabs -->
             <div
-                class="flex p-1 bg-gray-100/50 dark:bg-gray-800/50 rounded-xl border border-gray-200/50 dark:border-gray-700/50 relative"
+                class="flex p-0.5 bg-slate-100 dark:bg-slate-800/80 rounded-lg border border-slate-200/80 dark:border-slate-700/60 relative text-xs font-medium"
             >
-                <div
-                    class="absolute inset-y-1 w-[calc(50%-4px)] bg-white dark:bg-gray-700 rounded-lg shadow-sm transition-all duration-300 ease-out"
-                    style="left: {activeTab === 'props'
-                        ? '4px'
-                        : 'calc(50% + 0px)'}"
-                ></div>
                 <button
-                    class="flex-1 px-4 py-1.5 text-xs font-bold flex items-center justify-center gap-2 transition-colors relative z-10 {activeTab ===
+                    class="flex-1 py-1 rounded-md flex items-center justify-center gap-1.5 transition-colors {activeTab ===
                     'props'
-                        ? 'text-gray-900 dark:text-white'
-                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}"
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-semibold shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'}"
                     onclick={() => (activeTab = "props")}
                 >
-                    <Info size={14} /> Properties
+                    <Info size={13} /> Style
                 </button>
                 <button
-                    class="flex-1 px-4 py-1.5 text-xs font-bold flex items-center justify-center gap-2 transition-colors relative z-10 {activeTab ===
+                    class="flex-1 py-1 rounded-md flex items-center justify-center gap-1.5 transition-colors {activeTab ===
+                    'palettes'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-semibold shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'}"
+                    onclick={() => (activeTab = "palettes")}
+                >
+                    <Palette size={13} /> Palettes
+                </button>
+                <button
+                    class="flex-1 py-1 rounded-md flex items-center justify-center gap-1.5 transition-colors {activeTab ===
                     'ai'
-                        ? 'text-indigo-600 dark:text-indigo-400'
-                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}"
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-semibold shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'}"
                     onclick={() => (activeTab = "ai")}
                 >
-                    <Sparkles size={14} /> AI Insight
+                    <Network size={13} /> Topology
                 </button>
             </div>
 
             {#if activeTab === "props"}
-                <div class="space-y-6 flex-1 animate-fade-in">
-                    <!-- Selection Header -->
+                <div class="space-y-4">
+                    <!-- Element Title -->
                     <div
-                        class="flex items-center gap-3 p-3 bg-white/50 dark:bg-gray-800/30 rounded-xl border border-gray-100 dark:border-gray-700/50"
+                        class="flex items-center gap-2.5 p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200/60 dark:border-slate-800"
                     >
                         <div
-                            class="p-2.5 bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/50 dark:to-indigo-800/50 rounded-lg text-indigo-600 dark:text-indigo-400 shadow-inner"
+                            class="p-1.5 bg-slate-200 dark:bg-slate-700 rounded-md text-slate-700 dark:text-slate-200"
                         >
-                            <Box size={20} />
+                            <Box size={16} />
                         </div>
-                        <div class="min-w-0">
+                        <div class="min-w-0 flex-1">
                             <h3
-                                class="font-bold text-sm text-gray-900 dark:text-white truncate"
+                                class="font-semibold text-xs text-slate-900 dark:text-white truncate"
                             >
-                                {diagramStore.selectedElementId}
+                                {isBatchMode
+                                    ? `${diagramStore.multiSelection.length} Nodes Selected`
+                                    : diagramStore.selectedElementId}
                             </h3>
                             <p
-                                class="text-[10px] font-mono text-gray-500 dark:text-gray-400 mt-0.5"
+                                class="text-[10px] font-mono text-slate-400 mt-0.5"
                             >
-                                {diagramStore.selectedElementType ||
-                                    "Unknown Element"}
+                                {isBatchMode
+                                    ? "Batch Edit Mode"
+                                    : diagramStore.mode}
                             </p>
                         </div>
                     </div>
 
                     <!-- Appearance -->
-                    <div class="space-y-3">
+                    <div class="space-y-2.5">
                         <h4
-                            class="text-[10px] font-extrabold text-gray-400/80 uppercase tracking-widest pl-1"
+                            class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest pl-1"
                         >
-                            Appearance
+                            Color & Shape
                         </h4>
 
                         <div
-                            class="bg-white/30 dark:bg-gray-800/20 rounded-xl p-3 border border-gray-100/50 dark:border-gray-700/50 space-y-4"
+                            class="bg-white dark:bg-slate-800/30 rounded-xl p-3 border border-slate-100 dark:border-slate-800 space-y-3.5"
                         >
-                            <PropertyRow label="Color">
-                                <div class="flex gap-2">
-                                    {#each ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6"] as color}
+                            <!-- Swatches from active palette -->
+                            <div>
+                                <div
+                                    class="text-[10px] text-slate-400 mb-1.5 font-medium flex items-center justify-between"
+                                >
+                                    <span>Theme Swatches</span>
+                                    <span class="font-mono text-[9px]">
+                                        {diagramStore.customPalettes[diagramStore.activePaletteIndex]?.name}
+                                    </span>
+                                </div>
+                                <div class="flex flex-wrap gap-1.5">
+                                    {#each diagramStore.customPalettes[diagramStore.activePaletteIndex]?.colors || [] as color}
                                         <button
-                                            class="w-6 h-6 rounded-full border-2 border-white dark:border-gray-700 shadow-sm hover:scale-110 hover:shadow-glow-sm transition-all"
+                                            class="w-6 h-6 rounded-md border border-black/10 dark:border-white/10 shadow-sm hover:scale-110 transition-transform"
                                             style="background-color: {color}"
-                                            onclick={() =>
-                                                diagramStore.updateElementProperty(
-                                                    "color",
-                                                    color,
-                                                )}
-                                            aria-label="Set color {color}"
+                                            onclick={() => applyColor(color)}
+                                            title="Apply {color}"
+                                            aria-label="Color swatch {color}"
                                         ></button>
                                     {/each}
                                 </div>
-                            </PropertyRow>
+                            </div>
 
                             <div
-                                class="w-full h-px bg-gray-200/50 dark:bg-gray-700/50"
+                                class="w-full h-px bg-slate-100 dark:bg-slate-800"
                             ></div>
 
                             <PropertyRow label="Shape">
                                 <select
-                                    class="w-full h-8 text-xs bg-white/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg px-2 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                                    class="w-full h-8 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 text-slate-700 dark:text-slate-200 outline-none"
                                     onchange={(e) =>
-                                        diagramStore.updateElementProperty(
-                                            "shape",
-                                            e.currentTarget.value,
-                                        )}
+                                        applyShape(e.currentTarget.value)}
                                 >
-                                    <option value="">Default</option>
-                                    <option value="rectangle">Rectangle</option>
-                                    <option value="cloud">Cloud</option>
-                                    <option value="database">Database</option>
-                                    <option value="node">Node</option>
+                                    <option value="">Choose Shape...</option>
+                                    <option value="rectangle">Rectangle (box)</option>
+                                    <option value="database">Database (cylinder)</option>
+                                    <option value="queue">Queue (message queue)</option>
+                                    <option value="cloud">Cloud (cluster)</option>
+                                    <option value="actor">Actor (user / client)</option>
+                                    <option value="component">Component</option>
                                 </select>
                             </PropertyRow>
                         </div>
                     </div>
 
-                    <!-- Text -->
-                    <div class="space-y-3">
-                        <h4
-                            class="text-[10px] font-extrabold text-gray-400/80 uppercase tracking-widest pl-1"
-                        >
-                            Typography
-                        </h4>
-                        <div
-                            class="bg-white/30 dark:bg-gray-800/20 rounded-xl p-3 border border-gray-100/50 dark:border-gray-700/50 space-y-4"
-                        >
-                            <PropertyRow label="Label">
+                    <!-- Single node Text Edit (if not batch) -->
+                    {#if !isBatchMode}
+                        <div class="space-y-2.5">
+                            <h4
+                                class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest pl-1"
+                            >
+                                Label Text
+                            </h4>
+                            <div
+                                class="bg-white dark:bg-slate-800/30 rounded-xl p-3 border border-slate-100 dark:border-slate-800"
+                            >
                                 <input
                                     type="text"
-                                    class="w-full h-8 text-xs bg-white/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg px-2 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500/20 outline-none"
-                                    placeholder="Element label..."
-                                    onchange={(e) =>
+                                    class="w-full h-8 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 text-slate-800 dark:text-slate-100 outline-none"
+                                    placeholder="Enter node label..."
+                                    onchange={(e) => {
                                         diagramStore.updateElementProperty(
                                             "label",
-                                            e.currentTarget.value,
-                                        )}
+                                            e.currentTarget.value
+                                        );
+                                        diagramStore.render();
+                                    }}
                                 />
-                            </PropertyRow>
+                            </div>
                         </div>
+                    {/if}
+                </div>
+            {:else if activeTab === "palettes"}
+                <!-- Custom Palette Switcher -->
+                <div class="space-y-3">
+                    <h4
+                        class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest pl-1"
+                    >
+                        Preset Palettes
+                    </h4>
+                    <div class="space-y-2">
+                        {#each diagramStore.customPalettes as pal, idx}
+                            <button
+                                class="w-full text-left p-2.5 rounded border transition-colors {diagramStore.activePaletteIndex ===
+                                idx
+                                    ? 'border-slate-900 dark:border-slate-100 bg-slate-100 dark:bg-slate-800 shadow-xs'
+                                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 hover:border-slate-400'}"
+                                onclick={() =>
+                                    (diagramStore.activePaletteIndex = idx)}
+                            >
+                                <div
+                                    class="text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5"
+                                >
+                                    {pal.name}
+                                </div>
+                                <div class="flex gap-1">
+                                    {#each pal.colors as col}
+                                        <div
+                                            class="w-5 h-4 rounded-xs border border-black/10 dark:border-white/10"
+                                            style="background-color: {col}"
+                                        ></div>
+                                    {/each}
+                                </div>
+                            </button>
+                        {/each}
                     </div>
                 </div>
             {:else}
-                <!-- AI Tab -->
+                <!-- AI Insight Tab -->
                 <div class="flex-1 overflow-hidden animate-fade-in">
                     <AIExplainer />
                 </div>
             {/if}
-            <div class="pt-4">
+
+            <div class="pt-2">
                 <button
-                    class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all border border-dashed border-gray-200 dark:border-gray-700 hover:border-red-200 dark:hover:border-red-900/30 group"
+                    class="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded text-xs font-semibold text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 border border-slate-200 dark:border-slate-800 transition-colors"
                     onclick={clearOverrides}
                 >
-                    <Trash2
-                        size={14}
-                        class="group-hover:scale-110 transition-transform"
-                    /> Reset Selection
+                    <Trash2 size={13} /> Clear Selection
                 </button>
             </div>
         </div>
     {:else}
         <div
-            class="flex-1 flex flex-col items-center justify-center p-8 text-center text-gray-300 dark:text-gray-700"
+            class="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400"
         >
             <div
-                class="w-20 h-20 rounded-full bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-800/30 flex items-center justify-center mb-6 shadow-inner"
+                class="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3"
             >
-                <MousePointer2 size={32} class="opacity-30 text-indigo-500" />
+                <MousePointer2 size={20} class="opacity-50 text-slate-500" />
             </div>
-            <p class="text-sm font-bold text-gray-500 dark:text-gray-400">
-                No Selection
+            <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                No Node Selected
             </p>
-            <p
-                class="text-[11px] mt-2 leading-relaxed text-gray-400 max-w-[180px]"
-            >
-                Select any node or edge in the diagram to access advanced
-                controls.
+            <p class="text-[11px] mt-1 text-slate-400 leading-relaxed max-w-[200px]">
+                Click or Shift+Click elements in the diagram to inspect and batch edit styling.
             </p>
         </div>
     {/if}
 
-    <!-- Footer / Pinner -->
+    <!-- Pin footer -->
     <div
-        class="p-4 border-t border-white/10 dark:border-white/5 bg-gray-50/30 dark:bg-gray-900/30 flex justify-center backdrop-blur-sm rounded-b-2xl"
+        class="p-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex justify-center"
     >
-        <label class="flex items-center gap-2 cursor-pointer group select-none">
+        <label class="flex items-center gap-2 cursor-pointer select-none">
             <input type="checkbox" bind:checked={isPinned} class="sr-only" />
             <div
-                class="w-9 h-5 bg-gray-200 dark:bg-gray-700 rounded-full relative transition-all duration-300 {isPinned
-                    ? 'bg-indigo-500 shadow-glow-sm'
+                class="w-7 h-4 bg-slate-300 dark:bg-slate-700 rounded-full relative transition-colors {isPinned
+                    ? '!bg-slate-900 dark:!bg-slate-100'
                     : ''}"
             >
                 <div
-                    class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300 {isPinned
-                        ? 'translate-x-4'
+                    class="absolute top-0.5 left-0.5 w-3 h-3 bg-white dark:bg-slate-900 rounded-full transition-transform {isPinned
+                        ? 'translate-x-3'
                         : ''}"
                 ></div>
             </div>
             <span
-                class="text-[10px] font-bold text-gray-400 group-hover:text-indigo-500 transition-colors uppercase tracking-widest"
-                >Pin Deck</span
+                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
+                >Pin Inspector</span
             >
         </label>
     </div>

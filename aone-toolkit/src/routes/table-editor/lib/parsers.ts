@@ -4,20 +4,30 @@ import type { TableData, InputFormat, ParseResult } from './types';
 /**
  * Auto-detect format and parse content
  */
+/**
+ * Auto-detect format and parse content
+ */
 export function autoDetectAndParse(content: string): ParseResult {
-    if (isHTMLTable(content)) {
-        return { data: parseHTMLTable(content), detectedFormat: 'html' };
+    const trimmed = content.trim();
+    if (isJSONArrayData(trimmed)) {
+        return { data: parseJSONArrayData(trimmed), detectedFormat: 'csv', detectedType: 'json-array' };
     }
-    if (isSQLCreateTable(content)) {
-        return { data: parseSQLCreateTable(content), detectedFormat: 'csv', detectedType: 'sql-import' }; // Treat as CSV structure for editor
+    if (isHTMLTable(trimmed)) {
+        return { data: parseHTMLTable(trimmed), detectedFormat: 'html' };
     }
-    if (isMarkdownTable(content)) {
-        return { data: parseMarkdownTable(content), detectedFormat: 'markdown' };
+    if (isSQLCreateTable(trimmed)) {
+        return { data: parseSQLCreateTable(trimmed), detectedFormat: 'csv', detectedType: 'sql-import' };
     }
-    if (isCSVData(content)) {
-        return { data: parseCSVData(content), detectedFormat: 'csv' };
+    if (isMarkdownTable(trimmed)) {
+        return { data: parseMarkdownTable(trimmed), detectedFormat: 'markdown' };
     }
-    return { data: parseTextTable(content), detectedFormat: 'text' };
+    if (isTSVData(trimmed)) {
+        return { data: parseTSVData(trimmed), detectedFormat: 'csv', detectedType: 'tsv-excel' };
+    }
+    if (isCSVData(trimmed)) {
+        return { data: parseCSVData(trimmed), detectedFormat: 'csv' };
+    }
+    return { data: parseTextTable(trimmed), detectedFormat: 'text' };
 }
 
 /**
@@ -27,7 +37,7 @@ export function parseByFormat(content: string, format: InputFormat): TableData {
     const parsers: Record<Exclude<InputFormat, 'auto'>, () => TableData> = {
         html: () => parseHTMLTable(content),
         markdown: () => parseMarkdownTable(content),
-        csv: () => parseCSVData(content),
+        csv: () => (isTSVData(content) ? parseTSVData(content) : parseCSVData(content)),
         text: () => parseTextTable(content),
     };
 
@@ -45,6 +55,55 @@ export function parseByFormat(content: string, format: InputFormat): TableData {
 // ========================================
 // Format Detection
 // ========================================
+
+export function isJSONArrayData(content: string): boolean {
+    if (!content.startsWith('[') || !content.endsWith(']')) return false;
+    try {
+        const parsed = JSON.parse(content);
+        return Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && parsed[0] !== null;
+    } catch {
+        return false;
+    }
+}
+
+export function parseJSONArrayData(content: string): TableData {
+    const parsed = JSON.parse(content) as Array<Record<string, any>>;
+    const keySet = new Set<string>();
+    parsed.forEach(item => {
+        if (item && typeof item === 'object') {
+            Object.keys(item).forEach(k => keySet.add(k));
+        }
+    });
+
+    const headers = Array.from(keySet);
+    const rows: TableData = [headers];
+
+    parsed.forEach(item => {
+        if (item && typeof item === 'object') {
+            const row = headers.map(h => {
+                const val = item[h];
+                if (val === undefined || val === null) return '';
+                if (typeof val === 'object') return JSON.stringify(val);
+                return String(val);
+            });
+            rows.push(row);
+        }
+    });
+
+    return rows;
+}
+
+export function isTSVData(content: string): boolean {
+    const lines = content.trim().split('\n');
+    if (lines.length < 1) return false;
+    const tabCounts = lines.map(l => (l.match(/\t/g) || []).length);
+    return tabCounts[0] > 0 && tabCounts.every(c => Math.abs(c - tabCounts[0]) <= 1);
+}
+
+export function parseTSVData(content: string): TableData {
+    const lines = content.trim().split('\n');
+    return lines.map(line => line.split('\t').map(c => c.trim()));
+}
 
 export function isHTMLTable(content: string): boolean {
     return /<table[^>]*>[\s\S]*<\/table>/i.test(content) ||
@@ -73,6 +132,7 @@ export function isCSVData(content: string): boolean {
     return firstLineCommas > 0 && firstLineCommas === secondLineCommas;
 }
 
+
 // ========================================
 // Parsers
 // ========================================
@@ -86,7 +146,7 @@ export function parseHTMLTable(content: string): TableData {
         // Try to find standalone tr elements
         const rows = doc.querySelectorAll('tr');
         if (rows.length === 0) {
-            throw new Error('未找到有效的HTML表格');
+            throw new Error('No valid HTML table was found.');
         }
         return extractRowsData(rows);
     }

@@ -44,7 +44,7 @@
             : 'opacity-0'}"
     >
         <button
-            class="p-2 bg-gray-800/50 hover:bg-gray-700 rounded-lg text-white/70 hover:text-white backdrop-blur-sm"
+            class="p-2 bg-slate-800/50 hover:bg-slate-700 rounded-lg text-white/70 hover:text-white backdrop-blur-sm"
             onclick={onClose}
         >
             <X size={24} />

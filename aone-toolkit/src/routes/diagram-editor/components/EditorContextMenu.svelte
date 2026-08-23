@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
     import { fade, scale } from "svelte/transition";
     import {
         DIRECTION_OPTIONS,
@@ -40,43 +40,43 @@
             onClose();
         }
     }
-
-    const iconMap: Record<Direction, any> = {
-        right: ArrowRight,
-        left: ArrowLeft,
-        up: ArrowUp,
-        down: ArrowDown,
-        default: Circle,
-    };
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
 
 <!-- Backdrop -->
-<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 <div
     class="fixed inset-0 z-50"
     onclick={onClose}
+    onkeydown={(event) => {
+        if (event.key === "Escape" || event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onClose();
+        }
+    }}
     transition:fade={{ duration: 100 }}
+    role="button"
+    tabindex="0"
+    aria-label="Close direction menu"
 ></div>
 
 <!-- Menu -->
 <div
-    class="fixed z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden min-w-[180px]"
+    class="fixed z-50 bg-white dark:bg-[#0b0f17] rounded-lg shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden min-w-[180px]"
     style="left: {x}px; top: {y}px;"
-    transition:scale={{ duration: 150, start: 0.95 }}
+    transition:scale={{ duration: 100, start: 0.95 }}
     role="menu"
 >
     <!-- Header -->
     <div
-        class="px-3 py-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700"
+        class="px-3 py-1.5 bg-slate-50/50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800"
     >
-        <div class="text-xs font-bold text-gray-500 uppercase tracking-wider">
-            调整连线方向
+        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+            Arrow Direction
         </div>
         {#if arrowCount > 1}
-            <div class="text-[10px] text-indigo-500 mt-0.5">
-                将修改 {arrowCount} 个箭头
+            <div class="text-[10px] text-slate-700 dark:text-slate-300 font-mono mt-0.5">
+                {arrowCount} arrows selected
             </div>
         {/if}
     </div>
@@ -85,32 +85,32 @@
     <div class="py-1">
         {#each DIRECTION_OPTIONS as option}
             <button
-                class="w-full px-3 py-2 text-left flex items-center gap-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors group"
+                class="w-full px-3 py-1.5 text-left flex items-center gap-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors group text-xs"
                 onclick={() => handleSelect(option.id)}
                 role="menuitem"
             >
                 <span
-                    class="w-5 h-5 flex items-center justify-center text-gray-400 group-hover:text-indigo-500"
+                    class="w-4 h-4 flex items-center justify-center text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white"
                 >
                     {#if option.id === "right"}
-                        <ArrowRight size={16} />
+                        <ArrowRight size={14} />
                     {:else if option.id === "left"}
-                        <ArrowLeft size={16} />
+                        <ArrowLeft size={14} />
                     {:else if option.id === "up"}
-                        <ArrowUp size={16} />
+                        <ArrowUp size={14} />
                     {:else if option.id === "down"}
-                        <ArrowDown size={16} />
+                        <ArrowDown size={14} />
                     {:else}
-                        <Circle size={16} />
+                        <Circle size={8} />
                     {/if}
                 </span>
                 <span
-                    class="flex-1 text-sm text-gray-700 dark:text-gray-300 group-hover:text-indigo-600"
+                    class="flex-1 text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white"
                 >
                     {option.label}
                 </span>
                 <code
-                    class="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-500 font-mono"
+                    class="text-[10px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-500 font-mono"
                 >
                     {option.syntax}
                 </code>
@@ -121,12 +121,12 @@
     <!-- Graphviz Note -->
     {#if mode === "graphviz"}
         <div
-            class="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border-t border-amber-100 dark:border-amber-900/30"
+            class="px-3 py-1.5 bg-amber-50/50 dark:bg-amber-950/20 border-t border-amber-200/60 dark:border-amber-900/40"
         >
-            <div class="flex items-start gap-2">
-                <Info size={12} class="text-amber-500 mt-0.5 shrink-0" />
-                <p class="text-[10px] text-amber-700 dark:text-amber-300">
-                    Graphviz 使用 <code class="font-mono">rankdir</code> 控制全局方向，单条边方向由布局自动决定。
+            <div class="flex items-start gap-1.5">
+                <Info size={12} class="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                <p class="text-[10px] text-amber-800 dark:text-amber-300">
+                    Graphviz uses <code class="font-mono">rankdir</code> for layout orientation.
                 </p>
             </div>
         </div>

@@ -2,18 +2,25 @@
 	import "../app.css";
 	import Sidebar from "$lib/components/Sidebar.svelte";
 	import CommandPalette from "$lib/components/CommandPalette.svelte";
-	import ClipboardPanel from "$lib/components/ClipboardPanel.svelte";
+	import StorageManagerModal from "$lib/components/StorageManagerModal.svelte";
 	import ToastContainer from "$lib/components/toast/ToastContainer.svelte";
 	import ProgressIndicator from "$lib/components/progress/ProgressIndicator.svelte";
 	import { sidebarCollapsed, theme } from "$lib/stores";
 	import { onMount } from "svelte";
-	import { Clipboard } from "lucide-svelte";
 
 	let { children } = $props();
-	let isClipboardOpen = $state(false);
+	let isStorageManagerOpen = $state(false);
 
 	onMount(() => {
 		theme.init();
+
+		const handleStorageOpenEvent = () => {
+			isStorageManagerOpen = true;
+		};
+		window.addEventListener("open-storage-manager", handleStorageOpenEvent);
+		return () => {
+			window.removeEventListener("open-storage-manager", handleStorageOpenEvent);
+		};
 	});
 </script>
 
@@ -35,30 +42,17 @@
 	<ToastContainer />
 	<ProgressIndicator />
 	<Sidebar />
-	<ClipboardPanel bind:isOpen={isClipboardOpen} />
+	<StorageManagerModal bind:isOpen={isStorageManagerOpen} />
 
 	<main
 		class="
-      min-h-screen transition-all duration-300 ease-out
-      {$sidebarCollapsed ? 'ml-16' : 'ml-60'}
+      h-screen overflow-hidden flex flex-col transition-[margin-left] duration-300 ease-out
+      ml-16 {$sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-60'}
     "
 	>
-		<div class="p-6">
+		<div class="h-full flex-1 flex flex-col overflow-hidden">
 			{@render children()}
 		</div>
 	</main>
-
-	<!-- Fixed Global Tools -->
-	<div class="fixed bottom-6 right-6 z-40 flex flex-col gap-3">
-		<button
-			class="w-12 h-12 rounded-full bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-primary-500 dark:hover:text-primary-400 hover:scale-110 transition-all group"
-			onclick={() => (isClipboardOpen = !isClipboardOpen)}
-			title="Clipboard History"
-		>
-			<Clipboard size={20} />
-			<span
-				class="absolute right-0 top-0 w-3 h-3 bg-primary-500 rounded-full border-2 border-white dark:border-slate-800 scale-0 group-hover:scale-100 transition-transform"
-			></span>
-		</button>
-	</div>
 </div>
+

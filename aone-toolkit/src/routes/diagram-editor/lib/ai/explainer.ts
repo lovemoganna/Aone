@@ -8,14 +8,14 @@ export async function explainDiagram(code: string, mode: 'plantuml' | 'graphviz'
     // 1. Check for API Configuration
     let apiKey = '';
     let endpoint = 'https://api.openai.com/v1/chat/completions';
-    let model = 'gpt-3.5-turbo';
+    let model = 'gpt-4o-mini';
 
     if (typeof localStorage !== 'undefined') {
         const stored = localStorage.getItem('aone_ai_config');
         if (stored) {
             try {
                 const config = JSON.parse(stored);
-                apiKey = config.apiKey;
+                apiKey = config.apiKey || '';
                 if (config.endpoint) endpoint = config.endpoint;
                 if (config.model) model = config.model;
             } catch (e) { /* ignore */ }
@@ -26,14 +26,14 @@ export async function explainDiagram(code: string, mode: 'plantuml' | 'graphviz'
     if (apiKey) {
         try {
             const prompt = `Analyze this ${mode} diagram code and provide a JSON response with:
-            {
-                "summary": "1-2 sentence high-level purpose",
-                "flows": ["List of 3-5 key logical flows"],
-                "entities": ["List of key entities with type"]
-            }
+{
+    "summary": "Concise 1-2 sentence high-level architectural purpose",
+    "flows": ["List of key logical flows"],
+    "entities": ["List of key components/nodes"]
+}
 
-            Code:
-            ${code}`;
+Code:
+${code}`;
 
             const res = await fetch(endpoint, {
                 method: 'POST',
@@ -42,7 +42,7 @@ export async function explainDiagram(code: string, mode: 'plantuml' | 'graphviz'
                     'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
-                    model: model,
+                    model,
                     messages: [{ role: 'user', content: prompt }],
                     temperature: 0.1
                 })
@@ -50,52 +50,84 @@ export async function explainDiagram(code: string, mode: 'plantuml' | 'graphviz'
 
             if (res.ok) {
                 const data = await res.json();
-                const content = data.choices[0]?.message?.content;
-                // Try parsing JSON from content (it might be wrapped in backticks)
+                const content = data.choices?.[0]?.message?.content || '';
                 const cleanJson = content.replace(/```json|```/g, '').trim();
                 return JSON.parse(cleanJson);
             }
         } catch (e) {
-            console.warn("AI API failed, falling back to heuristics", e);
+            console.warn("AI API request failed, falling back to AST topology diagnostics", e);
         }
     }
 
-    // 3. Fallback Heuristics (Offline)
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            const summary = `This is a ${mode} diagram demonstrating a structural or behavioral relationship. (Offline Analysis)`;
-            const flows: string[] = [];
-            const entities: string[] = [];
+    // 3. High-Precision AST Topological Diagnosis (Instant Offline Analysis)
+    const lines = code.split('\n');
+    const flows: string[] = [];
+    const entitySet = new Set<string>();
+    const outgoing = new Map<string, number>();
+    const incoming = new Map<string, number>();
 
-            // Simple heuristics
-            if (mode === 'plantuml') {
-                const lines = code.split('\n');
-                lines.forEach(line => {
-                    const trimmed = line.trim();
-                    if (trimmed.includes('->') || trimmed.includes('-->')) {
-                        flows.push(trimmed);
-                    }
-                    if (trimmed.match(/^(?:class|interface|component|node|rectangle)\s+(\w+)/)) {
-                        const match = trimmed.match(/^(?:class|interface|component|node|rectangle)\s+(\w+)/);
-                        if (match) entities.push(`${match[1]}`);
-                    }
-                });
-            } else {
-                // Graphviz heuristic
-                const lines = code.split('\n');
-                lines.forEach(line => {
-                    const trimmed = line.trim();
-                    if (trimmed.includes('->') || trimmed.includes('--')) {
-                        flows.push(trimmed);
-                    }
-                });
+    if (mode === 'plantuml') {
+        lines.forEach((raw) => {
+            const line = raw.trim();
+            if (!line || line.startsWith("'") || line.startsWith("@") || line.startsWith("!")) return;
+
+            // Detect sequence / relationship arrows: A -> B: msg
+            const arrowMatch = line.match(/^([a-zA-Z0-9_"\s]+?)\s*(?:->|-->|<-|<--|-\|>|\.\.>|\.\.|--)\s*([a-zA-Z0-9_"\s]+?)(?:\s*:\s*(.*))?$/);
+            if (arrowMatch) {
+                const src = arrowMatch[1].replace(/["']/g, '').trim();
+                const dst = arrowMatch[2].replace(/["']/g, '').trim();
+                const label = arrowMatch[3]?.trim();
+                if (src && dst) {
+                    entitySet.add(src);
+                    entitySet.add(dst);
+                    outgoing.set(src, (outgoing.get(src) || 0) + 1);
+                    incoming.set(dst, (incoming.get(dst) || 0) + 1);
+                    flows.push(label ? `${src} ➔ ${dst} (${label})` : `${src} ➔ ${dst}`);
+                }
             }
 
-            resolve({
-                summary,
-                flows: flows.slice(0, 5), // Limit for demo
-                entities: [...new Set(entities)].slice(0, 10)
-            });
-        }, 1000);
-    });
+            // Entity definitions: class User, actor Client, component [Gateway] as GW, etc.
+            const entityMatch = line.match(/^(?:actor|participant|database|queue|component|class|interface|node|package|rectangle)\s+(?:["']([^"']+)["']\s+as\s+(\w+)|["']?(\w+)["']?)/i);
+            if (entityMatch) {
+                const name = entityMatch[1] || entityMatch[2] || entityMatch[3];
+                if (name) entitySet.add(name);
+            }
+        });
+    } else {
+        lines.forEach((raw) => {
+            const line = raw.trim();
+            if (!line || line.startsWith("//") || line.startsWith("/*") || line.startsWith("digraph") || line.startsWith("graph") || line.startsWith("}")) return;
+
+            const edgeMatch = line.match(/([a-zA-Z0-9_]+)\s*(?:->|--)\s*([a-zA-Z0-9_]+)(?:\s*\[(.*)\])?/);
+            if (edgeMatch) {
+                const src = edgeMatch[1].trim();
+                const dst = edgeMatch[2].trim();
+                const labelMatch = edgeMatch[3]?.match(/label\s*=\s*["']([^"']+)["']/);
+                const label = labelMatch ? labelMatch[1] : '';
+                entitySet.add(src);
+                entitySet.add(dst);
+                outgoing.set(src, (outgoing.get(src) || 0) + 1);
+                incoming.set(dst, (incoming.get(dst) || 0) + 1);
+                flows.push(label ? `${src} ➔ ${dst} (${label})` : `${src} ➔ ${dst}`);
+            }
+        });
+    }
+
+    const entities = Array.from(entitySet);
+    const entryPoints = entities.filter(e => (incoming.get(e) || 0) === 0 && (outgoing.get(e) || 0) > 0);
+    const terminalPoints = entities.filter(e => (outgoing.get(e) || 0) === 0 && (incoming.get(e) || 0) > 0);
+
+    let summary = `Topology contains ${entities.length} nodes and ${flows.length} relations.`;
+    if (entryPoints.length > 0) {
+        summary += ` Ingress starts at [${entryPoints.slice(0, 2).join(', ')}]`;
+    }
+    if (terminalPoints.length > 0) {
+        summary += ` ending at [${terminalPoints.slice(0, 2).join(', ')}].`;
+    }
+
+    return {
+        summary,
+        flows: flows.slice(0, 8),
+        entities: entities.slice(0, 12)
+    };
 }

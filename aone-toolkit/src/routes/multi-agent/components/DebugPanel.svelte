@@ -17,6 +17,7 @@
     let expandedId = $state<number | null>(null);
     let logs = $derived(agentStore.debugLogs);
     let isOpen = $derived(agentStore.debugPanelOpen);
+    let hasAttentionLog = $derived(logs.some(l => l.status === "error" || Boolean(l.error)));
 
     function totalDuration(): string {
         const total = logs.reduce((sum, l) => sum + l.duration, 0);
@@ -48,6 +49,13 @@
         agentStore.clearDebugLogs();
     }
 
+    function handleWindowKeyDown(e: KeyboardEvent) {
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "D" || e.key === "d")) {
+            e.preventDefault();
+            togglePanel();
+        }
+    }
+
     function typeBadgeColor(type: DebugLog["type"]): string {
         switch (type) {
             case "stage":
@@ -59,6 +67,7 @@
             case "fallback":
                 return "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400";
         }
+        return "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400";
     }
 
     function statusIcon(status: DebugLog["status"]) {
@@ -66,9 +75,11 @@
     }
 </script>
 
-{#if logs.length > 0}
+<svelte:window onkeydown={handleWindowKeyDown} />
+
+{#if logs.length > 0 && (isOpen || hasAttentionLog)}
     <div
-        class="border-t-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950"
+        class="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950"
     >
         <!-- Toggle Bar -->
         <button
@@ -80,19 +91,19 @@
                 <span
                     class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider"
                 >
-                    Debug Console
+                    运行诊断分析 (Diagnostics)
                 </span>
                 <span
-                    class="px-1.5 py-0.5 rounded-full bg-indigo-500 text-white text-[10px] font-bold"
+                    class="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-xs font-semibold"
                 >
-                    {logs.length}
+                    {hasAttentionLog ? "需注意" : `${logs.length} 条日志`}
                 </span>
             </div>
             <div class="flex items-center gap-3">
                 <span
-                    class="text-[10px] text-slate-400 flex items-center gap-1"
+                    class="text-xs text-slate-400 flex items-center gap-1"
                 >
-                    <Clock size={10} />
+                    <Clock size={12} />
                     {totalDuration()}
                 </span>
                 {#if isOpen}
@@ -115,7 +126,7 @@
                         class="flex items-center gap-1 text-[10px] text-slate-400 hover:text-rose-500 transition-colors"
                     >
                         <Trash2 size={10} />
-                        Clear
+                        清空
                     </button>
                 </div>
 
@@ -131,7 +142,7 @@
                             class="w-full flex items-center gap-3 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors text-left"
                         >
                             <span
-                                class="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase {typeBadgeColor(
+                                class="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase {typeBadgeColor(
                                     log.type,
                                 )}"
                             >
@@ -142,11 +153,11 @@
                             >
                                 {log.name}
                             </span>
-                            <span class="shrink-0 text-[10px] text-slate-400">
+                            <span class="shrink-0 text-xs text-slate-400 font-mono">
                                 {formatDuration(log.duration)}
                             </span>
                             <StatusIcon
-                                size={12}
+                                size={14}
                                 class={log.status === "success"
                                     ? "text-emerald-500"
                                     : "text-rose-500"}
@@ -162,22 +173,23 @@
                                         class="flex items-center justify-between mb-1"
                                     >
                                         <span
-                                            class="text-[10px] font-bold text-slate-400 uppercase"
+                                            class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
                                         >
-                                            Input Prompt
+                                            输入提示词 (Input)
                                         </span>
                                         <button
                                             onclick={() => copyText(log.input)}
                                             class="text-slate-400 hover:text-indigo-500 transition-colors"
+                                            title="复制输入提示词"
                                         >
-                                            <Copy size={10} />
+                                            <Copy size={12} />
                                         </button>
                                     </div>
                                     <pre
-                                        class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-400 max-h-32 overflow-y-auto whitespace-pre-wrap break-words">{log.input.substring(
+                                        class="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-mono text-slate-700 dark:text-slate-300 max-h-36 overflow-y-auto whitespace-pre-wrap break-words">{log.input.substring(
                                             0,
-                                            1000,
-                                        )}{log.input.length > 1000
+                                            1500,
+                                        )}{log.input.length > 1500
                                             ? "..."
                                             : ""}</pre>
                                 </div>
@@ -188,46 +200,47 @@
                                         class="flex items-center justify-between mb-1"
                                     >
                                         <span
-                                            class="text-[10px] font-bold text-slate-400 uppercase"
+                                            class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
                                         >
-                                            Output
+                                            输出结果 (Output)
                                         </span>
                                         <button
                                             onclick={() => copyText(log.output)}
                                             class="text-slate-400 hover:text-indigo-500 transition-colors"
+                                            title="复制输出结果"
                                         >
-                                            <Copy size={10} />
+                                            <Copy size={12} />
                                         </button>
                                     </div>
                                     <pre
-                                        class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-400 max-h-32 overflow-y-auto whitespace-pre-wrap break-words">{log.output.substring(
+                                        class="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-mono text-slate-700 dark:text-slate-300 max-h-36 overflow-y-auto whitespace-pre-wrap break-words">{log.output.substring(
                                             0,
-                                            1000,
-                                        )}{log.output.length > 1000
+                                            1500,
+                                        )}{log.output.length > 1500
                                             ? "..."
                                             : ""}</pre>
                                 </div>
 
                                 <!-- Timing -->
                                 <div
-                                    class="flex gap-4 text-[10px] text-slate-400"
+                                    class="flex gap-4 text-xs text-slate-400"
                                 >
                                     <span>
-                                        Start: {formatTime(log.startTime)}
+                                        启动时间: {formatTime(log.startTime)}
                                     </span>
                                     <span>
-                                        End: {formatTime(log.endTime)}
+                                        结束时间: {formatTime(log.endTime)}
                                     </span>
-                                    <span class="font-bold text-indigo-500">
-                                        Duration: {formatDuration(log.duration)}
+                                    <span class="font-semibold text-indigo-600 dark:text-indigo-400">
+                                        耗时: {formatDuration(log.duration)}
                                     </span>
                                 </div>
 
                                 {#if log.error}
                                     <div
-                                        class="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/30 text-[10px] text-rose-600 dark:text-rose-400"
+                                        class="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/30 text-xs text-rose-600 dark:text-rose-400"
                                     >
-                                        Error: {log.error}
+                                        错误信息 (Error): {log.error}
                                     </div>
                                 {/if}
                             </div>

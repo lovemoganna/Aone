@@ -1,388 +1,160 @@
 <script lang="ts">
-    import { Panel, Button } from "$lib/components/ui";
-    import { settingsStore } from "$lib/stores/settingsStore.svelte";
-    import { agentStore } from "$lib/stores/agentStore.svelte";
     import { goto } from "$app/navigation";
-    import { fade, fly } from "svelte/transition";
-    import { 
-        MessageCircle, 
-        Users, 
-        ArrowLeft,
-        Send,
+    import { tick } from "svelte";
+    import { fade } from "svelte/transition";
+    import { agentStore } from "$lib/stores/agentStore.svelte";
+    import { settingsStore } from "$lib/stores/settingsStore.svelte";
+    import { AgentAvatar } from "$lib/components/ui";
+    import {
+        ArrowRight,
         Bot,
-        X,
-        ChevronRight,
+        CheckCircle2,
+        MessageCircle,
         RefreshCw,
-        Play,
-        Pause,
-        RotateCcw
+        Route,
+        Users,
+        Sparkles,
+        AlertTriangle
     } from "lucide-svelte";
-    
-    // 圆桌布局配置
-    const agentPositions = [
-        { id: 'calculator', angle: 0, radius: 120 },
-        { id: 'stress_tester', angle: 72, radius: 120 },
-        { id: 'pathfinder', angle: 144, radius: 120 },
-        { id: 'decomposer', angle: 216, radius: 120 },
-        { id: 'closer', angle: 288, radius: 120 }
-    ];
-    
-    // 活跃的Agent
-    let activeAgents = $state<string[]>(['decomposer', 'calculator', 'pathfinder', 'stress_tester', 'closer']);
-    
-    // 用户输入
-    let userInput = $state('');
-    
-    // 圆桌是否在进行中
-    let isRoundtableActive = $state(false);
-    
-    // 讨论记录
-    let discussions = $state<{agentId: string; content: string; timestamp: number}[]>([]);
-    
-    // 当前发言的Agent
-    let speakingAgent = $state<string | null>(null);
-    
-    // 获取Agent信息
-    function getAgentInfo(id: string) {
-        return agentStore.getAgent(id);
+    import { getAgentDisplayName, getAgentAlias, SQUAD_PRESETS } from "$lib/constants/cognitiveAgents";
+
+    const roundtablePreset = SQUAD_PRESETS.find(p => p.id === 'preset_five_dimensional_roundtable') || SQUAD_PRESETS[3];
+    const roundtableAgentIds = roundtablePreset.agentIds;
+
+    let task = $state("");
+    let errorMessage = $state<string | null>(null);
+
+    let roundtableAgents = $derived(
+        roundtableAgentIds
+            .map((id) => agentStore.getAgent(id))
+            .filter((agent): agent is NonNullable<ReturnType<typeof agentStore.getAgent>> => Boolean(agent)),
+    );
+
+    function openWorkbench() {
+        agentStore.clearSession();
+        agentStore.currentSession.activeAgentIds = [...roundtableAgentIds];
+        agentStore.pipelineState.currentGoal = task.trim();
+        goto("/multi-agent");
     }
-    
-    // 计算Agent位置
-    function getPosition(angle: number, radius: number) {
-        const rad = (angle - 90) * (Math.PI / 180);
-        return {
-            x: Math.cos(rad) * radius,
-            y: Math.sin(rad) * radius
-        };
-    }
-    
-    // 开始圆桌讨论
-    function startRoundtable() {
-        if (!userInput.trim()) return;
-        
-        isRoundtableActive = true;
-        
-        // 添加用户问题作为起始
-        discussions = [{
-            agentId: 'user',
-            content: userInput,
-            timestamp: Date.now()
-        }];
-        
-        // 触发第一轮讨论
-        runDiscussionRound();
-    }
-    
-    // 运行讨论轮次
-    async function runDiscussionRound() {
-        for (const agentId of activeAgents) {
-            speakingAgent = agentId;
-            
-            // 模拟Agent思考和发言
-            await new Promise(r => setTimeout(r, 1500));
-            
-            const agent = getAgentInfo(agentId);
-            
-            // 生成回应
-            const response = await generateAgentResponse(agentId, userInput);
-            
-            discussions = [...discussions, {
-                agentId,
-                content: response,
-                timestamp: Date.now()
-            }];
-            
-            speakingAgent = null;
+
+    async function runInWorkbench() {
+        if (!settingsStore.isConfigured) {
+            errorMessage = "请先配置大模型 API Key（右上角齿轮设置）后再启动推演。";
+            return;
         }
-        
-        // 询问用户是否继续
-    }
-    
-    // 生成Agent回应（模拟）
-    async function generateAgentResponse(agentId: string, question: string): Promise<string> {
-        const agent = getAgentInfo(agentId);
-        
-        // 这里应该调用实际的AI服务
-        // 暂时返回模拟响应
-        const responses: Record<string, string> = {
-            decomposer: `【拆局者视角】\n\n我先帮你把这个问题拆解一下：\n\n这个问题至少包含3个层面：\n① 核心问题是什么\n② 涉及的变量有哪些\n③ 你的可控范围\n\n让我逐一分析...`,
-            calculator: `【算账的视角】\n\n从量化角度看，这个选择涉及：\n\n• 机会成本\n• 时间投入\n• 潜在收益\n• 风险因素\n\n让我帮你算清楚...`,
-            pathfinder: `【找路的视角】\n\n也许你可以考虑第三条路：\n\n不仅仅是非A即B，还有C、D的选择。\n\n比如...`,
-            stress_tester: `【兜底的视角】\n\n我们来推演一下最坏的情况：\n\n即使失败了，你还有：\n• 现有技能\n• • 可迁移经验\n• 退路选择\n\n最坏情况下的损失是可以承受的。`,
-            closer: `【收网的视角】\n\n综合以上分析，你需要做的是：\n\n1. 今天：完成第一步（具体动作）\n2. 这周：跟进3个关键步骤\n3. 这月：达成核心目标\n\n准备好了就行动！`
-        };
-        
-        return responses[agentId] || '（正在思考...）';
-    }
-    
-    // 继续讨论
-    function continueDiscussion() {
-        runDiscussionRound();
-    }
-    
-    // 重置圆桌
-    function resetRoundtable() {
-        discussions = [];
-        userInput = '';
-        isRoundtableActive = false;
-        speakingAgent = null;
-    }
-    
-    // 返回
-    function goBack() {
-        goto('/multi-agent');
-    }
-    
-    // 获取Agent颜色
-    function getAgentColor(agentId: string): string {
-        const colors: Record<string, string> = {
-            decomposer: '#FF6B35',
-            calculator: '#2EC4B6',
-            pathfinder: '#E8C547',
-            stress_tester: '#7B68EE',
-            closer: '#20BF55'
-        };
-        return colors[agentId] || '#6366F1';
+        errorMessage = null;
+
+        const goal = task.trim();
+        agentStore.clearSession();
+        agentStore.currentSession.activeAgentIds = [...roundtableAgentIds];
+        agentStore.pipelineState.currentGoal = goal;
+        if (goal) {
+            agentStore.addMessage("user", goal);
+        }
+        await goto("/multi-agent");
+        await tick();
+        if (goal) {
+            await agentStore.runSquadCollaboration(goal);
+        }
     }
 </script>
 
 <svelte:head>
-    <title>圆桌会诊 - 认知决策工具</title>
+    <title>经典圆桌协同入口 - Aone Toolkit</title>
 </svelte:head>
 
-<div class="h-[calc(100vh-3rem)] flex flex-col">
-    <!-- Header -->
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-        <div class="flex items-center gap-4">
-            <button 
-                onclick={goBack}
-                class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
-            >
-                <ArrowLeft class="w-5 h-5 text-slate-600 dark:text-slate-400" />
-            </button>
-            
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                    <MessageCircle class="w-5 h-5 text-white" />
+<div class="min-h-screen bg-slate-50 px-4 py-6 dark:bg-slate-950" in:fade={{ duration: 180 }}>
+    <div class="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <main class="space-y-6">
+            <!-- Top Banner -->
+            <section class="rounded-3xl border border-indigo-200/80 bg-white/95 p-6 shadow-xs dark:border-indigo-900/50 dark:bg-slate-900/90 backdrop-blur-md">
+                <div class="mb-3 inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] font-bold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60">
+                    <Sparkles class="h-3 w-3" />
+                    五维经典认知圆桌
                 </div>
-                <div>
-                    <h1 class="text-lg font-bold text-slate-900 dark:text-white">
-                        圆桌会诊
-                    </h1>
-                    <p class="text-xs text-slate-500">
-                        5位思维专家协同讨论
-                    </p>
+                <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">经典 5 专家圆桌推演</h1>
+                <p class="mt-2 max-w-2xl text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                    圆桌模式聚合了结构拆解、量化精算、破局创新、极限风控与敏捷执行五维核心能力。点击即可直接将该预设专家团队载入协同工作台。
+                </p>
+                <div class="mt-4 flex flex-wrap gap-2.5">
+                    <a href="/multi-agent" class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-500 shadow-xs cursor-pointer active:scale-95">
+                        打开工作台
+                        <ArrowRight class="h-3.5 w-3.5" />
+                    </a>
+                    <a href="/agent-studio/orchestration" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 transition hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">
+                        管理协同阵容
+                    </a>
                 </div>
-            </div>
-        </div>
-        
-        <div class="flex items-center gap-2">
-            {#if isRoundtableActive}
-                <button 
-                    onclick={resetRoundtable}
-                    class="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
-                >
-                    <RotateCcw class="w-4 h-4" />
-                    重新开始
-                </button>
-            {/if}
-        </div>
-    </div>
-    
-    <!-- Main Content -->
-    <div class="flex-1 flex overflow-hidden">
-        <!-- Left: Round Table Visualization -->
-        <div class="w-1/2 flex items-center justify-center bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 relative overflow-hidden">
-            <!-- 圆形桌 -->
-            <div class="relative w-80 h-80">
-                <!-- 桌面 -->
-                <div class="absolute inset-0 rounded-full border-4 border-dashed border-slate-300 dark:border-slate-600 opacity-50"></div>
-                <div class="absolute inset-8 rounded-full border-2 border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 backdrop-blur"></div>
-                
-                <!-- 中心问题 -->
-                <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <div class="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-                        <Bot class="w-10 h-10 text-white" />
+            </section>
+
+            <!-- Active Roster Card -->
+            <section class="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+                <div class="flex items-start gap-3.5 border-b border-slate-100 dark:border-slate-800/80 pb-4">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-2xs">
+                        <MessageCircle class="h-5 w-5" />
                     </div>
-                </div>
-                
-                <!-- Agent 位置 -->
-                {#each agentPositions as pos}
-                    {@const agent = getAgentInfo(pos.id)}
-                    {@const posXY = getPosition(pos.angle, pos.radius)}
-                    {@const isSpeaking = speakingAgent === pos.id}
-                    <div 
-                        class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500"
-                        style="transform: translate(calc(-50% + {posXY.x}px), calc(-50% + {posXY.y}px))"
-                    >
-                        <div 
-                            class="w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300
-                            {isSpeaking ? 'scale-125 shadow-xl' : 'hover:scale-110'}"
-                            style="background: linear-gradient(135deg, {getAgentColor(pos.id)}, {getAgentColor(pos.id)}CC)"
-                        >
-                            <span class="text-2xl font-bold text-white">
-                                {agent?.name?.[0] || '?'}
-                            </span>
-                        </div>
-                        
-                        <!-- Agent 名称 -->
-                        <div class="absolute left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap">
-                            <span class="text-xs font-medium" style="color: {getAgentColor(pos.id)}">
-                                {agent?.name || pos.id}
-                            </span>
-                        </div>
-                        
-                        <!-- 说话指示器 -->
-                        {#if isSpeaking}
-                            <div class="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-white shadow-lg animate-ping"></div>
-                        {/if}
-                    </div>
-                {/each}
-            </div>
-            
-            <!-- 图例 -->
-            <div class="absolute bottom-6 left-6 flex flex-wrap gap-2">
-                {#each agentPositions as pos}
-                    {@const agent = getAgentInfo(pos.id)}
-                    <div class="flex items-center gap-1.5 px-2 py-1 bg-white/80 dark:bg-slate-800/80 rounded-lg backdrop-blur">
-                        <div class="w-2 h-2 rounded-full" style="background: {getAgentColor(pos.id)}"></div>
-                        <span class="text-xs text-slate-600 dark:text-slate-400">{agent?.name}</span>
-                    </div>
-                {/each}
-            </div>
-        </div>
-        
-        <!-- Right: Discussion Panel -->
-        <div class="w-1/2 flex flex-col border-l border-slate-200 dark:border bg-white dark:bg-slate-800-slate-900">
-            <!-- 讨论记录 -->
-            <div class="flex-1 overflow-y-auto p-4 space-y-4">
-                {#if discussions.length === 0}
-                    <!-- 欢迎界面 -->
-                    <div class="h-full flex flex-col items-center justify-center text-center p-8">
-                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/30 dark:to-purple-900/30 flex items-center justify-center mb-6">
-                            <Users class="w-10 h-10 text-violet-500" />
-                        </div>
-                        <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                            圆桌会诊
-                        </h2>
-                        <p class="text-slate-500 dark:text-slate-400 mb-8 max-w-xs">
-                            5位思维专家从不同角度分析你的问题，给你全方位的决策支持
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-900 dark:text-white">经典专家阵容架构</h2>
+                        <p class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                            五位一体的认知协作矩阵，覆盖从问题拆解到最终交付全生命周期：
                         </p>
-                        
-                        <!-- 问题输入 -->
-                        <div class="w-full max-w-md">
-                            <textarea
-                                bind:value={userInput}
-                                placeholder="描述你的问题或困惑..."
-                                rows="4"
-                                class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none resize-none text-slate-900 dark:text-white placeholder:text-slate-400"
-                            ></textarea>
-                            
-                            <button 
-                                onclick={startRoundtable}
-                                disabled={!userInput.trim()}
-                                class="w-full mt-4 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:from-slate-300 disabled:to-slate-400 text-white rounded-xl font-medium transition-all hover:shadow-lg disabled:shadow-none flex items-center justify-center gap-2"
-                            >
-                                <Play class="w-5 h-5" />
-                                开始圆桌讨论
-                            </button>
-                        </div>
                     </div>
-                {:else}
-                    <!-- 讨论记录 -->
-                    {#each discussions as item}
-                        {@const agent = item.agentId === 'user' ? null : getAgentInfo(item.agentId)}
-                        <div 
-                            class="flex gap-3"
-                            transition:fly={{ y: 20, duration: 300 }}
-                        >
-                            {#if agent}
-                                <div 
-                                    class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                                    style="background: linear-gradient(135deg, {getAgentColor(item.agentId)}, {getAgentColor(item.agentId)}CC)"
-                                >
-                                    <span class="text-lg font-bold text-white">
-                                        {agent.name[0]}
-                                    </span>
-                                </div>
-                            {:else}
-                                <div class="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                                    <span class="text-lg">👤</span>
-                                </div>
-                            {/if}
-                            
-                            <div class="flex-1">
-                                {#if agent}
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="font-medium" style="color: {getAgentColor(item.agentId)}">
-                                            {agent.name}
-                                        </span>
-                                        <span class="text-xs text-slate-400">
-                                            {agent.role}
-                                        </span>
-                                    </div>
-                                {/if}
-                                
-                                <div class="p-3 rounded-xl {agent ? 'bg-slate-50 dark:bg-slate-800' : 'bg-violet-50 dark:bg-violet-900/20'}">
-                                    <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
-                                        {item.content}
-                                    </p>
+                </div>
+
+                <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {#each roundtableAgents as agent}
+                        <article class="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-slate-50/50 p-3.5 dark:border-slate-800 dark:bg-slate-950/40">
+                            <div class="flex items-start gap-2.5">
+                                <AgentAvatar agent={agent.id} size="sm" shape="rounded" glow={false} />
+                                <div class="min-w-0 flex-1">
+                                    <h3 class="font-bold text-xs text-slate-900 dark:text-white truncate">{getAgentDisplayName(agent.id, agent.name)}</h3>
+                                    <p class="mt-0.5 line-clamp-2 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">{agent.role}</p>
                                 </div>
                             </div>
-                        </div>
+                        </article>
                     {/each}
-                    
-                    <!-- 正在思考指示 -->
-                    {#if speakingAgent}
-                        <div class="flex gap-3">
-                            <div 
-                                class="w-10 h-10 rounded-xl flex items-center justify-center animate-pulse"
-                                style="background: linear-gradient(135deg, {getAgentColor(speakingAgent)}, {getAgentColor(speakingAgent)}CC)"
-                            >
-                                <span class="text-lg font-bold text-white">
-                                    {getAgentInfo(speakingAgent)?.name[0]}
-                                </span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="flex gap-1">
-                                    <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0ms"></span>
-                                    <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 150ms"></span>
-                                    <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 300ms"></span>
-                                </div>
-                                <span class="text-sm text-slate-500">
-                                    {getAgentInfo(speakingAgent)?.name} 正在发言...
-                                </span>
-                            </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Right Side Launch Panel -->
+        <aside class="space-y-6">
+            <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+                <h2 class="text-sm font-bold text-slate-900 dark:text-white">快速启动推演</h2>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">输入您的攻坚任务并带入工作台执行</p>
+
+                <div class="mt-4 space-y-3">
+                    <textarea
+                        bind:value={task}
+                        rows="4"
+                        class="w-full rounded-2xl border border-slate-200/80 bg-slate-50 p-3 text-xs outline-none transition focus:border-slate-400 dark:focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white resize-none"
+                        placeholder="例如：评估是否应该重构当前核心微服务架构为单体应用..."
+                    ></textarea>
+
+                    {#if errorMessage}
+                        <div class="flex items-start gap-2 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 p-2.5 text-xs text-rose-700 dark:text-rose-300">
+                            <AlertTriangle class="h-4 w-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+                            <span>{errorMessage}</span>
                         </div>
                     {/if}
-                {/if}
-            </div>
-            
-            <!-- 底部操作 -->
-            {#if discussions.length > 0 && !speakingAgent}
-                <div class="p-4 border-t border-slate-200 dark:border-slate-800">
-                    <div class="flex gap-3">
-                        <button 
-                            onclick={continueDiscussion}
-                            class="flex-1 px-4 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-xl font-medium transition-all hover:shadow-lg flex items-center justify-center gap-2"
+
+                    <div class="flex flex-col gap-2">
+                        <button
+                            onclick={runInWorkbench}
+                            class="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-indigo-500 shadow-xs cursor-pointer active:scale-95"
                         >
-                            <RefreshCw class="w-5 h-5" />
-                            继续讨论
+                            启动圆桌推演
+                            <ArrowRight class="h-3.5 w-3.5" />
                         </button>
-                        
-                        <button 
-                            onclick={() => {
-                                // 跳转到收网的生成行动清单
-                                goto('/multi-agent?agent=closer&context=' + encodeURIComponent(JSON.stringify(discussions)));
-                            }}
-                            class="flex-1 px-4 py-3 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                        <button
+                            onclick={openWorkbench}
+                            class="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200/80 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
                         >
-                            <ChevronRight class="w-5 h-5" />
-                            收网出清单
+                            直接载入工作台
                         </button>
                     </div>
                 </div>
-            {/if}
-        </div>
+            </div>
+        </aside>
     </div>
 </div>

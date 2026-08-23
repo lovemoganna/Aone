@@ -32,19 +32,21 @@
     let tailwindClass = $derived(getTailwindMatch(px));
 </script>
 
-<div class="max-w-4xl mx-auto space-y-8 py-8">
+<div class="space-y-8 py-8 w-full">
     <!-- Config -->
     <div class="flex flex-col items-center gap-2">
         <label
+            for="root-font-size-input"
             class="text-xs font-bold text-slate-400 uppercase tracking-widest"
             >Root Font Size (HTML)</label
         >
         <div class="relative group">
             <input
+                id="root-font-size-input"
                 type="number"
                 bind:value={rootSize}
                 oninput={() => updateFromRem()}
-                class="w-32 text-center px-4 py-2 bg-white dark:bg-slate-800 rounded-lg font-mono text-sm border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm group-hover:shadow-md"
+                class="input text-sm w-32"
             />
             <span
                 class="absolute right-3 top-2 text-xs text-slate-400 font-bold"
@@ -59,21 +61,23 @@
     >
         <!-- Background Gradient -->
         <div
-            class="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-transparent to-purple-500/5 pointer-events-none"
+            class="hidden"
         ></div>
 
         <!-- PX Input -->
         <div class="flex flex-col gap-4 relative z-10">
             <label
+                for="px-converter-input"
                 class="text-sm font-bold text-center text-slate-700 dark:text-slate-300 uppercase tracking-wider"
                 >Pixels</label
             >
             <div class="relative group">
                 <input
+                    id="px-converter-input"
                     type="number"
                     bind:value={px}
                     oninput={updateFromPx}
-                    class="w-full text-center p-6 text-4xl font-mono font-bold bg-slate-50 dark:bg-slate-950 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/20 border-2 border-transparent focus:border-indigo-500 transition-all text-slate-900 dark:text-white shadow-inner"
+                    class="input text-sm w-full"
                 />
                 <span
                     class="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 font-bold"
@@ -83,7 +87,7 @@
             {#if tailwindClass}
                 <div class="text-center">
                     <span
-                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                     >
                         {tailwindClass}
                     </span>
@@ -105,16 +109,18 @@
         <!-- REM Input -->
         <div class="flex flex-col gap-4 relative z-10">
             <label
+                for="rem-converter-input"
                 class="text-sm font-bold text-center text-slate-700 dark:text-slate-300 uppercase tracking-wider"
                 >REM</label
             >
             <div class="relative group">
                 <input
+                    id="rem-converter-input"
                     type="number"
                     bind:value={rem}
                     oninput={updateFromRem}
                     step="0.125"
-                    class="w-full text-center p-6 text-4xl font-mono font-bold bg-slate-50 dark:bg-slate-950 rounded-2xl outline-none focus:ring-4 focus:ring-purple-500/20 border-2 border-transparent focus:border-purple-500 transition-all text-slate-900 dark:text-white shadow-inner"
+                    class="input text-sm w-full"
                 />
                 <span
                     class="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 font-bold"
@@ -142,7 +148,7 @@
                 <Ruler size={14} /> Box Size Preview
             </span>
             <div
-                class="bg-indigo-500 shadow-lg shadow-indigo-500/30 rounded-lg flex items-center justify-center text-white text-xs font-bold transition-all duration-300"
+                class="bg-slate-700 shadow-lg shadow-slate-500/30 rounded-lg flex items-center justify-center text-white text-xs font-bold transition-all duration-300"
                 style="width: {Math.min(px, 300)}px; height: {Math.min(
                     px,
                     150,
@@ -184,14 +190,14 @@
     <div class="flex flex-wrap justify-center gap-3">
         {#each [12, 14, 16, 18, 20, 24, 32, 48, 64, 96] as p}
             <button
-                class="px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-sm group min-w-[80px]"
+                class="btn btn-secondary text-sm shadow-sm"
                 onclick={() => {
                     px = p;
                     updateFromPx();
                 }}
             >
                 <div
-                    class="font-bold text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                    class="font-bold text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white"
                 >
                     {p}px
                 </div>

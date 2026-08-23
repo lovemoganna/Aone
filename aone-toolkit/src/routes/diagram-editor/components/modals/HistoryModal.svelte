@@ -29,16 +29,16 @@
 
 {#if isOpen}
     <div
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-        transition:fade
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
+        transition:fade={{ duration: 100 }}
         onclick={onClose}
         onkeydown={(e) => e.key === "Escape" && onClose()}
         role="button"
         tabindex="0"
     >
         <div
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-200 dark:border-gray-700 max-h-[80vh] flex flex-col"
-            transition:slide={{ duration: 200 }}
+            class="bg-white dark:bg-[#0b0f17] rounded-lg shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800 max-h-[80vh] flex flex-col"
+            transition:slide={{ duration: 120 }}
             onclick={(e) => e.stopPropagation()}
             onkeydown={(e) => e.stopPropagation()}
             role="dialog"
@@ -47,59 +47,61 @@
         >
             <!-- Header -->
             <div
-                class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 shrink-0"
+                class="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 shrink-0"
             >
-                <h3
-                    class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2"
-                >
-                    <History size={20} class="text-indigo-500" />
-                    Local History
-                </h3>
+                <div class="flex items-center gap-2">
+                    <History size={15} class="text-slate-700 dark:text-slate-300" />
+                    <h3
+                        class="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200"
+                    >
+                        Local History
+                    </h3>
+                </div>
                 <button
-                    class="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg text-gray-500"
+                    class="p-1 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                     onclick={onClose}
                 >
-                    <X size={20} />
+                    <X size={15} />
                 </button>
             </div>
 
             <!-- List -->
-            <div class="flex-1 overflow-y-auto p-2 space-y-2">
+            <div class="flex-1 overflow-y-auto p-3 space-y-1.5 text-xs">
                 {#if sortedHistory.length === 0}
-                    <div class="text-center py-10 text-gray-500">
-                        <Clock class="mx-auto mb-2 opacity-50" />
-                        <p>No history yet.</p>
+                    <div class="text-center py-8 text-slate-400">
+                        <Clock class="mx-auto mb-2 opacity-50" size={20} />
+                        <p>No snapshots recorded yet.</p>
                     </div>
                 {/if}
 
                 {#each sortedHistory as item}
                     <div
-                        class="p-3 bg-white dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors group flex items-center justify-between"
+                        class="p-2.5 bg-white dark:bg-slate-900/50 rounded border border-slate-200 dark:border-slate-800 hover:border-slate-400 transition-colors group flex items-center justify-between"
                     >
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2.5">
                             <div
-                                class="p-2 rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 font-mono text-xs"
+                                class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[11px] font-semibold"
                             >
                                 {formatTime(item.timestamp)}
                             </div>
-                            <div class="text-xs text-gray-500">
-                                {item.code.length} chars
+                            <div class="text-[11px] text-slate-400 font-mono">
+                                {item.code.length} bytes
                             </div>
                         </div>
 
                         <div
-                            class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                            class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                             <button
-                                class="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded"
+                                class="p-1 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
                                 title="Diff with Current"
                                 onclick={() => onDiff(item.code)}
                             >
                                 <GitCompare size={14} />
                             </button>
                             <button
-                                class="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
-                                title="Restore Version"
+                                class="p-1 text-slate-600 hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded transition-colors"
+                                title="Restore Snapshot"
                                 onclick={() => {
                                     diagramStore.restoreHistory(item);
                                     onClose();
@@ -113,9 +115,9 @@
             </div>
 
             <div
-                class="p-3 text-xs text-center text-gray-400 border-t border-gray-100 dark:border-gray-800 shrink-0"
+                class="p-2.5 text-[11px] text-center text-slate-400 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 shrink-0 font-mono"
             >
-                Snapshots are taken automatically after changes.
+                Snapshots captured on render
             </div>
         </div>
     </div>

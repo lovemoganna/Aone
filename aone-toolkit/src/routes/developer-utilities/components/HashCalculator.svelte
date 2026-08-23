@@ -98,24 +98,18 @@
     }
 </script>
 
-<div class="space-y-6 max-w-4xl mx-auto">
+<div class="space-y-6 w-full">
     <!-- Input Section -->
     <div class="space-y-4">
         <div class="flex gap-4 border-b border-slate-200 dark:border-slate-800">
             <button
-                class="px-4 py-2 text-sm font-bold border-b-2 transition-colors {inputMode ===
-                'text'
-                    ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'}"
+                class="btn btn-ghost text-sm"
                 onclick={() => (inputMode = "text")}
             >
                 Text Input
             </button>
             <button
-                class="px-4 py-2 text-sm font-bold border-b-2 transition-colors {inputMode ===
-                'file'
-                    ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'}"
+                class="btn btn-ghost text-sm"
                 onclick={() => (inputMode = "file")}
             >
                 File Input
@@ -126,7 +120,7 @@
             <div class="relative">
                 <textarea
                     bind:value={inputText}
-                    class="w-full h-32 p-4 font-mono text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition-all"
+                    class="textarea-editor shadow-inner bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/80 rounded-lg w-full"
                     placeholder="Enter text to hash..."
                 ></textarea>
                 <div class="absolute bottom-2 right-2 text-xs text-slate-400">
@@ -145,7 +139,7 @@
                 >
                     {#if inputFile}
                         <div
-                            class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-2 text-indigo-600"
+                            class="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-2 text-slate-500"
                         >
                             <FileUp size={24} />
                         </div>
@@ -166,7 +160,7 @@
                         </p>
                     {/if}
                 </div>
-                <input type="file" class="hidden" onchange={handleFileSelect} />
+                <input type="file" class="input text-sm" onchange={handleFileSelect} />
             </label>
         {/if}
     </div>
@@ -184,7 +178,7 @@
                     >
                     <div class="flex items-center gap-2">
                         {#if isCalculating}
-                            <span class="text-xs text-indigo-500 animate-pulse"
+                            <span class="text-xs text-slate-500 animate-pulse"
                                 >Calculating...</span
                             >
                         {/if}
@@ -192,7 +186,7 @@
                             variant="ghost"
                             size="sm"
                             onclick={() => copy(hash)}
-                            class="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                            class="btn btn-ghost text-sm"
                             title="Copy"
                         >
                             <Copy size={14} />
@@ -210,7 +204,7 @@
 
     <!-- Verification Tool -->
     <div
-        class="bg-indigo-50 dark:bg-slate-800/50 p-6 rounded-xl border border-indigo-100 dark:border-slate-700"
+        class="bg-slate-100 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-200 dark:border-slate-700"
     >
         <h3
             class="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-4"
@@ -221,7 +215,7 @@
             <input
                 type="text"
                 bind:value={compareHash}
-                class="flex-1 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
+                class="input text-sm flex-1"
                 placeholder="Paste a hash to compare..."
             />
         </div>

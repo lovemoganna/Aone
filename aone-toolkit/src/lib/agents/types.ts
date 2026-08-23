@@ -109,7 +109,7 @@ export interface AgentResponse {
     content: string;
     skillUsed?: string;
     metadata?: Record<string, any>;
-    finishReason: 'completed' | 'error' | 'cancelled' | 'max_tokens';
+    finishReason: 'completed' | 'error' | 'cancelled' | 'max_tokens' | 'unconfigured';
 }
 
 // ============== Agent 注册表接口 ==============

@@ -55,7 +55,9 @@
     advanced: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   };
 
-  export let onLoadExample: (example: WorkflowExample) => void = () => {};
+  let { onLoadExample = () => {} } = $props<{
+    onLoadExample?: (example: WorkflowExample) => void;
+  }>();
 </script>
 
 <div class="flex flex-col h-full">
@@ -79,6 +81,7 @@
   <div class="p-3 border-b border-slate-200 dark:border-slate-700">
     <div class="flex gap-2 overflow-x-auto pb-1">
       {#each categories as cat}
+        {@const CategoryIcon = cat.icon}
         <button
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors
             {selectedCategory === cat.id 
@@ -86,7 +89,7 @@
               : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700'}"
           onclick={() => selectedCategory = cat.id as any}
         >
-          <svelte:component this={cat.icon} class="w-3.5 h-3.5" />
+          <CategoryIcon class="w-3.5 h-3.5" />
           {cat.label}
         </button>
       {/each}

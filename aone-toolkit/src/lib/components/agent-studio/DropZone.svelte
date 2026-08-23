@@ -1,6 +1,7 @@
 <script lang="ts">
     import { fade } from 'svelte/transition';
-    import { Upload, FileText, FileJson, FileImage, File, X, Check } from 'lucide-svelte';
+    import { Upload, FileText, FileJson, FileImage, X } from 'lucide-svelte';
+    import type { Snippet } from 'svelte';
     
     // 支持的文件类型
     interface FileTypeConfig {
@@ -85,7 +86,10 @@
     }
     
     // 文件处理回调
-    export let onFilesProcessed: ((files: File[]) => void) | undefined = undefined;
+    let { children, onFilesProcessed = undefined } = $props<{
+        children?: Snippet;
+        onFilesProcessed?: (files: File[]) => void;
+    }>();
     
     function handleFilesProcessed(fileList: File[]) {
         if (onFilesProcessed) {
@@ -121,7 +125,7 @@
     ondrop={handleDrop}
 >
     <!-- 插槽内容 -->
-    <slot />
+    {@render children?.()}
     
     <!-- 全屏拖拽遮罩 -->
     {#if isDragging}
@@ -174,6 +178,7 @@
         <div class="mt-4 space-y-2">
             {#each files as file, index}
                 {@const config = getFileConfig(file)}
+                {@const FileTypeIcon = config.icon}
                 <div 
                     class="flex items-center gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"
                 >
@@ -181,7 +186,7 @@
                         class="w-10 h-10 rounded-lg flex items-center justify-center"
                         style="background: {config.color}20"
                     >
-                        <svelte:component this={config.icon} class="w-5 h-5" style="color: {config.color}" />
+                        <FileTypeIcon class="w-5 h-5" style="color: {config.color}" />
                     </div>
                     
                     <div class="flex-1 min-w-0">
@@ -196,6 +201,8 @@
                     <button 
                         onclick={() => removeFile(index)}
                         class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                        title="Remove file"
+                        aria-label={`Remove ${file.name}`}
                     >
                         <X class="w-4 h-4 text-slate-400" />
                     </button>
@@ -205,13 +212,3 @@
     {/if}
 </div>
 
-<style>
-    @keyframes breathe {
-        0%, 100% { opacity: 0.3; transform: scale(1); }
-        50% { opacity: 0.6; transform: scale(1.02); }
-    }
-    
-    .animate-breathe {
-        animation: breathe 2s ease-in-out infinite;
-    }
-</style>

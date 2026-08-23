@@ -53,21 +53,21 @@
 
 <div class="h-full flex flex-col md:flex-row gap-6">
     <!-- Input -->
-    <div class="flex-1 flex flex-col gap-2">
-        <label
-            for="dedup-input"
-            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
-            >Original List</label
-        >
+    <div class="flex-1 flex flex-col gap-3 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-sm">
+        <div class="flex justify-between items-center">
+            <label
+                for="dedup-input"
+                class="label-section"
+                >Original List</label
+            >
+            <span class="text-[11px] text-slate-400 font-mono">Lines: {input ? input.split("\n").length : 0}</span>
+        </div>
         <textarea
             id="dedup-input"
             bind:value={input}
-            class="flex-1 min-h-[300px] p-4 font-mono text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none resize-none focus:ring-2 focus:ring-primary-500/20 transition-all placeholder:text-slate-400"
+            class="textarea-editor flex-1"
             placeholder="Paste list here..."
         ></textarea>
-        <div class="text-xs text-slate-500 text-right">
-            Lines: {input ? input.split("\n").length : 0}
-        </div>
     </div>
 
     <!-- Controls -->
@@ -75,58 +75,58 @@
         class="flex md:flex-col items-center justify-center gap-4 py-4 md:py-0 w-full md:w-48 shrink-0"
     >
         <div
-            class="space-y-3 w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700"
+            class="space-y-3 w-full p-4 bg-slate-50/80 dark:bg-[#111113]/80 border border-slate-100 dark:border-slate-800/60 rounded-xl shadow-sm"
         >
             <div
-                class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
+                class="label-section mb-2"
             >
                 Filters
             </div>
 
-            <label class="flex items-center gap-2 cursor-pointer">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
                 <input
                     type="checkbox"
                     bind:checked={config.dedup}
-                    class="rounded text-primary-600 focus:ring-primary-500"
+                    class="rounded text-primary-600 focus:ring-primary-500 w-4 h-4 cursor-pointer"
                 />
-                <span class="text-sm">Remove Duplicates</span>
+                <span class="text-xs font-medium text-slate-600 dark:text-slate-300">Remove Duplicates</span>
             </label>
-            <label class="flex items-center gap-2 cursor-pointer">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
                 <input
                     type="checkbox"
                     bind:checked={config.trim}
-                    class="rounded text-primary-600 focus:ring-primary-500"
+                    class="rounded text-primary-600 focus:ring-primary-500 w-4 h-4 cursor-pointer"
                 />
-                <span class="text-sm">Trim Whitespace</span>
+                <span class="text-xs font-medium text-slate-600 dark:text-slate-300">Trim Whitespace</span>
             </label>
-            <label class="flex items-center gap-2 cursor-pointer">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
                 <input
                     type="checkbox"
                     bind:checked={config.empty}
-                    class="rounded text-primary-600 focus:ring-primary-500"
+                    class="rounded text-primary-600 focus:ring-primary-500 w-4 h-4 cursor-pointer"
                 />
-                <span class="text-sm">Remove Empty</span>
+                <span class="text-xs font-medium text-slate-600 dark:text-slate-300">Remove Empty</span>
             </label>
         </div>
 
         <div class="w-full space-y-2">
             <Button
                 variant="secondary"
-                class="w-full justify-start"
+                class="btn btn-secondary text-sm w-full"
                 onclick={() => sort("asc")}
             >
                 <ArrowDownAZ size={16} class="mr-2" /> Sort A-Z
             </Button>
             <Button
                 variant="secondary"
-                class="w-full justify-start"
+                class="btn btn-secondary text-sm w-full"
                 onclick={() => sort("desc")}
             >
                 <ArrowUpZA size={16} class="mr-2" /> Sort Z-A
             </Button>
             <Button
                 variant="ghost"
-                class="w-full justify-start text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                class="btn btn-ghost text-sm w-full hover:text-rose-500"
                 onclick={() => (input = "")}
             >
                 <Eraser size={16} class="mr-2" /> Clear All
@@ -135,29 +135,35 @@
     </div>
 
     <!-- Output -->
-    <div class="flex-1 flex flex-col gap-2 relative">
-        <label
-            for="dedup-output"
-            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
-            >Cleaned List</label
-        >
-        <textarea
-            id="dedup-output"
-            value={output}
-            readonly
-            class="flex-1 min-h-[300px] p-4 font-mono text-sm bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none resize-none text-slate-700 dark:text-slate-300"
-            placeholder="Result will appear here..."
-        ></textarea>
+    <div class="flex-1 flex flex-col gap-3 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-sm">
+        <div class="flex justify-between items-center">
+            <label
+                for="dedup-output"
+                class="label-section"
+                >Cleaned List</label
+            >
+            <span class="text-[11px] text-slate-400 font-mono">Lines: {stats.result}</span>
+        </div>
+        <div class="relative flex-1 min-h-[350px]">
+            <textarea
+                id="dedup-output"
+                value={output}
+                readonly
+                class="textarea-editor w-full"
+                placeholder="Result will appear here..."
+            ></textarea>
 
-        <div class="flex justify-between items-center text-xs text-slate-500">
-            <span>Result: {stats.result} lines</span>
             {#if output}
-                <button
-                    class="flex items-center gap-1 text-primary-600 font-medium hover:text-primary-700"
-                    onclick={() => navigator.clipboard.writeText(output)}
-                >
-                    <Copy size={12} /> Copy Result
-                </button>
+                <div class="absolute top-3 right-3">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onclick={() => navigator.clipboard.writeText(output)}
+                        class="btn btn-secondary text-sm shadow-sm"
+                    >
+                        <Copy size={14} class="mr-1" /> Copy
+                    </Button>
+                </div>
             {/if}
         </div>
     </div>

@@ -1,11 +1,17 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { Wifi, WifiOff, AlertTriangle, Clock, Activity } from 'lucide-svelte';
+  import type { ConnectionStatus } from '$lib/stores/healthStore.svelte';
   import { healthStore, quotaPercentage, latencyStatus } from '$lib/stores/healthStore.svelte';
 
-  let health = $state<any>(null);
+  type LatencyLevel = 'good' | 'warning' | 'critical';
+
+  let health = $state<{
+    status: ConnectionStatus;
+    metrics: { apiLatency: number };
+  } | null>(null);
   let quota = $state(0);
-  let latency = $state('good');
+  let latency = $state<LatencyLevel>('good');
 
   // Subscribe to stores
   const unsubHealth = healthStore.subscribe(v => health = v);
@@ -23,14 +29,14 @@
     healthStore.stopMonitoring();
   });
 
-  const statusConfig = {
+  const statusConfig: Record<ConnectionStatus, { color: string; bg: string; label: string; icon: any }> = {
     connected: { color: 'text-emerald-500', bg: 'bg-emerald-500', label: '已连接', icon: Wifi },
     connecting: { color: 'text-amber-500', bg: 'bg-amber-500', label: '连接中', icon: Activity },
     disconnected: { color: 'text-slate-400', bg: 'bg-slate-400', label: '已断开', icon: WifiOff },
     error: { color: 'text-red-500', bg: 'bg-red-500', label: '错误', icon: AlertTriangle },
   };
 
-  const latencyConfig = {
+  const latencyConfig: Record<LatencyLevel, { color: string; label: string }> = {
     good: { color: 'text-emerald-500', label: '< 100ms' },
     warning: { color: 'text-amber-500', label: '< 300ms' },
     critical: { color: 'text-red-500', label: '> 300ms' },
@@ -38,11 +44,12 @@
 </script>
 
 {#if health}
+  {@const StatusIcon = statusConfig[health.status].icon}
   <div class="flex items-center gap-3 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs">
     <!-- Connection Status -->
     <div class="flex items-center gap-1.5">
       <div class="w-2 h-2 rounded-full {statusConfig[health.status].bg} animate-pulse"></div>
-      <svelte:component this={statusConfig[health.status].icon} class="w-3.5 h-3.5 {statusConfig[health.status].color}" />
+      <StatusIcon class="w-3.5 h-3.5 {statusConfig[health.status].color}" />
       <span class="text-slate-600 dark:text-slate-400">{statusConfig[health.status].label}</span>
     </div>
 

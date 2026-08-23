@@ -17,7 +17,7 @@
     type FileCategory = 'config' | 'data' | 'text' | 'image' | 'unknown';
     
     // 文件信息
-    export let file: {
+    type PreviewFile = {
         name: string;
         size: number;
         type: string;
@@ -25,9 +25,25 @@
     };
     
     // 解析结果
-    export let parsedData: any = null;
-    export let parseError: string | null = null;
-    export let parseStatus: 'idle' | 'parsing' | 'success' | 'error' = 'idle';
+    let {
+        file,
+        parsedData = null,
+        parseError = null,
+        parseStatus = 'idle',
+        onPreview = undefined,
+        onDownload = undefined,
+        onDelete = undefined,
+        onImport = undefined,
+    } = $props<{
+        file: PreviewFile;
+        parsedData?: any;
+        parseError?: string | null;
+        parseStatus?: 'idle' | 'parsing' | 'success' | 'error';
+        onPreview?: () => void;
+        onDownload?: () => void;
+        onDelete?: () => void;
+        onImport?: () => void;
+    }>();
     
     // 文件分类
     let category: FileCategory = $derived.by(() => {
@@ -55,6 +71,7 @@
                 return { icon: File, color: '#9CA3AF', label: '未知文件' };
         }
     });
+    let FileTypeIcon = $derived(iconConfig.icon);
     
     // 格式化大小
     function formatSize(bytes: number): string {
@@ -94,10 +111,6 @@
     }
     
     // 操作
-    export let onPreview: (() => void) | undefined = undefined;
-    export let onDownload: (() => void) | undefined = undefined;
-    export let onDelete: (() => void) | undefined = undefined;
-    export let onImport: (() => void) | undefined = undefined;
 </script>
 
 <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-md transition-shadow">
@@ -108,7 +121,7 @@
                 class="w-10 h-10 rounded-lg flex items-center justify-center"
                 style="background: {iconConfig.color}20"
             >
-                <svelte:component this={iconConfig.icon} class="w-5 h-5" style="color: {iconConfig.color}" />
+                <FileTypeIcon class="w-5 h-5" style="color: {iconConfig.color}" />
             </div>
             <div>
                 <h4 class="font-medium text-slate-900 dark:text-white flex items-center gap-2">
@@ -131,6 +144,7 @@
             onclick={() => onDelete?.()}
             class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             title="删除"
+            aria-label={`Delete ${file.name}`}
         >
             <Trash2 class="w-4 h-4 text-slate-400" />
         </button>
@@ -175,8 +189,8 @@
         <div class="mb-3">
             <div class="text-xs text-slate-500 mb-1">预览:</div>
             <pre class="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg text-xs text-slate-600 dark:text-slate-400 overflow-x-auto max-h-32">{previewContent}</pre>
-            {#if file.content.length > 500}
-                <p class="text-xs text-slate-400 mt-1">...共 {file.content.length} 字符</p>
+            {#if (file.content?.length ?? 0) > 500}
+                <p class="text-xs text-slate-400 mt-1">...共 {file.content?.length ?? 0} 字符</p>
             {/if}
         </div>
     {/if}

@@ -30,33 +30,33 @@
     const perms = ["Read (4)", "Write (2)", "Execute (1)"];
 </script>
 
-<div class="space-y-8">
+<div class="space-y-6">
     <!-- Display -->
-    <div class="flex gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div
-            class="flex-1 bg-slate-900 text-white p-6 rounded-xl flex flex-col items-center justify-center gap-2"
+            class="bg-slate-900 text-white p-5 rounded-lg border border-slate-800 flex flex-col items-center justify-center gap-1.5 shadow-2xs"
         >
             <div
-                class="text-xs font-bold text-slate-400 uppercase tracking-widest"
+                class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
             >
-                Octal
+                八进制 (Octal)
             </div>
             <div
-                class="text-4xl font-mono font-bold tracking-widest text-primary-400"
+                class="text-3xl font-mono font-bold tracking-widest text-emerald-400"
             >
                 {octal}
             </div>
         </div>
         <div
-            class="flex-1 bg-slate-100 dark:bg-slate-800 p-6 rounded-xl flex flex-col items-center justify-center gap-2 border border-slate-200 dark:border-slate-700"
+            class="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-lg flex flex-col items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-700 shadow-2xs"
         >
             <div
-                class="text-xs font-bold text-slate-500 uppercase tracking-widest"
+                class="text-xs font-semibold text-slate-500 uppercase tracking-wider"
             >
-                Symbolic
+                符号表示 (Symbolic)
             </div>
             <div
-                class="text-2xl font-mono font-medium text-slate-700 dark:text-slate-300"
+                class="text-xl font-mono font-medium text-slate-800 dark:text-slate-200"
             >
                 {symbolic}
             </div>
@@ -64,38 +64,28 @@
     </div>
 
     <!-- Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         {#each categories as cat}
             <div
-                class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden"
+                class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden shadow-2xs"
             >
                 <div
-                    class="bg-slate-50 dark:bg-slate-800/50 px-4 py-3 border-b border-slate-200 dark:border-slate-800 text-center font-bold text-slate-700 dark:text-slate-200"
+                    class="bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 text-center font-semibold text-xs text-slate-700 dark:text-slate-200"
                 >
-                    {cat.label}
+                    {cat.label === 'Owner' ? '所有者 (Owner)' : cat.label === 'Group' ? '所属组 (Group)' : '公共用户 (Public)'}
                 </div>
-                <div class="p-4 space-y-2">
+                <div class="p-3 space-y-1.5">
                     {#each perms as perm, i}
                         <label
-                            class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors group select-none"
+                            class="flex items-center gap-3 p-2.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors group select-none border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
                         >
-                            <div
-                                class="relative w-5 h-5 flex items-center justify-center border-2 rounded-md transition-colors
-                                {cat.state[i]
-                                    ? 'bg-primary-500 border-primary-500'
-                                    : 'border-slate-300 dark:border-slate-600 group-hover:border-primary-400'}"
-                            >
-                                {#if cat.state[i]}
-                                    <Check size={14} class="text-white" />
-                                {/if}
-                            </div>
                             <input
                                 type="checkbox"
                                 bind:checked={cat.state[i]}
-                                class="hidden"
+                                class="rounded border-slate-300 dark:border-slate-600 text-slate-900 focus:ring-slate-400 w-4 h-4 cursor-pointer"
                             />
                             <span
-                                class="text-sm font-medium text-slate-600 dark:text-slate-300"
+                                class="text-xs font-medium text-slate-700 dark:text-slate-300 font-mono"
                                 >{perm}</span
                             >
                         </label>

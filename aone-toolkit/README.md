@@ -1,42 +1,67 @@
-# sv
+# Aone Toolkit
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Aone is an AI workflow cockpit with a developer toolkit attached. The main path is:
 
-## Creating a project
+1. Design the Agent context in Agent Studio.
+2. Run the task in Multi-Agent Workbench.
+3. Capture, inspect, format, compare, and package the output with focused tools.
 
-If you're seeing this, you've probably already done this step. Congrats!
+The project is built with SvelteKit, Svelte 5, TypeScript, Vite, Tailwind CSS, and local browser storage.
+
+## Core Workspaces
+
+- Agent Studio: assemble Agents, Personas, Skills, Squads, and reusable Workflows.
+- Multi-Agent Workbench: execute direct tasks, prepared Agents, Squads, and saved Workflows.
+- Prompt Hub: preserve prompts, templates, collections, and reusable instructions.
+
+## Toolkit Areas
+
+- Data editors: JSON, YAML, and table editing.
+- API tools: API response inspection and OpenAPI exploration.
+- Data generation and analysis: mock data, charts, and SQL query review.
+- Developer utilities: formatting, diffing, scanning, encoding, conversion, snippets, SVG, and CSS helpers.
+
+## Development
+
+Install dependencies:
 
 ```sh
-# create a new project
-npx sv create my-app
+npm install
 ```
 
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-npx sv create --template minimal --types ts --no-install aone-toolkit
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Run the local app:
 
 ```sh
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+Check Svelte and TypeScript diagnostics:
 
-To create a production version of your app:
+```sh
+npm run check
+```
+
+Create a production build:
 
 ```sh
 npm run build
 ```
 
-You can preview the production build with `npm run preview`.
+Preview a production build:
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+```sh
+npm run preview
+```
+
+## Project Map
+
+- `src/lib/config.ts` controls the global tool directory used by the homepage, sidebar, and command palette.
+- `src/routes/+page.svelte` is the main dashboard and product entry point.
+- `src/routes/agent-studio/` contains setup and resource-building workflows.
+- `src/routes/multi-agent/` contains the execution workbench.
+- `src/routes/developer-utilities/` contains compact single-purpose utilities.
+- `src/routes/table-editor/lib/` contains shared structured-data conversion helpers.
+
+## Product Principle
+
+Prefer a task-first workflow over a tool-first maze. New features should either strengthen the Agent -> Workbench -> Asset loop or clearly support one of its handoff steps.

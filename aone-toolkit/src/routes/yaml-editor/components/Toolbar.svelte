@@ -74,7 +74,7 @@
             size="sm"
             onclick={onUndo}
             disabled={!canUndo}
-            title="Undo (Ctrl+Z)"
+            title="撤销 (Ctrl+Z)"
             class="h-7 w-7 p-0"
         >
             <!-- Undo 2 -->
@@ -99,7 +99,7 @@
             size="sm"
             onclick={onRedo}
             disabled={!canRedo}
-            title="Redo (Ctrl+Y)"
+            title="重做 (Ctrl+Y)"
             class="h-7 w-7 p-0"
         >
             <!-- Redo 2 -->
@@ -129,7 +129,7 @@
             variant="ghost"
             size="sm"
             onclick={onBatch}
-            title="Batch Import (Paste YAML)"
+            title="批量导入 (粘贴 YAML)"
             class="h-7 px-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40"
         >
             <!-- Clipboard Paste (ClipboardList) -->
@@ -150,13 +150,13 @@
                     d="M8 11h.01"
                 /><path d="M8 16h.01" /></svg
             >
-            <span>Batch</span>
+            <span>批量导入</span>
         </Button>
         <Button
             variant="ghost"
             size="sm"
             onclick={onImport}
-            title="Import YAML File"
+            title="导入 YAML 文件"
             class="h-7 px-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40"
         >
             <!-- Upload -->
@@ -175,7 +175,7 @@
                     points="17 8 12 3 7 8"
                 /><line x1="12" x2="12" y1="3" y2="15" /></svg
             >
-            <span>Import</span>
+            <span>导入</span>
         </Button>
     </div>
 
@@ -187,7 +187,7 @@
             variant="ghost"
             size="sm"
             onclick={() => (exportDropdownOpen = !exportDropdownOpen)}
-            title="Download File"
+            title="下载/导出数据"
             class="h-7 px-2 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40"
         >
             <!-- Download -->
@@ -206,7 +206,7 @@
                     points="7 10 12 15 17 10"
                 /><line x1="12" x2="12" y1="15" y2="3" /></svg
             >
-            <span>Export</span>
+            <span>导出</span>
             <!-- Chevron -->
             <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -251,7 +251,7 @@
                             d="m10 13-2 2 2 2"
                         /><path d="m14 17 2-2-2-2" /></svg
                     >
-                    <span>YAML</span>
+                    <span>导出为 YAML</span>
                 </button>
                 <button
                     class="w-full px-3 py-1.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"
@@ -275,7 +275,7 @@
                             d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"
                         /></svg
                     >
-                    <span>JSON</span>
+                    <span>导出为 JSON</span>
                 </button>
             </div>
         {/if}
@@ -289,7 +289,7 @@
             variant="ghost"
             size="sm"
             onclick={onCopy}
-            title="Copy as YAML"
+            title="复制为 YAML 文本"
             class="h-7 px-2 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-900/40"
         >
             <!-- Clipboard + Code -->
@@ -308,14 +308,14 @@
                     d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
                 /><path d="m9 14 2 2 4-4" /></svg
             >
-            <span>YAML</span>
+            <span>复制 YAML</span>
         </Button>
         {#if onCopyJSON}
             <Button
                 variant="ghost"
                 size="sm"
                 onclick={onCopyJSON}
-                title="Copy as JSON"
+                title="复制为 JSON 文本"
                 class="h-7 px-2 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-900/40"
             >
                 <!-- Clipboard + Braces -->
@@ -343,7 +343,7 @@
                         d="M8 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"
                     /></svg
                 >
-                <span>JSON</span>
+                <span>复制 JSON</span>
             </Button>
         {/if}
     </div>
@@ -357,7 +357,7 @@
                 variant="ghost"
                 size="sm"
                 onclick={onFormat}
-                title="Format / Beautify YAML"
+                title="格式化 / 美化 YAML"
                 class="h-7 px-2 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40"
             >
                 <!-- Sparkles -->
@@ -378,7 +378,7 @@
                         d="M3 5h4"
                     /><path d="M17 19h4" /></svg
                 >
-                <span>Format</span>
+                <span>格式化</span>
             </Button>
         </div>
     {/if}
@@ -388,7 +388,7 @@
         variant="ghost"
         size="sm"
         onclick={onClear}
-        title="Clear All Data"
+        title="清空所有数据"
         class="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 mr-1"
     >
         <!-- Trash 2 -->
@@ -422,7 +422,7 @@
             variant="ghost"
             size="sm"
             onclick={onHelp}
-            title="Keyboard Shortcuts"
+            title="键盘快捷键"
             class="h-7 w-7 p-0 text-slate-600 dark:text-slate-400"
         >
             <svg
@@ -452,7 +452,7 @@
             variant="ghost"
             size="sm"
             onclick={toggleTheme}
-            title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            title={isDark ? "切换到浅色模式" : "切换到深色模式"}
             class="h-7 w-7 p-0"
         >
             {#if isDark}

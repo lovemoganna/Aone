@@ -55,16 +55,19 @@
 </script>
 
 <div class="h-full flex flex-col gap-6">
-    <div class="flex-1 flex flex-col gap-2">
-        <label
-            for="str-input"
-            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
-            >Input Text</label
-        >
+    <div class="flex-1 flex flex-col gap-3 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-sm">
+        <div class="flex justify-between items-center">
+            <label
+                for="str-input"
+                class="label-section"
+                >Input Text</label
+            >
+            <span class="text-[11px] text-slate-400 font-mono">{input.length} chars</span>
+        </div>
         <textarea
             id="str-input"
             bind:value={input}
-            class="w-full h-32 p-4 font-mono text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none resize-none focus:ring-2 focus:ring-primary-500/20 transition-all placeholder:text-slate-400"
+            class="textarea-editor flex-1"
             placeholder="Type any text to convert (e.g. helloWorld or user_id)..."
         ></textarea>
     </div>
@@ -72,23 +75,23 @@
     <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {#each cases as c}
             <div
-                class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 flex flex-col gap-2 group hover:border-primary-200 dark:hover:border-primary-900 transition-colors"
+                class="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 flex flex-col gap-3 shadow-sm hover:border-primary-500 transition-colors"
             >
                 <div class="flex justify-between items-center">
                     <span
-                        class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                        class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
                         >{c.label}</span
                     >
                     <button
-                        class="p-1 text-slate-400 hover:text-primary-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-all"
+                        class="btn btn-secondary text-xs p-1.5 shadow-sm"
                         onclick={() => navigator.clipboard.writeText(c.val)}
                         title="Copy"
                     >
-                        <Copy size={14} />
+                        <Copy size={12} />
                     </button>
                 </div>
                 <div
-                    class="font-mono text-sm text-slate-700 dark:text-slate-300 break-all select-all"
+                    class="font-mono text-sm text-slate-700 dark:text-slate-300 break-all select-all flex-1"
                 >
                     {c.val}
                 </div>

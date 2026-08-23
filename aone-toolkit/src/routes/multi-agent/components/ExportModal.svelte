@@ -26,7 +26,7 @@
         { key: "org", label: "Org Mode", icon: BookOpen },
     ];
 
-    function getPreview(): string {
+    function get内容预览(): string {
         const messages = agentStore.currentSession.messages;
         const goal = agentStore.pipelineState.currentGoal;
         let content = "";
@@ -79,17 +79,19 @@
 </script>
 
 {#if open}
+    <!-- [01] 增强导出报告模态框的无障碍绑定、375px 窄屏容器适配与网格响应式 -->
     <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
     <div
         transition:fade={{ duration: 150 }}
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
         role="dialog"
         aria-modal="true"
+        aria-labelledby="export-modal-title"
         tabindex="-1"
         onclick={handleBackdrop}
     >
         <div
-            class="w-[520px] max-h-[80vh] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden"
+            class="w-full max-w-[520px] max-h-[85vh] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden"
         >
             <!-- Header -->
             <div
@@ -97,30 +99,37 @@
             >
                 <div>
                     <h2
+                        id="export-modal-title"
                         class="text-lg font-bold text-slate-900 dark:text-white"
                     >
-                        Export Report
+                        导出运行报告
                     </h2>
                     <p class="text-xs text-slate-500 mt-0.5">
-                        Choose format and download
+                        选择导出格式并下载
                     </p>
                 </div>
+                <!-- [01] 为关闭按钮增加 type="button"、aria-label 与焦点样式 -->
                 <button
+                    type="button"
                     onclick={() => (open = false)}
-                    class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    aria-label="关闭导出窗口"
+                    title="关闭"
                 >
                     <X size={18} class="text-slate-400" />
                 </button>
             </div>
 
             <!-- Format Selection -->
-            <div class="p-5 space-y-4">
-                <div class="grid grid-cols-4 gap-2">
+            <div class="p-5 space-y-4 overflow-y-auto">
+                <!-- [01] 格式选择网格适配 375px 小屏为 2 列并自适应展开为 4 列 -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {#each FORMATS as fmt}
                         {@const FmtIcon = fmt.icon}
                         <button
+                            type="button"
                             onclick={() => (selectedFormat = fmt.key)}
-                            class="flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all
+                            class="flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500
                             {selectedFormat === fmt.key
                                 ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30'
                                 : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}"
@@ -143,13 +152,13 @@
                     {/each}
                 </div>
 
-                <!-- Options -->
+                <!-- 导出选项 -->
                 <div
                     class="flex items-center gap-2 text-xs text-slate-500 mt-2"
                 >
                     <Settings2 size={12} />
                     <span class="font-bold uppercase tracking-wider"
-                        >Options</span
+                        >导出选项</span
                     >
                 </div>
                 <div class="flex gap-4">
@@ -161,7 +170,7 @@
                             bind:checked={includeTimestamps}
                             class="rounded border-slate-300"
                         />
-                        Include timestamps
+                        包含时间戳
                     </label>
                     <label
                         class="flex items-center gap-2 text-xs cursor-pointer"
@@ -171,41 +180,43 @@
                             bind:checked={includePrompts}
                             class="rounded border-slate-300"
                         />
-                        Include prompts
+                        包含提示词
                     </label>
                 </div>
 
-                <!-- Preview -->
+                <!-- 内容预览 -->
                 <div>
                     <div
                         class="flex items-center gap-1.5 mb-2 text-xs text-slate-500"
                     >
                         <Eye size={12} />
                         <span class="font-bold uppercase tracking-wider"
-                            >Preview</span
+                            >内容预览</span
                         >
                     </div>
                     <pre
-                        class="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-400 max-h-48 overflow-y-auto whitespace-pre-wrap break-words font-mono">{getPreview()}</pre>
+                        class="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-400 max-h-48 overflow-y-auto whitespace-pre-wrap break-words font-mono">{get内容预览()}</pre>
                 </div>
             </div>
 
             <!-- Footer -->
             <div
-                class="flex justify-end gap-2 p-5 border-t border-slate-200 dark:border-slate-800"
+                class="flex justify-end gap-2 p-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50"
             >
                 <button
+                    type="button"
                     onclick={() => (open = false)}
-                    class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                    class="px-4 py-2 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 >
-                    Cancel
+                    取消
                 </button>
                 <button
+                    type="button"
                     onclick={handleDownload}
-                    class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 shadow-lg shadow-indigo-500/20 transition-all"
+                    class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                 >
                     <Download size={14} />
-                    Download
+                    立即导出下载
                 </button>
             </div>
         </div>

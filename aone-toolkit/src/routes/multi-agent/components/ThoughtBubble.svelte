@@ -1,37 +1,33 @@
 <script lang="ts">
     import { slide } from "svelte/transition";
     import { Map as Sitemap } from "lucide-svelte";
-    import { marked } from "marked";
+    import RichMessageContent from "./RichMessageContent.svelte";
 
     let { content }: { content: string } = $props();
-
     let isExpanded = $state(false);
-    let htmlContent = $derived(marked.parse(content));
 </script>
 
-<div class="w-full max-w-3xl mx-auto mb-4">
+<div class="w-full max-w-3xl mx-auto mb-3">
     <button
-        class="w-full text-left p-3 rounded-lg border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/50 dark:bg-indigo-900/10 hover:bg-indigo-100/50 transition-all group/thought"
+        class="w-full text-left p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-all cursor-pointer group"
         onclick={() => (isExpanded = !isExpanded)}
     >
         <div class="flex items-center justify-between gap-2">
-            <div
-                class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400"
-            >
-                <Sitemap size={12} class="animate-pulse" />
-                Thinking Process
+            <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <Sitemap size={13} class="text-slate-500" />
+                <span>协同推演过程</span>
             </div>
-            <div class="text-[10px] text-indigo-400 opacity-60">
-                {isExpanded ? "Click to collapse" : "Click to expand"}
+            <div class="text-[11px] text-slate-400">
+                {isExpanded ? "收起" : "展开详情"}
             </div>
         </div>
 
         {#if isExpanded}
             <div
                 transition:slide
-                class="mt-2 pt-2 border-t border-indigo-100/50 dark:border-indigo-900/20 prose prose-sm dark:prose-invert max-w-none text-xs text-indigo-900/70 dark:text-indigo-200/70"
+                class="mt-2 pt-2 border-t border-slate-200 dark:border-slate-750 text-xs text-slate-700 dark:text-slate-300 leading-relaxed"
             >
-                {@html htmlContent}
+                <RichMessageContent content={content} />
             </div>
         {/if}
     </button>

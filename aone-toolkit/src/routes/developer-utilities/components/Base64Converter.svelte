@@ -1,151 +1,157 @@
 <script lang="ts">
-    import { Button } from "$lib/components/ui";
-    import { Copy, ArrowRightLeft, Check, AlertCircle } from "lucide-svelte";
-    import { fade } from "svelte/transition";
+    import { copyToClipboard } from "$lib/utils/clipboard";
+    import { toastStore } from "$lib/stores/toastStore.svelte";
+    import { Copy, Trash2, ArrowRightLeft, Check, AlertCircle } from "lucide-svelte";
 
-    let input = $state("");
+    let input = $state("Hello 世界！Aone Toolkit 2026");
     let mode = $state<"encode" | "decode">("encode");
-    let output = $state("");
-    let error = $state<string | null>(null);
-    let copied = $state(false);
+    let urlSafe = $state(false);
 
-    function processBase64() {
-        error = null;
-        if (!input) {
-            output = "";
-            return;
+    function utf8ToBase64(str: string, isUrlSafe = false): string {
+        const bytes = new TextEncoder().encode(str);
+        let binary = "";
+        for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
         }
-
-        try {
-            if (mode === "encode") {
-                output = btoa(input);
-            } else {
-                output = atob(input);
-            }
-        } catch (e) {
-            output = "";
-            error = "Invalid Input";
+        let base64 = btoa(binary);
+        if (isUrlSafe) {
+            base64 = base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
         }
+        return base64;
     }
 
-    $effect(() => {
-        // Trigger processing when input or mode changes
-        processBase64();
-        // Just referencing input and mode to track dependencies
-        // (Svelte 5 runest automatically track dependency, so simple call is enough)
-        if (input || mode) {
+    function base64ToUtf8(str: string): string {
+        let base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+        while (base64.length % 4) {
+            base64 += "=";
+        }
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return new TextDecoder("utf-8").decode(bytes);
+    }
+
+    let result = $derived.by(() => {
+        if (!input) return { text: "", error: null };
+        try {
+            if (mode === "encode") {
+                return { text: utf8ToBase64(input, urlSafe), error: null };
+            } else {
+                return { text: base64ToUtf8(input), error: null };
+            }
+        } catch (e: any) {
+            return { text: "", error: "Base64 解码失败：输入包含非法字符或非标准格式" };
         }
     });
 
-    function toggleMode() {
-        mode = mode === "encode" ? "decode" : "encode";
-        // Swap input and output if valid (optional UX enhancement, maybe confusing)
-        // Let's keep it simple: just switch mode
+    function swapInputOutput() {
+        if (result.text && !result.error) {
+            input = result.text;
+            mode = mode === "encode" ? "decode" : "encode";
+            toastStore.success("已切换模式并置入结果");
+        }
     }
 
-    async function copyOutput() {
-        if (!output) return;
-        await navigator.clipboard.writeText(output);
-        copied = true;
-        setTimeout(() => (copied = false), 2000);
+    function copyResult() {
+        if (!result.text) return;
+        copyToClipboard(result.text, "Base64 结果");
+        toastStore.success("已复制到剪贴板");
     }
 </script>
 
-<div class="h-full flex flex-col md:flex-row gap-6">
-    <!-- Input Column -->
-    <div class="flex-1 flex flex-col gap-2">
-        <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">
-            {mode === "encode" ? "Text Input" : "Base64 Input"}
-        </label>
-        <textarea
-            bind:value={input}
-            class="flex-1 min-h-[300px] p-4 font-mono text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none transition-all"
-            placeholder={mode === "encode"
-                ? "Paste text to encode..."
-                : "Paste Base64 to decode..."}
-            spellcheck="false"
-        ></textarea>
-        <div class="flex justify-between text-xs text-slate-500">
-            <span>{input.length} chars</span>
+<div class="h-full flex flex-col gap-2 min-h-0">
+    <!-- Top Toolbar -->
+    <div class="h-9 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-xs">
+        <div class="flex items-center gap-2">
+            <span class="font-bold text-slate-800 dark:text-slate-200">Base64 转换器</span>
+            <div class="flex p-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[11px]">
+                <button
+                    type="button"
+                    class="px-2.5 py-0.5 rounded font-medium transition {mode === 'encode' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                    onclick={() => mode = "encode"}
+                >
+                    文本 → Base64 (Encode)
+                </button>
+                <button
+                    type="button"
+                    class="px-2.5 py-0.5 rounded font-medium transition {mode === 'decode' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                    onclick={() => mode = "decode"}
+                >
+                    Base64 → 文本 (Decode)
+                </button>
+            </div>
+            {#if mode === "encode"}
+                <label class="flex items-center gap-1 text-[11px] text-slate-500 cursor-pointer select-none ml-2">
+                    <input type="checkbox" bind:checked={urlSafe} class="rounded text-slate-600 text-xs" />
+                    <span>URL-Safe 模式 (- / _)</span>
+                </label>
+            {/if}
         </div>
-    </div>
 
-    <!-- Controls Column (Middle) -->
-    <div
-        class="flex md:flex-col items-center justify-center gap-4 py-4 md:py-0"
-    >
-        <button
-            class="p-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-white dark:hover:bg-slate-700 shadow-sm border border-slate-200 dark:border-slate-700 transition-all active:scale-95 group"
-            onclick={toggleMode}
-            title="Switch Mode"
-        >
-            <ArrowRightLeft
-                size={20}
-                class="group-hover:rotate-180 transition-transform duration-300"
-            />
-        </button>
-
-        <div
-            class="text-xs font-bold text-slate-400 uppercase tracking-wider hidden md:block rotate-90 whitespace-nowrap"
-        >
-            {mode}
-        </div>
-    </div>
-
-    <!-- Output Column -->
-    <div class="flex-1 flex flex-col gap-2">
-        <div class="flex justify-between items-center">
-            <label
-                class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+        <div class="flex items-center gap-1.5">
+            <button
+                type="button"
+                class="px-2 py-1 text-xs rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition flex items-center gap-1"
+                onclick={swapInputOutput}
+                title="将输出作为输入并反转模式"
             >
-                {mode === "encode" ? "Base64 Output" : "Text Output"}
-            </label>
-            {#if error}
-                <span
-                    transition:fade
-                    class="text-xs text-rose-500 font-medium flex items-center gap-1"
-                >
-                    <AlertCircle size={12} />
-                    {error}
-                </span>
-            {/if}
+                <ArrowRightLeft size={12} /> 翻转输入输出
+            </button>
+            <button
+                type="button"
+                class="p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/20 text-slate-400 hover:text-rose-500 transition"
+                onclick={() => input = ""}
+                title="清空"
+            >
+                <Trash2 size={13} />
+            </button>
         </div>
+    </div>
 
-        <div class="relative flex-1 min-h-[300px]">
+    <!-- 2-Column Split Workspace -->
+    <div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-2 min-h-0">
+        <!-- Input -->
+        <div class="flex flex-col border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-xs min-h-0">
+            <div class="h-8 px-3 bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300 shrink-0">
+                <span>{mode === "encode" ? "输入源文本 (UTF-8)" : "输入 Base64 编码字符串"}</span>
+                <span class="text-[10px] text-slate-400 font-mono">{input.length} 字符</span>
+            </div>
             <textarea
-                value={output}
-                readonly
-                class="w-full h-full p-4 font-mono text-sm bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-600 dark:text-slate-400 focus:outline-none resize-none"
-                placeholder="Result will appear here..."
+                bind:value={input}
+                class="flex-1 w-full p-2.5 font-mono text-xs bg-transparent resize-none focus:outline-none dark:text-slate-200 leading-relaxed"
+                placeholder={mode === "encode" ? "在此输入或粘贴需要编码为 Base64 的文本..." : "在此输入 Base64 字符串..."}
+                spellcheck="false"
             ></textarea>
-
-            {#if output}
-                <div class="absolute top-2 right-2">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onclick={copyOutput}
-                        class="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border border-slate-200/50 hover:bg-white hover:border-slate-300"
-                    >
-                        {#if copied}
-                            <Check size={14} class="mr-1 text-emerald-500" />
-                            <span class="text-emerald-500">Copied</span>
-                        {:else}
-                            <Copy size={14} class="mr-1" /> Copy
-                        {/if}
-                    </Button>
-                </div>
-            {/if}
         </div>
-        <div class="flex justify-between text-xs text-slate-500">
-            <span>{output.length} chars</span>
-            {#if mode === "encode" && output.length > 0}
-                <span
-                    >Size increase: {Math.round(
-                        (output.length / (input.length || 1) - 1) * 100,
-                    )}%</span
+
+        <!-- Output -->
+        <div class="flex flex-col border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-xs min-h-0">
+            <div class="h-8 px-3 bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300 shrink-0">
+                <span>{mode === "encode" ? "Base64 输出结果" : "解码文本输出"}</span>
+                <button
+                    onclick={copyResult}
+                    disabled={!result.text}
+                    class="text-[10px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:underline flex items-center gap-1 disabled:opacity-40"
                 >
-            {/if}
+                    <Copy size={10} /> 复制输出
+                </button>
+            </div>
+            <div class="flex-1 p-2.5 overflow-auto font-mono text-xs bg-slate-50/30 dark:bg-slate-950/40 text-slate-800 dark:text-slate-200 min-h-0">
+                {#if result.error}
+                    <div class="p-2.5 rounded bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+                        <AlertCircle size={14} class="shrink-0" />
+                        <span>{result.error}</span>
+                    </div>
+                {:else if result.text}
+                    <pre class="whitespace-pre-wrap break-all leading-relaxed select-all">{result.text}</pre>
+                {:else}
+                    <div class="h-full flex items-center justify-center text-slate-400 text-xs italic">
+                        在左侧输入以生成结果
+                    </div>
+                {/if}
+            </div>
         </div>
     </div>
 </div>

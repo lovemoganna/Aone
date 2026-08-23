@@ -30,14 +30,19 @@
     });
 </script>
 
-<div class="h-full flex flex-col md:flex-row gap-6">
-    <div class="flex-1 flex flex-col gap-2">
-        <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">
-            {mode === "encode" ? "Plain Text" : "HTML Entity String"}
-        </label>
+<div class="h-full flex flex-col md:flex-row gap-4">
+    <!-- Input Column -->
+    <div class="flex-1 flex flex-col gap-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs">
+        <div class="flex justify-between items-center">
+            <span class="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                {mode === "encode" ? "纯文本 (Plain Text)" : "HTML 实体字符串 (Entity String)"}
+            </span>
+            <span class="text-[11px] text-slate-400 font-mono">{input.length} 字符</span>
+        </div>
         <textarea
             bind:value={input}
-            class="flex-1 min-h-[300px] p-4 font-mono text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none resize-none focus:ring-2 focus:ring-primary-500/20 transition-all"
+            aria-label={mode === "encode" ? "Plain Text" : "HTML Entity String"}
+            class="flex-1 min-h-[350px] w-full text-xs font-mono p-3 bg-slate-50/50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-400 text-slate-800 dark:text-slate-200 resize-none"
             placeholder={mode === "encode"
                 ? "<div class='foo'>Bar</div>"
                 : "&lt;div class=&#39;foo&#39;&gt;Bar&lt;/div&gt;"}
@@ -46,43 +51,50 @@
 
     <!-- Switcher -->
     <div
-        class="flex md:flex-col items-center justify-center gap-4 py-4 md:py-0"
+        class="flex md:flex-col items-center justify-center gap-3 py-2 md:py-0"
     >
         <button
-            class="p-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-white dark:hover:bg-slate-700 shadow-sm border border-slate-200 dark:border-slate-700 transition-all active:scale-95 group"
+            class="p-2.5 rounded-full bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white shadow-2xs border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
             onclick={() => (mode = mode === "encode" ? "decode" : "encode")}
-            title="Switch Mode"
+            title="切换模式 (Encode / Decode)"
         >
             <ArrowRightLeft
-                size={20}
-                class="group-hover:rotate-180 transition-transform duration-300"
+                size={16}
             />
         </button>
         <div
-            class="text-xs font-bold text-slate-400 uppercase tracking-wider hidden md:block rotate-90 whitespace-nowrap"
+            class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider hidden md:block rotate-90 whitespace-nowrap"
         >
             {mode}
         </div>
     </div>
 
-    <div class="flex-1 flex flex-col gap-2 relative">
-        <label class="text-sm font-semibold text-slate-700 dark:text-slate-300"
-            >Result</label
-        >
-        <textarea
-            value={output}
-            readonly
-            class="flex-1 min-h-[300px] p-4 font-mono text-sm bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none resize-none text-slate-700 dark:text-slate-300"
-            placeholder="Result..."
-        ></textarea>
-        {#if output}
-            <button
-                class="absolute top-8 right-2 p-1.5 bg-white/50 dark:bg-slate-900/50 rounded-md hover:bg-white text-slate-500 hover:text-primary-600 border border-transparent hover:border-slate-200 transition-all"
-                onclick={() => navigator.clipboard.writeText(output)}
-                title="Copy"
-            >
-                <Copy size={16} />
-            </button>
-        {/if}
+    <!-- Output Column -->
+    <div class="flex-1 flex flex-col gap-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs">
+        <div class="flex justify-between items-center">
+            <span class="text-xs font-semibold text-slate-700 dark:text-slate-200">处理结果 (Result)</span>
+            <span class="text-[11px] text-slate-400 font-mono">{output.length} 字符</span>
+        </div>
+        <div class="relative flex-1 min-h-[350px] flex flex-col">
+            <textarea
+                value={output}
+                readonly
+                aria-label="Result"
+                class="flex-1 w-full text-xs font-mono p-3 bg-slate-50/50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-md text-slate-800 dark:text-slate-200 resize-none focus:outline-none"
+                placeholder="结果将在此显示..."
+            ></textarea>
+            {#if output}
+                <div class="absolute top-2.5 right-2.5">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onclick={() => navigator.clipboard.writeText(output)}
+                        class="text-xs py-1 px-2.5 bg-white dark:bg-slate-800 shadow-2xs"
+                    >
+                        <Copy size={12} class="mr-1" /> 复制
+                    </Button>
+                </div>
+            {/if}
+        </div>
     </div>
 </div>

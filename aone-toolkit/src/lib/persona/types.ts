@@ -100,6 +100,8 @@ export interface AbstractPersona {
     // 扩展配置
     visual: PersonaVisual;
     config?: PersonaConfig;
+    outputRestraintMode?: 'inherit' | 'strict' | 'standard' | 'relaxed' | 'custom' | 'off';
+    customRestraintRule?: string;
     
     // 背景故事 (可选)
     background?: string;

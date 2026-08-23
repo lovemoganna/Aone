@@ -32,139 +32,137 @@
 
 {#if isOpen}
     <div
-        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs select-none"
         onclick={onClose}
-        transition:fade={{ duration: 300 }}
+        onkeydown={(event) => {
+            if (event.key === "Escape" || event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onClose();
+            }
+        }}
+        role="button"
+        tabindex="0"
+        aria-label="Close collaboration modal"
+        transition:fade={{ duration: 100 }}
     >
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-            class="glass-pro rounded-2xl w-full max-w-md overflow-hidden flex flex-col transition-all duration-700"
+            class="bg-white dark:bg-[#0b0f17] border border-slate-200 dark:border-slate-800 rounded-lg w-full max-w-md overflow-hidden flex flex-col shadow-2xl"
             onclick={(e) => e.stopPropagation()}
-            transition:fly={{ y: 20, duration: 400 }}
+            transition:fly={{ y: 10, duration: 120 }}
         >
             <!-- Header -->
             <div
-                class="p-6 border-b border-white/10 flex items-center justify-between"
+                class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/40"
             >
-                <div class="flex items-center gap-3">
-                    <div
-                        class="p-2 bg-indigo-500/20 rounded-lg text-indigo-400 glow-premium"
-                    >
-                        <Users size={24} />
-                    </div>
+                <div class="flex items-center gap-2">
+                    <Users size={15} class="text-slate-700 dark:text-slate-300" />
                     <div>
-                        <h3 class="text-lg font-bold text-white">
-                            Collaboration
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                            Real-time Collaboration
                         </h3>
-                        <p class="text-xs text-gray-400">P2P Real-time Sync</p>
                     </div>
                 </div>
                 <button
-                    class="p-2 hover:bg-white/10 rounded-xl transition-colors text-gray-400"
+                    type="button"
+                    class="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded transition-colors"
                     onclick={onClose}
+                    title="Close modal"
+                    aria-label="Close modal"
                 >
-                    <X size={20} />
+                    <X size={15} />
                 </button>
             </div>
 
-            <div class="p-6 space-y-6">
+            <div class="p-4 space-y-4 text-xs">
                 {#if diagramStore.isCollaborating}
-                    <div class="space-y-4">
+                    <div class="space-y-3">
                         <div
-                            class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 flex items-center gap-4"
+                            class="bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded p-2.5 flex items-center gap-2.5"
                         >
-                            <div class="relative">
-                                <Radio
-                                    size={24}
-                                    class="text-indigo-400 animate-pulse"
-                                />
-                                <div
-                                    class="absolute inset-0 bg-indigo-400 rounded-full animate-ping opacity-20"
-                                ></div>
-                            </div>
-                            <div class="flex-1">
-                                <p class="text-sm font-bold text-white">
+                            <Radio size={16} class="text-emerald-500 animate-pulse shrink-0" />
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold text-slate-900 dark:text-slate-100">
                                     Live Session Active
                                 </p>
-                                <p class="text-xs text-gray-400">
-                                    Share your ID to let others join.
+                                <p class="text-slate-500 dark:text-slate-400 text-[11px]">
+                                    Share session ID with peers to edit together.
                                 </p>
                             </div>
                         </div>
 
-                        <div class="space-y-2">
+                        <div class="space-y-1.5">
                             <label
-                                class="text-xs font-bold text-gray-500 uppercase tracking-wider"
-                                >Session ID</label
+                                for="diagram-session-id"
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
                             >
+                                Session ID
+                            </label>
                             <div class="flex gap-2">
                                 <input
+                                    id="diagram-session-id"
                                     type="text"
                                     readonly
                                     value={diagramStore.sessionID}
-                                    class="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-300 outline-none"
+                                    class="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-2.5 py-1.5 font-mono text-slate-800 dark:text-slate-200 outline-none text-xs"
                                 />
                                 <button
-                                    class="p-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all glow-premium active:scale-95"
+                                    type="button"
+                                    class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded font-semibold text-xs transition-colors flex items-center gap-1 shadow-xs"
                                     onclick={handleCopy}
+                                    title="Copy session ID"
                                 >
-                                    {#if copied}<Check size={20} />{:else}<Copy
-                                            size={20}
-                                        />{/if}
+                                    {#if copied}
+                                        <Check size={14} class="text-emerald-400 dark:text-emerald-600" />
+                                        <span>Copied</span>
+                                    {:else}
+                                        <Copy size={14} />
+                                        <span>Copy</span>
+                                    {/if}
                                 </button>
                             </div>
                         </div>
 
                         <button
-                            class="w-full py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-sm font-bold border border-red-500/20 transition-all"
+                            type="button"
+                            class="w-full py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded font-semibold text-xs transition-colors"
                             onclick={() => diagramStore.stopCollaboration()}
                         >
-                            End Session
+                            End Collaboration Session
                         </button>
                     </div>
                 {:else}
-                    <div class="space-y-6">
-                        <div class="space-y-3">
-                            <p class="text-sm text-gray-400 leading-relaxed">
-                                Host a session to collaborate in real-time or
-                                join an existing one using a Session ID.
-                            </p>
+                    <div class="space-y-3">
+                        <button
+                            type="button"
+                            class="w-full py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded font-semibold text-xs transition-colors shadow-xs"
+                            onclick={handleHost}
+                        >
+                            Start New Collaboration Host
+                        </button>
+
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-px bg-slate-200 dark:border-slate-800"></div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">or join</span>
+                            <div class="flex-1 h-px bg-slate-200 dark:border-slate-800"></div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <input
+                                type="text"
+                                bind:value={joinID}
+                                placeholder="Paste peer session ID..."
+                                class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-2.5 py-1.5 text-slate-800 dark:text-slate-200 outline-none text-xs font-mono"
+                            />
                             <button
-                                class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all glow-premium active:scale-95"
-                                onclick={handleHost}
+                                type="button"
+                                class="w-full py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded font-semibold text-xs border border-slate-200 dark:border-slate-700 transition-colors disabled:opacity-50"
+                                disabled={!joinID.trim()}
+                                onclick={handleJoin}
                             >
-                                Start Hosting
+                                Join Existing Session
                             </button>
-                        </div>
-
-                        <div class="relative flex items-center py-2">
-                            <div
-                                class="flex-grow border-t border-white/5"
-                            ></div>
-                            <span
-                                class="flex-shrink mx-4 text-xs font-bold text-gray-600 uppercase tracking-widest"
-                                >OR</span
-                            >
-                            <div
-                                class="flex-grow border-t border-white/5"
-                            ></div>
-                        </div>
-
-                        <div class="space-y-3">
-                            <div class="flex gap-2">
-                                <input
-                                    type="text"
-                                    bind:value={joinID}
-                                    placeholder="Enter Session ID..."
-                                    class="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-indigo-500/50 transition-colors"
-                                />
-                                <button
-                                    class="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold transition-all active:scale-95"
-                                    onclick={handleJoin}
-                                    disabled={!joinID.trim()}
-                                >
-                                    Join
-                                </button>
-                            </div>
                         </div>
                     </div>
                 {/if}

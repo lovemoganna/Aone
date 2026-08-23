@@ -1,188 +1,261 @@
-// Local Intelligence Engine: High-performance heuristic generator
-// No external API dependency for 100% privacy and speed.
+// High-performance architecture diagram generator
+// Supports OpenAI-compatible LLM endpoint when configured, with zero-latency local synthesis fallback.
 
 interface DiagramTemplate {
     keywords: string[];
-    generate: (context: string) => string;
+    generate: (prompt: string, context: string) => string;
 }
 
 const TEMPLATES: DiagramTemplate[] = [
     {
-        keywords: ['auth', 'login', 'sso', 'oauth', 'token'],
+        keywords: ['auth', 'login', 'sso', 'oauth', 'token', 'jwt', 'security'],
         generate: () => `@startuml
-!theme blueprint
-title "Authentication Flow (OAuth2/OIDC)"
+!theme plain
+skinparam roundcorner 8
+skinparam defaultFontName "Inter, -apple-system, sans-serif"
 
-actor User
-participant "Client App" as Client
-participant "Auth Server" as Auth
-database "User DB" as DB
+title "Authentication Flow (OAuth2 / OIDC)"
 
-User -> Client: Click Login
-activate Client
-Client -> Auth: Redirect to /authorize
-activate Auth
-Auth -> User: Show Login Page
-User -> Auth: Enter Credentials
-Auth -> DB: Validate User
-activate DB
-DB --> Auth: User Valid
-deactivate DB
-Auth -> Client: Redirect with Auth Code
-deactivate Auth
-Client -> Auth: Exchange Code for Token
-activate Auth
-Auth --> Client: Access Token + ID Token
-deactivate Auth
-Client -> User: Logged In
-deactivate Client
+actor "User" as user
+participant "Client App" as client
+participant "Auth Gateway" as auth
+database "Identity DB" as db
+
+user -> client: Initiate Login Request
+activate client
+client -> auth: Redirect to /oauth/authorize
+activate auth
+auth -> user: Present Login Challenge
+user -> auth: Submit Credentials + MFA
+auth -> db: Validate Identity Record
+activate db
+db --> auth: Identity Verified (Status: Active)
+deactivate db
+auth -> client: Callback with Auth Code
+deactivate auth
+client -> auth: Exchange Code for Access Token
+activate auth
+auth --> client: Issue JWT Token (Access + Refresh)
+deactivate auth
+client -> user: Session Established (Dashboard)
+deactivate client
 @enduml`
     },
     {
-        keywords: ['microservice', 'architecture', 'service', 'gateway'],
+        keywords: ['microservice', 'architecture', 'service', 'gateway', 'backend', 'api'],
         generate: () => `@startuml
-!theme blueprint
-top to bottom direction
+!theme plain
+skinparam roundcorner 8
+skinparam defaultFontName "Inter, -apple-system, sans-serif"
+left to right direction
 
-package "API Gateway Layer" {
-  [API Gateway] as Gateway
-  [Load Balancer] as LB
+package "Ingress & Edge" {
+  [Cloudflare / WAF] as waf
+  [API Gateway] as gateway
 }
 
-package "Core Services" {
-  component "Auth Service" as Auth
-  component "Order Service" as Order
-  component "Product Service" as Product
+package "Domain Microservices" {
+  component "Auth Service" as authSvc
+  component "Order Service" as orderSvc
+  component "Inventory Service" as invSvc
 }
 
-database "Redis Cache" as Cache
-database "PostgreSQL" as DB
-queue "Kafka / RabbitMQ" as Queue
+package "Persistence & Messaging" {
+  database "PostgreSQL (Primary)" as db
+  database "Redis Cache" as cache
+  queue "Kafka Event Bus" as kafka
+}
 
-LB --> Gateway
-Gateway --> Auth
-Gateway --> Order
-Gateway --> Product
+waf --> gateway
+gateway --> authSvc : Verify Bearer Token
+gateway --> orderSvc : Route Order API
+gateway --> invSvc : Query Inventory
 
-Order --> Cache
-Order --> DB
-Order --> Queue
-
-note right of Queue: Async Event Bus
+orderSvc --> db : Transact
+orderSvc --> cache : Read Cache
+orderSvc --> kafka : Publish OrderCreated Event
+kafka --> invSvc : Consume Stock Allocation
 @enduml`
     },
     {
-        keywords: ['state', 'machine', 'lifecycle', 'workflow'],
+        keywords: ['state', 'machine', 'lifecycle', 'workflow', 'pipeline'],
         generate: () => `@startuml
-!theme blueprint
+!theme plain
+skinparam roundcorner 8
+skinparam defaultFontName "Inter, -apple-system, sans-serif"
+
 title "Order Lifecycle State Machine"
 
-[*] --> Draft
+[*] --> Created : Submit Order
+Created --> Validating : Inventory Lock
+Validating --> PendingPayment : Validation Passed
+Validating --> Failed : Insufficient Stock
 
-state "Draft" as Draft {
-  [*] --> Idle
-  Idle --> Validating : Check Inventory
-  Validating --> Idle : Valid
+PendingPayment --> Paid : Payment Captured
+PendingPayment --> Expired : TTL Timeout (15m)
+
+state "Fulfillment" as Fulfillment {
+  [*] --> Packing
+  Packing --> Dispatched : Courier Handover
+  Dispatched --> InTransit : Tracking Active
 }
 
-Draft --> PendingPayment : Submit Order
-PendingPayment --> Paid : Payment Success
-PendingPayment --> Canceled : Timeout
-
-state "Processing" as Proc {
-  Paid --> Packing
-  Packing --> Shipping
-}
-
-Shipping --> Delivered
+Paid --> Fulfillment : Route to Warehouse
+InTransit --> Delivered : Signature Confirmed
 Delivered --> [*]
-Canceled --> [*]
+
+Failed --> [*]
+Expired --> [*]
 @enduml`
     },
     {
-        keywords: ['er', 'entity', 'relationship', 'database', 'schema'],
+        keywords: ['er', 'entity', 'relationship', 'database', 'schema', 'table'],
         generate: () => `@startuml
-!theme blueprint
+!theme plain
 hide circle
 skinparam linetype ortho
+skinparam defaultFontName "Inter, -apple-system, sans-serif"
 
-entity "User" as user {
-  *id : uuid <<generated>>
+entity "User" as users {
+  *id : uuid <<PK>>
   --
-  *email : text
-  username : text
+  *email : varchar(255)
+  username : varchar(100)
+  created_at : timestamp
 }
 
-entity "Order" as order {
-  *id : uuid <<generated>>
+entity "Order" as orders {
+  *id : uuid <<PK>>
   --
   *user_id : uuid <<FK>>
-  total : money
-  status : enum
+  status : enum_order_status
+  total_amount : numeric(10,2)
+  created_at : timestamp
 }
 
-entity "OrderItem" as item {
-  *id : uuid
+entity "OrderItem" as order_items {
+  *id : uuid <<PK>>
   --
   *order_id : uuid <<FK>>
   product_id : uuid
   quantity : int
+  unit_price : numeric(10,2)
 }
 
-user ||..o{ order
-order ||..|{ item
+users ||..o{ orders : "places"
+orders ||..|{ order_items : "contains"
 @enduml`
     }
 ];
 
-export async function generateDiagramFromAI(prompt: string, currentCode: string, mode: 'plantuml' | 'graphviz'): Promise<string> {
-    // Simulate thinking delay for UX realism (100ms-300ms)
-    await new Promise(resolve => setTimeout(resolve, 800));
+export async function generateDiagramFromAI(
+    prompt: string,
+    currentCode: string,
+    mode: 'plantuml' | 'graphviz'
+): Promise<string> {
+    const trimmedPrompt = prompt.trim();
+    if (!trimmedPrompt) return currentCode;
 
-    const p = prompt.toLowerCase();
+    // 1. Check for configured LLM API
+    let apiKey = '';
+    let endpoint = 'https://api.openai.com/v1/chat/completions';
+    let model = 'gpt-4o-mini';
 
-    // 1. Detect Intent via Keywords
+    if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem('aone_ai_config');
+        if (stored) {
+            try {
+                const config = JSON.parse(stored);
+                if (config.apiKey) apiKey = config.apiKey;
+                if (config.endpoint) endpoint = config.endpoint;
+                if (config.model) model = config.model;
+            } catch (e) {
+                // ignore json error
+            }
+        }
+    }
+
+    if (apiKey) {
+        try {
+            const systemPrompt = `You are a software architect expert. Generate valid ${mode === 'plantuml' ? 'PlantUML' : 'Graphviz DOT'} code for the requested architecture. Output ONLY the raw code wrapped inside ${mode === 'plantuml' ? '@startuml and @enduml' : 'digraph G { ... }'}. Do NOT include markdown backticks or commentary.`;
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: trimmedPrompt }
+                    ],
+                    temperature: 0.2
+                })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                const text = data.choices?.[0]?.message?.content?.trim();
+                if (text) {
+                    return text.replace(/```(plantuml|dot|graphviz)?/g, '').replace(/```/g, '').trim();
+                }
+            }
+        } catch (e) {
+            console.warn("AI generation failed, using local generator", e);
+        }
+    }
+
+    // 2. Local zero-latency synthesis
+    const p = trimmedPrompt.toLowerCase();
     const matched = TEMPLATES.find(t => t.keywords.some(k => p.includes(k)));
 
     if (matched && mode === 'plantuml') {
-        return matched.generate(currentCode);
+        return matched.generate(trimmedPrompt, currentCode);
     }
 
-    // 2. Generic Fallback
+    // Dynamic contextual generation based on prompt entities
+    const title = trimmedPrompt.length > 30 ? `${trimmedPrompt.slice(0, 30)}...` : trimmedPrompt;
+
     if (mode === 'plantuml') {
         return `@startuml
-!theme blueprint
-title "Generated: ${prompt.slice(0, 20)}..."
+!theme plain
+skinparam roundcorner 8
+skinparam defaultFontName "Inter, -apple-system, sans-serif"
 
-component "System A" as A
-component "System B" as B
-database "Database" as DB
+title "${title}"
 
-A -> B : Request Data
-activate B
-B -> DB : Query
-DB --> B : Result
-B --> A : Response
-deactivate B
+actor Client
+component "API Gateway" as Gateway
+component "Service Layer" as Svc
+database "Data Storage" as DB
 
-note right of A: Generated by Local Intelligence
+Client -> Gateway : Request (${trimmedPrompt.slice(0, 20)})
+Gateway -> Svc : Forward Action
+activate Svc
+Svc -> DB : Query / Mutate
+DB --> Svc : Data Record
+Svc --> Gateway : Processed Result
+deactivate Svc
+Gateway --> Client : Response 200 OK
 @enduml`;
     } else {
         return `digraph G {
-  label="Generated: ${prompt.slice(0, 20)}...";
+  label="${title}";
   rankdir=LR;
-  node [shape=box, style="filled,rounded", fillcolor="#e0e7ff", fontname="Helvetica"];
+  node [shape=box, style="filled,rounded", fillcolor="#f1f5f9", color="#64748b", fontname="Helvetica"];
   
-  start [label="Start", shape=circle, style=filled, fillcolor=black, fontcolor=white];
-  end [label="End", shape=doublecircle, style=filled, fillcolor=black, fontcolor=white];
+  Client [shape=ellipse, fillcolor="#e0e7ff", color="#4f46e5"];
+  Gateway [label="API Gateway"];
+  Service [label="Business Logic"];
+  Database [shape=cylinder, fillcolor="#fef3c7", color="#d97706"];
   
-  process [label="Process A"];
-  decision [label="Decision?", shape=diamond];
-  
-  start -> process;
-  process -> decision;
-  decision -> end [label="Yes"];
-  decision -> process [label="No"];
+  Client -> Gateway [label="Request"];
+  Gateway -> Service [label="Forward"];
+  Service -> Database [label="Query/Write"];
+  Database -> Service [label="Result"];
+  Service -> Gateway [label="Response"];
+  Gateway -> Client [label="200 OK"];
 }`;
     }
 }

@@ -1,155 +1,150 @@
-import { writable, derived, get } from 'svelte/store';
-import { browser } from '$app/environment';
+import { writable, get } from 'svelte/store';
 
-export interface HistoryItem {
-  id: string;
-  type: 'agent' | 'skill' | 'workflow' | 'page' | 'command';
-  title: string;
-  url?: string;
-  timestamp: number;
-  metadata?: Record<string, any>;
+export interface HistoryCommand {
+  execute: () => void;
+  undo: () => void;
 }
 
-export interface HistoryGroup {
-  label: string;
-  items: HistoryItem[];
+export interface HistoryState {
+  past: HistoryCommand[];
+  future: HistoryCommand[];
 }
 
-const MAX_ITEMS = 50;
-const STORAGE_KEY = 'agent-studio-history';
-
-function loadFromStorage(): HistoryItem[] {
-  if (!browser) return [];
-  
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (e) {
-    console.error('Failed to load history:', e);
-  }
-  return [];
-}
-
-function saveToStorage(items: HistoryItem[]) {
-  if (!browser) return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  } catch (e) {
-    console.error('Failed to save history:', e);
-  }
-}
+// 最大历史记录数量（扩展到50步）
+const MAX_HISTORY_SIZE = 50;
 
 function createHistoryStore() {
-  const initial = loadFromStorage();
-  const { subscribe, set, update } = writable<HistoryItem[]>(initial);
-
-  // Auto-save on changes
-  subscribe((value) => {
-    saveToStorage(value);
+  const { subscribe, update, set } = writable<HistoryState>({
+    past: [],
+    future: []
   });
-
-  function add(item: Omit<HistoryItem, 'id' | 'timestamp'>) {
-    const id = `history-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const newItem: HistoryItem = {
-      ...item,
-      id,
-      timestamp: Date.now(),
-    };
-
-    update((items) => {
-      // Remove duplicate (same type and url)
-      const filtered = items.filter(
-        (i) => !(i.type === item.type && i.url === item.url)
-      );
-      
-      // Add new item at the beginning
-      const updated = [newItem, ...filtered].slice(0, MAX_ITEMS);
-      return updated;
-    });
-
-    return id;
-  }
-
-  function remove(id: string) {
-    update((items) => items.filter((item) => item.id !== id));
-  }
-
-  function clear() {
-    set([]);
-  }
-
-  function clearByType(type: HistoryItem['type']) {
-    update((items) => items.filter((item) => item.type !== type));
-  }
-
-  function clearOlderThan(timestamp: number) {
-    update((items) => items.filter((item) => item.timestamp > timestamp));
-  }
-
-  function search(query: string): HistoryItem[] {
-    const items = get({ subscribe });
-    const lowerQuery = query.toLowerCase();
-    
-    return items.filter(
-      (item) =>
-        item.title.toLowerCase().includes(lowerQuery) ||
-        item.type.toLowerCase().includes(lowerQuery)
-    );
-  }
-
-  function getRecent(limit = 10): HistoryItem[] {
-    const items = get({ subscribe });
-    return items.slice(0, limit);
-  }
-
-  function getByType(type: HistoryItem['type']): HistoryItem[] {
-    const items = get({ subscribe });
-    return items.filter((item) => item.type === type);
-  }
 
   return {
     subscribe,
-    set,
-    add,
-    remove,
-    clear,
-    clearByType,
-    clearOlderThan,
-    search,
-    getRecent,
-    getByType,
+
+    // 获取当前可撤销步数
+    getUndoCount: () => {
+      return get({ subscribe }).past.length;
+    },
+
+    // 获取当前可重做步数
+    getRedoCount: () => {
+      return get({ subscribe }).future.length;
+    },
+
+    // Add a new command to history
+    push: (command: HistoryCommand) => {
+      update(state => {
+        let newPast = [...state.past, command];
+        
+        // 超过最大数量时，移除最旧的记录
+        if (newPast.length > MAX_HISTORY_SIZE) {
+          newPast = newPast.slice(-MAX_HISTORY_SIZE);
+        }
+        
+        return {
+          past: newPast,
+          future: [] // Clear redo stack on new action
+        };
+      });
+    },
+
+    // Undo the last action
+    undo: () => {
+      update(state => {
+        if (state.past.length === 0) return state;
+
+        const newPast = [...state.past];
+        const command = newPast.pop()!;
+
+        command.undo();
+
+        return {
+          past: newPast,
+          future: [command, ...state.future]
+        };
+      });
+    },
+
+    // Redo the last undone action
+    redo: () => {
+      update(state => {
+        if (state.future.length === 0) return state;
+
+        const newFuture = [...state.future];
+        const command = newFuture.shift()!;
+
+        command.execute();
+
+        return {
+          past: [...state.past, command],
+          future: newFuture
+        };
+      });
+    },
+
+    // 批量撤销（支持多次撤销）
+    undoSteps: (steps: number) => {
+      update(state => {
+        if (state.past.length === 0) return state;
+        
+        let newPast = [...state.past];
+        const undoneCommands: HistoryCommand[] = [];
+        
+        for (let i = 0; i < steps && newPast.length > 0; i++) {
+          const command = newPast.pop()!;
+          command.undo();
+          undoneCommands.unshift(command); // 反向添加，保持顺序
+        }
+
+        return {
+          past: newPast,
+          future: [...undoneCommands, ...state.future]
+        };
+      });
+    },
+
+    // 批量重做
+    redoSteps: (steps: number) => {
+      update(state => {
+        if (state.future.length === 0) return state;
+        
+        let newFuture = [...state.future];
+        const redoneCommands: HistoryCommand[] = [];
+        
+        for (let i = 0; i < steps && newFuture.length > 0; i++) {
+          const command = newFuture.shift()!;
+          command.execute();
+          redoneCommands.push(command);
+        }
+
+        return {
+          past: [...state.past, ...redoneCommands],
+          future: newFuture
+        };
+      });
+    },
+
+    // Clear history
+    clear: () => {
+      set({ past: [], future: [] });
+    }
   };
 }
 
+import { toastStore } from './toastStore';
+
 export const historyStore = createHistoryStore();
 
-// Derived store for grouped history
-export const groupedHistory = derived(historyStore, ($history) => {
-  const now = Date.now();
-  const today = new Date().setHours(0, 0, 0, 0);
-  const thisWeek = today - 7 * 24 * 60 * 60 * 1000;
-  const thisMonth = today - 30 * 24 * 60 * 60 * 1000;
+// Wrap with toast
+const originalUndo = historyStore.undo;
+historyStore.undo = () => {
+  originalUndo();
+  toastStore.add('Undo', 'info', 1000);
+};
 
-  const groups: HistoryGroup[] = [
-    { label: '今天', items: [] },
-    { label: '本周', items: [] },
-    { label: '本月', items: [] },
-    { label: '更早', items: [] },
-  ];
-
-  $history.forEach((item) => {
-    if (item.timestamp >= today) {
-      groups[0].items.push(item);
-    } else if (item.timestamp >= thisWeek) {
-      groups[1].items.push(item);
-    } else if (item.timestamp >= thisMonth) {
-      groups[2].items.push(item);
-    } else {
-      groups[3].items.push(item);
-    }
-  });
-
-  return groups.filter((g) => g.items.length > 0);
-});
+const originalRedo = historyStore.redo;
+historyStore.redo = () => {
+  originalRedo();
+  toastStore.add('Redo', 'info', 1000);
+};

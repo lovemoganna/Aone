@@ -5,11 +5,9 @@
     import { fade } from "svelte/transition";
     import { FileText } from "lucide-svelte";
     import Header from "./components/Header.svelte";
-    import TabsBar from "./components/TabsBar.svelte";
     import Editor from "./components/Editor.svelte";
     import Preview from "./components/Preview.svelte";
     import LayoutControls from "./components/LayoutControls.svelte";
-    import ThemePicker from "./components/ThemePicker.svelte";
     import Inspector from "./components/Inspector.svelte";
     import SnippetModal from "./components/modals/SnippetModal.svelte";
     import AIPromptModal from "./components/modals/AIPromptModal.svelte";
@@ -23,20 +21,64 @@
     import ShareModal from "./components/modals/ShareModal.svelte";
     import DiffModal from "./components/modals/DiffModal.svelte";
     import IconModal from "./components/modals/IconModal.svelte";
+    import AccessibilityViewModal from "./components/modals/AccessibilityViewModal.svelte";
     import PresentationView from "./components/PresentationView.svelte";
     import StatusBar from "./components/StatusBar.svelte";
     import DiagramSidebar from "./components/DiagramSidebar.svelte";
     import HistoryModal from "./components/modals/HistoryModal.svelte";
-    import AccessibilityViewModal from "./components/modals/AccessibilityViewModal.svelte";
     import CommandPalette from "./components/CommandPalette.svelte";
+    import { hotkeyEngine } from "./lib/hotkeys";
+    import { dataBridge } from "$lib/stores/dataBridge";
+    import { toastStore } from "$lib/stores/toastStore.svelte";
 
-    let isSidebarCollapsed = $state(false);
+    let isSidebarCollapsed = $state(true);
+    let showEffects = $state(false);
 
     // ... imports ...
 
     const EXAMPLES = {
-        plantuml: `@startuml\nAlice -> Bob: Hello\nBob --> Alice: Hi!\n@enduml`,
-        graphviz: `digraph G {\n  rankdir=LR;\n  A -> B -> C;\n  A -> C;\n}`,
+        plantuml: `@startuml
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam roundcorner 8
+
+actor User as "用户 / Client"
+participant Gateway as "API 网关 / Gateway"
+participant Service as "业务服务 / Core Service"
+database DB as "数据库 / Database"
+
+User -> Gateway: 1. 发起业务请求 (HTTPS POST)
+activate Gateway
+Gateway -> Service: 2. 鉴权与路由转发 (gRPC)
+activate Service
+Service -> DB: 3. 查询与持久化事务
+activate DB
+DB --> Service: 4. 响应数据记录
+deactivate DB
+Service --> Gateway: 5. 返回处理结果 (JSON)
+deactivate Service
+Gateway --> User: 6. 响应客户端 (200 OK)
+deactivate Gateway
+@enduml`,
+        graphviz: `digraph Architecture {
+  rankdir=LR;
+  node [shape=box, style="rounded,filled", fillcolor="#f8fafc", color="#94a3b8", fontname="sans-serif"];
+  edge [color="#64748b", fontname="sans-serif", fontsize=10];
+
+  Client [label="客户端 / App", fillcolor="#eff6ff", color="#3b82f6"];
+  CDN [label="边缘节点 / CDN", fillcolor="#f0fdf4", color="#22c55e"];
+  Gateway [label="API 网关 / Kong", fillcolor="#fefce8", color="#eab308"];
+  ServiceA [label="微服务 A", fillcolor="#faf5ff", color="#a855f7"];
+  ServiceB [label="微服务 B", fillcolor="#faf5ff", color="#a855f7"];
+  DB [label="主从数据库 / MySQL", shape=cylinder, fillcolor="#fff1f2", color="#f43f5e"];
+
+  Client -> CDN [label="静态资源"];
+  Client -> Gateway [label="API 请求"];
+  Gateway -> ServiceA;
+  Gateway -> ServiceB;
+  ServiceA -> DB;
+  ServiceB -> DB;
+}`,
     };
 
     let isSnippetModalOpen = $state(false);
@@ -66,6 +108,7 @@
     let mousePos = $state({ x: 0, y: 0 });
 
     function handleMouseMove(e: MouseEvent) {
+        if (!showEffects) return;
         mousePos = { x: e.clientX, y: e.clientY };
     }
 
@@ -91,7 +134,7 @@
                 isAIPromptOpen = true;
                 break;
             case "toggle-sidebar":
-                isSidebarCollapsed = !isSidebarCollapsed;
+                diagramStore.toggleSidebar();
                 break;
             case "reset-view":
                 diagramStore.resetView();
@@ -131,52 +174,41 @@
     // Keyboard Shortcuts Handler
     function handleKeydown(e: KeyboardEvent) {
         const target = e.target as HTMLElement;
-        const isInput =
-            target.tagName === "INPUT" || target.tagName === "TEXTAREA";
+        const isInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
 
-        if (e.ctrlKey || e.metaKey) {
-            switch (e.key.toLowerCase()) {
-                case "k":
-                    e.preventDefault();
-                    isCommandPaletteOpen = !isCommandPaletteOpen;
-                    break;
-                case "enter":
-                    e.preventDefault();
-                    handleCommandAction("render");
-                    break;
-                case "\\":
-                    e.preventDefault();
-                    handleCommandAction("toggle-sidebar");
-                    break;
-                case "s":
-                    e.preventDefault();
-                    handleCommandAction("share");
-                    break;
-                case "e":
-                    e.preventDefault();
-                    handleCommandAction("export");
-                    break;
-                case "g":
-                    e.preventDefault();
-                    handleCommandAction("ai-gen");
-                    break;
-                case "h":
-                    e.preventDefault();
-                    handleCommandAction("history");
-                    break;
-                case "m":
-                    e.preventDefault();
-                    handleCommandAction("toggle-minimap");
-                    break;
-                case "n":
-                    e.preventDefault();
-                    handleCommandAction("new");
-                    break;
-                case "/":
-                    e.preventDefault();
-                    handleCommandAction("shortcuts");
-                    break;
-            }
+        if (!isInput) {
+            const handled = hotkeyEngine.handleKeyDown(e, (actionId) => {
+                switch (actionId) {
+                    case "render":
+                        diagramStore.render();
+                        break;
+                    case "save":
+                        diagramStore.takeSnapshot();
+                        break;
+                    case "command-palette":
+                        isCommandPaletteOpen = !isCommandPaletteOpen;
+                        break;
+                    case "find-replace":
+                        isFindReplaceOpen = true;
+                        break;
+                    case "new-doc":
+                        diagramStore.createDocument();
+                        break;
+                    case "export-modal":
+                        isExportModalOpen = true;
+                        break;
+                    case "history":
+                        isHistoryModalOpen = true;
+                        break;
+                    case "shortcuts":
+                        isKeyboardModalOpen = true;
+                        break;
+                    case "fit-view":
+                        diagramStore.resetView();
+                        break;
+                }
+            });
+            if (handled) return;
         }
 
         if (e.key === "Escape") {
@@ -229,6 +261,14 @@
             } catch (e) {
                 console.error("Failed to load generic share", e);
             }
+        }
+
+        const handoff = dataBridge.consume("/diagram-editor");
+        if (handoff && handoff.payload) {
+            diagramStore.code = handoff.payload;
+            diagramStore.render();
+            toastStore.success(`已从 ${handoff.sourceTool} 载入图表代码`);
+            return;
         }
 
         // Check for shared URL state
@@ -287,29 +327,34 @@
             }
         }
 
-        // Only set default if empty on mount
-        if (!diagramStore.code) {
-            diagramStore.code = EXAMPLES[diagramStore.mode];
-            diagramStore.render();
+        // Ensure default code is populated if empty
+        if (!diagramStore.code || !diagramStore.code.trim()) {
+            diagramStore.code = EXAMPLES[diagramStore.mode] || EXAMPLES.plantuml;
         }
+
+        // Always render immediately on mount so the diagram is visible directly
+        await diagramStore.render();
     });
 
     // Resizer Logic
     let splitPercent = $state(50);
     let isResizing = $state(false);
-    let container: HTMLElement;
+    let splitAreaRef = $state<HTMLElement>();
 
-    function handleMouseDown() {
+    function handleMouseDown(e: MouseEvent) {
+        e.preventDefault();
         isResizing = true;
         document.body.style.cursor = "col-resize";
         document.body.style.userSelect = "none";
     }
 
     function handleMouseMoveGlobal(e: MouseEvent) {
-        if (!isResizing || !container) return;
-        const rect = container.getBoundingClientRect();
-        const output = ((e.clientX - rect.left) / rect.width) * 100;
-        splitPercent = Math.max(20, Math.min(80, output));
+        if (!isResizing || !splitAreaRef) return;
+        const rect = splitAreaRef.getBoundingClientRect();
+        if (rect.width <= 0) return;
+        const offset = e.clientX - rect.left;
+        const percent = (offset / rect.width) * 100;
+        splitPercent = Math.max(15, Math.min(85, percent));
     }
 
     function handleMouseUp() {
@@ -402,21 +447,16 @@
     ondrop={handleGlobalDrop}
 />
 
-<div class="glow-follow-container">
-    <div
-        class="glow-cursor"
-        style="transform: translate(calc({mousePos.x}px - 50%), calc({mousePos.y}px - 50%))"
-    ></div>
-</div>
+
 
 <div
-    class="spatial-workspace h-[calc(100vh-3rem)] w-full flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden font-sans rounded-xl border border-gray-200 dark:border-gray-800 linear-glow transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1)
+    class="h-[calc(100vh-3rem)] w-full flex flex-col bg-white dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 overflow-hidden font-sans border border-slate-200 dark:border-slate-800
         {diagramStore.focusMode
-        ? 'fixed inset-0 z-50 h-screen rounded-none border-none scale-100 opacity-100'
-        : 'scale-[0.97] mt-4 shadow-2xl'}"
+        ? 'fixed inset-0 z-50 h-screen rounded-none border-none'
+        : ''}"
 >
     <div
-        class="transition-all duration-300 {diagramStore.focusMode
+        class="{diagramStore.focusMode
             ? 'hidden'
             : ''}"
     >
@@ -438,73 +478,70 @@
             onAIGen={() => (isAIPromptOpen = true)}
             onCollab={() => (isCollabModalOpen = true)}
         />
-        <TabsBar />
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 flex min-h-0 relative" bind:this={container}>
-        <div
-            class="transition-all duration-300 flex-shrink-0"
-            style="width: {isSidebarCollapsed
-                ? 80
-                : 332}px; {diagramStore.focusMode ? 'display: none;' : ''}"
-        >
+    <div class="flex-1 flex min-h-0 relative {isResizing ? 'select-none' : ''}">
+        {#if !diagramStore.focusMode}
             <DiagramSidebar
-                bind:this={sidebarRef}
                 bind:isCollapsed={isSidebarCollapsed}
+                bind:this={sidebarRef}
                 onDiff={handleDiff}
             />
-        </div>
+        {/if}
 
-        <!-- Left Panel: Editor -->
-        <div
-            style="width: {diagramStore.focusMode ? 50 : splitPercent}%"
-            class="h-full flex flex-col min-w-0 transition-all duration-300"
-        >
-            <div class="relative h-full flex flex-col">
-                <!-- Floating Exit Zen Button -->
-                {#if diagramStore.focusMode}
-                    <button
-                        class="absolute top-2 right-4 z-50 bg-black/50 hover:bg-black/70 text-white px-3 py-1 rounded-full text-xs backdrop-blur-sm transition-colors"
-                        onclick={() => (diagramStore.focusMode = false)}
-                    >
-                        Exit Zen Mode (Esc)
-                    </button>
-                {/if}
+        <!-- Split Workspace Area (Editor + Resizer + Preview) -->
+        <div class="flex-1 flex min-w-0 h-full relative" bind:this={splitAreaRef}>
+            <!-- Left Panel: Editor -->
+            <div
+                style="width: {diagramStore.focusMode ? 50 : splitPercent}%"
+                class="h-full flex flex-col min-w-0 {isResizing ? 'pointer-events-none' : 'transition-[width] duration-150'}"
+            >
+                <div class="relative h-full flex flex-col">
+                    <!-- Floating Exit Zen Button -->
+                    {#if diagramStore.focusMode}
+                        <button
+                            class="absolute top-4 right-6 z-50 bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-full text-sm font-medium hover:shadow-xl transition-all"
+                            onclick={() => (diagramStore.focusMode = false)}
+                        >
+                            Exit Zen Mode (Esc)
+                        </button>
+                    {/if}
 
-                <Editor
-                    bind:this={editorRef}
-                    bind:code={diagramStore.code}
-                    mode={diagramStore.mode}
-                    onRender={handleRender}
-                    onCursorChange={handleCursorChange}
+                    <Editor
+                        bind:this={editorRef}
+                        bind:code={diagramStore.code}
+                        mode={diagramStore.mode}
+                        onRender={handleRender}
+                        onCursorChange={handleCursorChange}
+                    />
+                </div>
+            </div>
+
+            <!-- Resizer Handle -->
+            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+            <div
+                class="w-2.5 relative group hover:cursor-col-resize flex items-center justify-center {isResizing ? 'bg-slate-300 dark:bg-slate-700' : 'hover:bg-slate-200 dark:hover:bg-slate-800'} border-x border-slate-200 dark:border-slate-800 transition-colors z-20 focus:outline-none {diagramStore.focusMode
+                    ? 'pointer-events-none opacity-0 w-0'
+                    : ''}"
+                role="separator"
+                aria-label="Resize panels"
+                onmousedown={handleMouseDown}
+            >
+                <div class="w-1 h-8 rounded-full {isResizing ? 'bg-slate-700 dark:bg-slate-300' : 'bg-slate-300 dark:bg-slate-600 group-hover:bg-slate-500'} transition-all"></div>
+            </div>
+
+            <!-- Right Panel: Preview -->
+            <div class="flex-1 h-full min-w-0 relative {isResizing ? 'pointer-events-none' : ''}">
+                <LayoutControls />
+                <Preview
+                    svg={diagramStore.svg}
+                    isRendering={diagramStore.isRendering}
+                    onExport={(f) => handleExport()}
+                    onFileDrop={handleFileDrop}
+                    onNavigate={handleNavigate}
                 />
             </div>
-        </div>
-
-        <!-- Resizer -->
-        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-        <div
-            class="w-2 hover:bg-indigo-500/50 hover:cursor-col-resize flex items-center justify-center bg-gray-200 dark:bg-gray-800 transition-colors z-10 focus:outline-none {diagramStore.focusMode
-                ? 'pointer-events-none opacity-0 w-0'
-                : ''}"
-            role="separator"
-            onmousedown={handleMouseDown}
-        >
-            <div class="w-0.5 h-8 bg-gray-400 rounded"></div>
-        </div>
-
-        <!-- Right Panel: Preview -->
-        <div class="flex-1 h-full min-w-0 relative">
-            <LayoutControls />
-            <ThemePicker />
-            <Preview
-                svg={diagramStore.svg}
-                isRendering={diagramStore.isRendering}
-                onExport={(f) => handleExport()}
-                onFileDrop={handleFileDrop}
-                onNavigate={handleNavigate}
-            />
         </div>
 
         <!-- Inspector Panel (Right) -->
@@ -528,19 +565,19 @@
     <!-- Drag Overlay -->
     {#if isDraggingFile}
         <div
-            class="fixed inset-0 z-[60] bg-indigo-500/20 backdrop-blur-sm border-4 border-indigo-500 border-dashed m-4 rounded-xl flex items-center justify-center pointer-events-none"
-            transition:fade={{ duration: 150 }}
+            class="fixed inset-0 z-[60] bg-slate-950/40 backdrop-blur-xs border-2 border-slate-400 dark:border-slate-500 border-dashed m-4 rounded-lg flex items-center justify-center pointer-events-none"
+            transition:fade={{ duration: 100 }}
         >
             <div
-                class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4"
+                class="bg-white dark:bg-[#0b0f17] p-6 rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col items-center gap-3 text-center"
             >
                 <div
-                    class="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400"
+                    class="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-700 dark:text-slate-300"
                 >
-                    <FileText size={32} />
+                    <FileText size={24} />
                 </div>
-                <h3 class="text-xl font-bold">Drop file to open</h3>
-                <p class="text-gray-500">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Drop file to open</h3>
+                <p class="text-xs text-slate-400 font-mono">
                     Supports .puml, .plantuml, .dot, .gv, .txt
                 </p>
             </div>

@@ -104,43 +104,54 @@ export function analyzeDiagram(code: string, mode: 'plantuml' | 'graphviz'): Ana
         }
     });
 
-    // 2. Cycle Detection (DFS)
-    const visited = new Set<string>();
-    const recStack = new Set<string>();
+    // 2. Cycle Detection (Only for DAG / topological diagrams, skip sequence diagrams)
+    const isSequenceDiagram = mode === 'plantuml' && (
+        code.includes('participant ') ||
+        code.includes('actor ') ||
+        code.includes('activate ') ||
+        code.includes('deactivate ') ||
+        code.includes('autonumber') ||
+        /([a-zA-Z0-9_]+)\s*-+>\s*([a-zA-Z0-9_]+)\s*:\s*.+/.test(code)
+    );
 
-    function hasCycle(node: string, path: string[]): string[] | null {
-        if (recStack.has(node)) return [...path, node];
-        if (visited.has(node)) return null;
+    if (!isSequenceDiagram) {
+        const visited = new Set<string>();
+        const recStack = new Set<string>();
 
-        visited.add(node);
-        recStack.add(node);
-        path.push(node);
+        function hasCycle(node: string, path: string[]): string[] | null {
+            if (recStack.has(node)) return [...path, node];
+            if (visited.has(node)) return null;
 
-        if (adj[node]) {
-            for (const neighbor of adj[node]) {
-                const cycle = hasCycle(neighbor, path);
-                if (cycle) return cycle;
+            visited.add(node);
+            recStack.add(node);
+            path.push(node);
+
+            if (adj[node]) {
+                for (const neighbor of adj[node]) {
+                    const cycle = hasCycle(neighbor, path);
+                    if (cycle) return cycle;
+                }
             }
+
+            recStack.delete(node);
+            path.pop();
+            return null;
         }
 
-        recStack.delete(node);
-        path.pop();
-        return null;
-    }
-
-    for (const node of nodes) {
-        if (!visited.has(node)) {
-            const cyclePath = hasCycle(node, []);
-            if (cyclePath) {
-                const cycleStart = cyclePath[cyclePath.length - 1];
-                const cleanCycle = cyclePath.slice(cyclePath.indexOf(cycleStart));
-                // Only report simple cycles for now
-                if (cleanCycle.length > 1) {
-                    results.push({
-                        severity: 'warning',
-                        message: `Cycle detected: ${cleanCycle.join(' -> ')}`
-                    });
-                    break;
+        for (const node of nodes) {
+            if (!visited.has(node)) {
+                const cyclePath = hasCycle(node, []);
+                if (cyclePath) {
+                    const cycleStart = cyclePath[cyclePath.length - 1];
+                    const cleanCycle = cyclePath.slice(cyclePath.indexOf(cycleStart));
+                    // Only report simple cycles for now
+                    if (cleanCycle.length > 1) {
+                        results.push({
+                            severity: 'warning',
+                            message: `Cycle detected: ${cleanCycle.join(' -> ')}`
+                        });
+                        break;
+                    }
                 }
             }
         }

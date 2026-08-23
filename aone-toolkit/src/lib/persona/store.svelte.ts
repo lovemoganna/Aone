@@ -11,6 +11,7 @@ import type {
     PersonaConfig
 } from './types';
 import { DEFAULT_PERSONA_MATRIX } from './types';
+import { settingsStore, DEFAULT_AI_RESTRAINT_RULE } from '$lib/stores/settingsStore.svelte';
 
 // 默认人格矩阵
 const DEFAULT_MATRIX: PersonaMatrix = {
@@ -330,7 +331,7 @@ class PersonaStore {
     ];
 
     // 自定义抽象人格
-    customPersonas: AbstractPersona[] = [];
+    customPersonas = $state<AbstractPersona[]>([]);
 
     // 当前编辑状态
     editingPersona: AbstractPersona | null = $state(null);
@@ -519,6 +520,28 @@ class PersonaStore {
         if (persona) {
             persona.usageCount++;
         }
+    }
+
+    // 获取融合全局或角色专属「AI 输出克制铁律」的最终系统提示词
+    getEffectiveSystemPrompt(persona: AbstractPersona): string {
+        let rule = '';
+        const mode = persona.outputRestraintMode || 'inherit';
+        if (mode === 'inherit') {
+            rule = settingsStore.activeRestraintRule;
+        } else if (mode === 'off') {
+            rule = '';
+        } else if (mode === 'custom') {
+            rule = persona.customRestraintRule || settingsStore.customRestraintRule || DEFAULT_AI_RESTRAINT_RULE;
+        } else if (mode === 'strict') {
+            rule = `${DEFAULT_AI_RESTRAINT_RULE}\n【极致克制附加令】：严禁超过 3 个核心要点，严禁任何过渡句与修饰词，直接输出核心结论与执行参数。`;
+        } else if (mode === 'relaxed') {
+            rule = `【AI 输出效率指南】：优先结论，保持直接高效，必要时可补充关键背景与延伸。`;
+        } else {
+            rule = DEFAULT_AI_RESTRAINT_RULE;
+        }
+
+        if (!rule) return persona.systemPrompt;
+        return `${rule}\n\n==================================================\n${persona.systemPrompt}`;
     }
 
     // 本地存储

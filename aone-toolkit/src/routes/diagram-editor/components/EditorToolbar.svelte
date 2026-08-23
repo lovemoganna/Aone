@@ -5,15 +5,11 @@
         ArrowUp,
         ArrowDown,
         Move,
-        Info,
-        Share2,
-        Check,
-        Link,
+        AlignLeft
     } from "lucide-svelte";
-    import { slide, fade } from "svelte/transition";
-    import { generateShareUrl } from "../lib/share";
     import { diagramStore } from "../lib/store.svelte";
     import type { Direction, DiagramMode } from "../lib/arrows";
+    import { formatDiagramCode } from "../lib/formatter";
     import ColorPicker from "./ColorPicker.svelte";
 
     let {
@@ -35,156 +31,82 @@
         { id: "down" as const, icon: ArrowDown, label: "Down" },
         { id: "default" as const, icon: Move, label: "Auto" },
     ];
+
+    function handleFormat() {
+        diagramStore.code = formatDiagramCode(diagramStore.code, diagramStore.mode);
+        diagramStore.render();
+    }
 </script>
 
 <div
-    class="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 transition-all duration-300 overflow-hidden"
-    style:height={hasArrows ? "40px" : "0px"}
-    style:opacity={hasArrows ? "1" : "0"}
+    class="h-7 px-2.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 flex items-center justify-between text-xs select-none shrink-0"
 >
-    <div class="h-10 flex items-center px-4 gap-4">
-        <div
-            class="text-[10px] font-bold text-gray-400 uppercase tracking-wider shrink-0 flex items-center gap-2"
-        >
-            <span>Connection</span>
-            <div class="h-3 w-[1px] bg-gray-200 dark:bg-gray-700"></div>
-        </div>
-
+    <!-- Left: Arrow Direction Controls -->
+    <div class="flex items-center gap-2">
         {#if mode === "plantuml"}
-            <div class="flex items-center gap-1">
-                {#each buttons as btn}
-                    <button
-                        class="p-1.5 rounded-md transition-all duration-200 relative group
-                        {activeDirection === btn.id
-                            ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 shadow-sm ring-1 ring-indigo-200 dark:ring-indigo-800'
-                            : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
-                        onclick={() => onDirectionChange(btn.id)}
-                        title={btn.label}
-                    >
-                        {#if btn.id === "left"}
-                            <ArrowLeft size={14} strokeWidth={2.5} />
-                        {:else if btn.id === "right"}
-                            <ArrowRight size={14} strokeWidth={2.5} />
-                        {:else if btn.id === "up"}
-                            <ArrowUp size={14} strokeWidth={2.5} />
-                        {:else if btn.id === "down"}
-                            <ArrowDown size={14} strokeWidth={2.5} />
-                        {:else}
-                            <Move size={14} strokeWidth={2.5} />
-                        {/if}
-                    </button>
-                {/each}
-            </div>
+            {#if hasArrows}
+                <span class="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                    Arrow:
+                </span>
+                <div class="flex items-center gap-0.5 bg-slate-200/60 dark:bg-slate-800 p-0.5 rounded">
+                    {#each buttons as btn}
+                        <button
+                            type="button"
+                            class="p-0.5 rounded transition-colors {activeDirection === btn.id
+                                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-semibold'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}"
+                            onclick={() => onDirectionChange(btn.id)}
+                            title={`Set Arrow Direction: ${btn.label}`}
+                            aria-label={`设置箭头朝向: ${btn.label}`}
+                        >
+                            {#if btn.id === "left"}
+                                <ArrowLeft size={11} strokeWidth={2} />
+                            {:else if btn.id === "right"}
+                                <ArrowRight size={11} strokeWidth={2} />
+                            {:else if btn.id === "up"}
+                                <ArrowUp size={11} strokeWidth={2} />
+                            {:else if btn.id === "down"}
+                                <ArrowDown size={11} strokeWidth={2} />
+                            {:else}
+                                <Move size={11} strokeWidth={2} />
+                            {/if}
+                        </button>
+                    {/each}
+                </div>
+            {:else}
+                <span class="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                    Source &middot; PlantUML
+                </span>
+            {/if}
         {:else}
-            <!-- Graphviz Notice -->
-            <div
-                class="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-3 py-1 rounded-full border border-amber-100 dark:border-amber-900/30"
-            >
-                <Info size={12} />
-                <span>Graphviz uses global rankdir</span>
-            </div>
+            <span class="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                Source &middot; Graphviz Dot
+            </span>
         {/if}
     </div>
 
-    <!-- Right Side Tools -->
-    <!-- Right Side Tools -->
-    <div
-        class="h-10 flex items-center px-4 gap-2 border-l border-gray-200 dark:border-gray-800"
-    >
-        <!-- Layout Toggle -->
-        <div
-            class="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 mr-2"
-        >
-            <button
-                class="p-1 px-2 text-[10px] font-bold rounded transition-all {diagramStore.code.includes(
-                    'left to right direction',
-                ) || diagramStore.layoutParams.rankdir === 'LR'
-                    ? 'text-gray-500'
-                    : 'bg-white dark:bg-gray-700 text-indigo-600 shadow-sm'}"
-                onclick={() => {
-                    // Switch to TB
-                    let code = diagramStore.code;
-                    if (diagramStore.mode === "plantuml") {
-                        code = code.replace(
-                            /left to right direction\s*\n?/g,
-                            "",
-                        );
-                    } else {
-                        // For Graphviz, we update layoutParams override
-                        diagramStore.layoutParams.rankdir = "TB";
-                    }
-                    diagramStore.code = code;
-                    diagramStore.render();
-                }}
-                title="Top-Down Layout"
-            >
-                TB
-            </button>
-            <button
-                class="p-1 px-2 text-[10px] font-bold rounded transition-all {diagramStore.code.includes(
-                    'left to right direction',
-                ) || diagramStore.layoutParams.rankdir === 'LR'
-                    ? 'bg-white dark:bg-gray-700 text-indigo-600 shadow-sm'
-                    : 'text-gray-500'}"
-                onclick={() => {
-                    // Switch to LR
-                    let code = diagramStore.code;
-                    if (diagramStore.mode === "plantuml") {
-                        if (!code.includes("left to right direction")) {
-                            // Insert after @startuml
-                            code = code.replace(
-                                /@startuml/i,
-                                "@startuml\nleft to right direction",
-                            );
-                        }
-                    } else {
-                        diagramStore.layoutParams.rankdir = "LR";
-                    }
-                    diagramStore.code = code;
-                    diagramStore.render();
-                }}
-                title="Left-Right Layout"
-            >
-                LR
-            </button>
-        </div>
-
-        <ColorPicker
-            onSelect={(color) => {
-                if (diagramStore.selectedElementId) {
-                    diagramStore.updateElementProperty("color", color);
-                } else {
-                    // Insert at cursor or fallback logic (simplest is alert user or append)
-                    // For now, let's just append to end or log it. Ideally we insert at cursor.
-                    // But store doesn't track cursor pos exactly for insertion yet without Editor ref.
-                    // We'll trust the store selection logic or just notify.
-                }
-            }}
-        />
-
+    <!-- Right: Quick actions (Format, Color Picker) -->
+    <div class="flex items-center gap-1">
         <button
-            class="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors relative group"
-            onclick={() => {
-                const url = generateShareUrl(diagramStore.code);
-                navigator.clipboard.writeText(url);
-                // Simple toast feedback could go here, or changing icon temporarily
-                const btn = document.getElementById("share-btn-icon");
-                if (btn) btn.style.color = "#10b981"; // green
-                setTimeout(() => {
-                    if (btn) btn.style.color = "";
-                }, 2000);
-            }}
-            title="Copy Live Share URL"
+            type="button"
+            class="px-1.5 py-0.5 text-[10px] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded transition-colors flex items-center gap-1 font-medium"
+            onclick={handleFormat}
+            title="Format Code (Shift+Alt+F)"
+            aria-label="格式化图表代码"
         >
-            <div id="share-btn-icon" class="transition-colors duration-300">
-                <Link size={16} strokeWidth={2} />
-            </div>
-
-            <span
-                class="absolute top-full right-0 mt-2 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity"
-            >
-                Copy Link
-            </span>
+            <AlignLeft size={11} />
+            <span>Format</span>
         </button>
+
+        {#if diagramStore.selectedElementId}
+            <div class="w-px h-3 bg-slate-200 dark:border-slate-800 mx-0.5"></div>
+            <ColorPicker
+                onSelect={(color) => {
+                    if (diagramStore.selectedElementId) {
+                        diagramStore.updateElementProperty("color", color);
+                    }
+                }}
+            />
+        {/if}
     </div>
 </div>

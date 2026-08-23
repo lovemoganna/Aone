@@ -83,17 +83,17 @@
     ];
 </script>
 
-<div class="h-full flex flex-col gap-8 p-4">
+<div class="h-full flex flex-col gap-6">
     <!-- Result Display -->
     <div
-        class="bg-slate-900 text-white p-8 rounded-2xl shadow-xl flex flex-col items-center justify-center gap-4 relative overflow-hidden group"
+        class="bg-slate-900 border border-slate-800 text-white p-8 rounded-2xl shadow-xl flex flex-col items-center justify-center gap-4 relative overflow-hidden group"
     >
         <div
-            class="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+            class="hidden"
         ></div>
 
         <div
-            class="text-sm font-medium text-slate-400 uppercase tracking-widest"
+            class="text-xs font-bold text-slate-400 uppercase tracking-widest"
         >
             Cron Expression
         </div>
@@ -104,61 +104,66 @@
         </div>
 
         <div
-            class="flex items-center gap-2 text-indigo-300 bg-indigo-500/10 px-4 py-2 rounded-full z-10"
+            class="flex items-center gap-2 text-slate-400 bg-slate-800/40 px-4 py-2 rounded-full z-10 text-xs font-semibold"
         >
-            <Clock size={16} />
+            <Clock size={14} />
             <span>{description}</span>
         </div>
 
         <button
-            class="absolute top-4 right-4 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+            class="btn btn-secondary text-sm shadow-sm"
             onclick={copyOutput}
             title="Copy Expression"
         >
             {#if copied}
-                <Check size={20} class="text-emerald-400" />
+                <Check size={18} class="text-emerald-400" />
             {:else}
-                <Copy size={20} class="text-white" />
+                <Copy size={18} class="text-white" />
             {/if}
         </button>
     </div>
 
     <!-- Inputs -->
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {#each fields as field}
-            <div class="space-y-2">
-                <label
-                    class="block text-sm font-semibold text-slate-700 dark:text-slate-300 text-center"
-                >
-                    {field.label}
-                </label>
-                <div class="relative">
-                    <input
-                        type="text"
-                        value={field.value()}
-                        oninput={(e) => field.set(e.currentTarget.value)}
-                        class="w-full text-center p-3 font-mono text-lg bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition-all"
-                        placeholder={field.hint}
-                    />
-                    <div class="text-[10px] text-center text-slate-400 mt-1">
-                        {field.placeholder}
+    <div class="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-sm space-y-4">
+        <div class="label-section">Expression Fields</div>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {#each fields as field}
+                <div class="space-y-2">
+                    <label
+                        for="cron-field-{field.label.toLowerCase().replace(/[^a-z0-9]/g, '')}"
+                        class="block text-[11px] font-bold text-slate-400 uppercase tracking-wide text-center"
+                    >
+                        {field.label}
+                    </label>
+                    <div class="relative">
+                        <input
+                            id="cron-field-{field.label.toLowerCase().replace(/[^a-z0-9]/g, '')}"
+                            type="text"
+                            value={field.value()}
+                            oninput={(e) => field.set(e.currentTarget.value)}
+                            class="input text-sm text-center"
+                            placeholder={field.hint}
+                        />
+                        <div class="text-[10px] text-center text-slate-500 mt-1">
+                            {field.placeholder}
+                        </div>
                     </div>
                 </div>
-            </div>
-        {/each}
+            {/each}
+        </div>
     </div>
 
     <!-- Quick Presets -->
-    <div class="space-y-3">
+    <div class="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-sm space-y-4">
         <h3
-            class="text-sm font-semibold text-slate-500 uppercase tracking-wider"
+            class="label-section"
         >
             Common Presets
         </h3>
         <div class="flex flex-wrap gap-2">
             {#each [{ l: "Every Minute", v: ["*", "*", "*", "*", "*"] }, { l: "Hourly", v: ["0", "*", "*", "*", "*"] }, { l: "Daily (Midnight)", v: ["0", "0", "*", "*", "*"] }, { l: "Weekly (Sunday)", v: ["0", "0", "*", "*", "0"] }, { l: "Monthly (1st)", v: ["0", "0", "1", "*", "*"] }] as preset}
                 <button
-                    class="px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
+                    class="btn btn-secondary text-sm shadow-sm"
                     onclick={() => {
                         minute = preset.v[0];
                         hour = preset.v[1];

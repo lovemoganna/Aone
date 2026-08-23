@@ -49,69 +49,82 @@
 
 {#if isOpen}
     <div
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-        transition:fade
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
+        transition:fade={{ duration: 100 }}
         onclick={onClose}
+        onkeydown={(event) => {
+            if (event.key === "Escape" || event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onClose();
+            }
+        }}
+        role="button"
+        tabindex="0"
+        aria-label="Close share modal"
     >
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-200 dark:border-gray-700"
-            transition:slide={{ duration: 200 }}
+            class="bg-white dark:bg-[#0b0f17] rounded-lg shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800"
+            transition:slide={{ duration: 120 }}
             onclick={(e) => e.stopPropagation()}
         >
             <!-- Header -->
             <div
-                class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50"
+                class="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40"
             >
                 <h3
-                    class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+                    class="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2"
                 >
-                    <Share2 size={20} class="text-indigo-500" />
+                    <Share2 size={15} class="text-slate-700 dark:text-slate-300" />
                     Share Diagram
                 </h3>
                 <button
-                    class="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg text-gray-500"
+                    class="p-1 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                     onclick={onClose}
+                    title="Close share modal"
+                    aria-label="Close share modal"
                 >
-                    <X size={20} />
+                    <X size={15} />
                 </button>
             </div>
 
             <!-- Body -->
-            <div class="p-6">
+            <div class="p-4 space-y-4">
                 <!-- Tabs -->
                 <div
-                    class="flex gap-4 border-b border-gray-200 dark:border-gray-700 mb-6"
+                    class="flex gap-4 border-b border-slate-200 dark:border-slate-800"
                 >
                     <button
-                        class="pb-2 text-sm font-medium transition-colors relative {activeTab ===
+                        class="pb-2 text-xs font-semibold transition-colors relative {activeTab ===
                         'link'
-                            ? 'text-indigo-600 dark:text-indigo-400'
-                            : 'text-gray-500 hover:text-gray-700'}"
+                            ? 'text-slate-900 dark:text-white'
+                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}"
                         onclick={() => (activeTab = "link")}
                     >
-                        <div class="flex items-center gap-2">
-                            <Link size={16} /> Share Link
+                        <div class="flex items-center gap-1.5">
+                            <Link size={14} /> Share Link
                         </div>
                         {#if activeTab === "link"}
                             <div
-                                class="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 dark:bg-indigo-400"
+                                class="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 dark:bg-slate-100"
                                 transition:fade
                             ></div>
                         {/if}
                     </button>
                     <button
-                        class="pb-2 text-sm font-medium transition-colors relative {activeTab ===
+                        class="pb-2 text-xs font-semibold transition-colors relative {activeTab ===
                         'embed'
-                            ? 'text-indigo-600 dark:text-indigo-400'
-                            : 'text-gray-500 hover:text-gray-700'}"
+                            ? 'text-slate-900 dark:text-white'
+                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}"
                         onclick={() => (activeTab = "embed")}
                     >
-                        <div class="flex items-center gap-2">
-                            <Code size={16} /> Embed Code
+                        <div class="flex items-center gap-1.5">
+                            <Code size={14} /> Embed Code
                         </div>
                         {#if activeTab === "embed"}
                             <div
-                                class="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 dark:bg-indigo-400"
+                                class="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 dark:bg-slate-100"
                                 transition:fade
                             ></div>
                         {/if}
@@ -119,102 +132,66 @@
                 </div>
 
                 <!-- Content -->
-                <div class="space-y-4">
+                <div class="space-y-3">
                     {#if activeTab === "link"}
-                        <div class="space-y-2">
+                        <div class="space-y-1.5">
                             <label
-                                class="block text-xs font-medium text-gray-700 dark:text-gray-300"
+                                for="diagram-share-url"
+                                class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
                             >
                                 Direct Link (Read Only)
                             </label>
                             <div class="flex gap-2">
                                 <input
+                                    id="diagram-share-url"
                                     type="text"
                                     readonly
                                     value={shareUrl}
-                                    class="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-mono text-gray-600 dark:text-gray-300 outline-none focus:ring-1 focus:ring-indigo-500 select-all"
+                                    class="flex-1 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-xs font-mono text-slate-700 dark:text-slate-300 outline-none select-all"
                                 />
                                 <button
-                                    class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center justify-center min-w-[80px]"
+                                    class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded font-semibold text-xs flex items-center gap-1.5 transition-colors shrink-0 shadow-xs"
                                     onclick={() => copyToClipboard(shareUrl)}
                                 >
                                     {#if copied}
-                                        <Check size={16} />
+                                        <Check size={14} class="text-emerald-400 dark:text-emerald-600" />
+                                        <span>Copied</span>
                                     {:else}
-                                        <Copy size={16} />
-                                        <span class="ml-1 text-xs">Copy</span>
+                                        <Copy size={14} />
+                                        <span>Copy</span>
                                     {/if}
                                 </button>
                             </div>
-                            <p class="text-[10px] text-gray-500">
-                                This link contains the entire diagram source
-                                code. It works entirely client-side.
+                            <p class="text-[10px] text-slate-400">
+                                This link contains the entire diagram source code and loads client-side.
                             </p>
                         </div>
                     {:else}
-                        <div class="space-y-2">
+                        <div class="space-y-1.5">
                             <label
-                                class="block text-xs font-medium text-gray-700 dark:text-gray-300"
+                                for="diagram-embed-code"
+                                class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
                             >
-                                Iframe Embed
+                                HTML Embed Snippet
                             </label>
-                            <div class="relative">
+                            <div class="flex gap-2">
                                 <textarea
+                                    id="diagram-embed-code"
                                     readonly
+                                    rows="3"
                                     value={embedCode}
-                                    class="w-full h-24 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-mono text-gray-600 dark:text-gray-300 outline-none focus:ring-1 focus:ring-indigo-500 resize-none select-all"
+                                    class="flex-1 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-xs font-mono text-slate-700 dark:text-slate-300 outline-none select-all resize-none"
                                 ></textarea>
                                 <button
-                                    class="absolute top-2 right-2 p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500"
-                                    title="Copy Code"
+                                    class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded font-semibold text-xs flex items-center gap-1.5 transition-colors shrink-0 self-start shadow-xs"
                                     onclick={() => copyToClipboard(embedCode)}
                                 >
                                     {#if copied}
-                                        <Check
-                                            size={14}
-                                            class="text-green-500"
-                                        />
+                                        <Check size={14} class="text-emerald-400 dark:text-emerald-600" />
+                                        <span>Copied</span>
                                     {:else}
                                         <Copy size={14} />
-                                    {/if}
-                                </button>
-                            </div>
-                            <p class="text-[10px] text-gray-500">
-                                Paste this code into your website, notion, or
-                                blog to embed a live preview.
-                            </p>
-                        </div>
-
-                        <div
-                            class="space-y-2 pt-4 border-t border-gray-100 dark:border-gray-700"
-                        >
-                            <label
-                                class="block text-xs font-medium text-gray-700 dark:text-gray-300"
-                            >
-                                Markdown Link
-                            </label>
-                            <div class="relative">
-                                <input
-                                    type="text"
-                                    readonly
-                                    value={`[View Diagram](${shareUrl})`}
-                                    class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-mono text-gray-600 dark:text-gray-300 outline-none focus:ring-1 focus:ring-indigo-500 select-all pr-10"
-                                />
-                                <button
-                                    class="absolute top-1 right-1 p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500"
-                                    title="Copy Markdown"
-                                    onclick={() =>
-                                        copyToClipboard(
-                                            `[View Diagram](${shareUrl})`,
-                                        )}
-                                >
-                                    {#if copied}
-                                        <Check
-                                            size={14}
-                                            class="text-green-500"
-                                        />
-                                    {:else}
-                                        <Copy size={14} />
+                                        <span>Copy</span>
                                     {/if}
                                 </button>
                             </div>

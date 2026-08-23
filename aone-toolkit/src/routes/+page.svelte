@@ -1,205 +1,584 @@
 <script lang="ts">
-    import { Panel } from "$lib/components/ui";
-    import DashboardStats from "$lib/components/DashboardStats.svelte";
+    import { onMount } from "svelte";
+    import { goto } from "$app/navigation";
+    import { tools, type Tool } from "$lib/config";
+    import { dataBridge, type HandoffDataType } from "$lib/stores/dataBridge";
+    import { toastStore } from "$lib/stores/toastStore.svelte";
+    import {
+        Bot,
+        Braces,
+        Code2,
+        Database,
+        FileCode2,
+        GitCompare,
+        MessageSquareCode,
+        Search,
+        Table2,
+        Wrench,
+        Network,
+        Radio,
+        BookOpenCheck,
+        DatabaseBackup,
+        BarChart3,
+        Terminal,
+        ShieldAlert,
+        GitFork,
+        PenTool,
+        Palette,
+        BookmarkCheck,
+        Regex,
+        Star,
+        LayoutGrid,
+        List,
+        Command,
+        CornerDownLeft,
+        HardDrive,
+        Sparkles,
+        Boxes,
+    } from "lucide-svelte";
 
-    // Tool interface imported from config now
+    const iconMap: Record<string, any> = {
+        agent: Bot,
+        "multi-agent": Network,
+        diagram: GitFork,
+        diff: GitCompare,
+        json: Braces,
+        prompt: MessageSquareCode,
+        regex: Regex,
+        table: Table2,
+        yaml: FileCode2,
+        mock: DatabaseBackup,
+        formatter: Code2,
+        "api-viewer": Radio,
+        snippets: BookmarkCheck,
+        svg: PenTool,
+        css: Palette,
+        curl: Terminal,
+        secret: ShieldAlert,
+        sql: Database,
+        interpreter: Terminal,
+        "api-spec": BookOpenCheck,
+        charts: BarChart3,
+        utilities: Wrench,
+    };
 
-    import { tools } from "$lib/config";
+    const categories = [
+        { id: "all", label: "全部" },
+        { id: "favorites", label: "已收藏" },
+        { id: "AI 智能中心", label: "AI 协作" },
+        { id: "数据与架构工作台", label: "数据与架构" },
+        { id: "开发者聚合工作台", label: "开发工具" },
+    ];
+
+    let selectedCategory = $state("all");
+    let searchQuery = $state("");
+    let viewMode = $state<"grid" | "compact">("grid");
+    let favorites = $state<string[]>([
+        "/agent-studio",
+        "/multi-agent",
+        "/prompt-hub",
+        "/json-editor",
+        "/diagram-editor",
+        "/developer-utilities",
+    ]);
+
+    let isMac = $state(false);
+
+    onMount(() => {
+        try {
+            isMac = typeof navigator !== "undefined" && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform || navigator.userAgent);
+            const savedFavs = localStorage.getItem("aone_favorite_tools");
+            if (savedFavs) {
+                favorites = JSON.parse(savedFavs);
+            }
+            const savedView = localStorage.getItem("aone_home_view_mode") as "grid" | "compact";
+            if (savedView === "grid" || savedView === "compact") {
+                viewMode = savedView;
+            }
+        } catch (e) {}
+    });
+
+    function toggleFavorite(e: MouseEvent, href: string) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (favorites.includes(href)) {
+            favorites = favorites.filter((item) => item !== href);
+        } else {
+            favorites = [...favorites, href];
+        }
+        try {
+            localStorage.setItem("aone_favorite_tools", JSON.stringify(favorites));
+        } catch (e) {}
+    }
+
+    function setViewMode(mode: "grid" | "compact") {
+        viewMode = mode;
+        try {
+            localStorage.setItem("aone_home_view_mode", mode);
+        } catch (e) {}
+    }
+
+    // Payload detection for quick navigation when pasting data
+    let detectedTarget = $derived.by<{
+        toolName: string;
+        href: string;
+        dataType: HandoffDataType;
+        label: string;
+    } | null>(() => {
+        const raw = searchQuery.trim();
+        if (!raw || raw.length < 5) return null;
+
+        // 1. cURL
+        if (raw.startsWith("curl ") || raw.includes(" -H ") || raw.includes(" --header ")) {
+            return { toolName: "Curl 转换器", href: "/developer-utilities#curl", dataType: "curl", label: "识别为 cURL 命令" };
+        }
+        // 2. JSON
+        if ((raw.startsWith("{") && raw.endsWith("}")) || (raw.startsWith("[") && raw.endsWith("]"))) {
+            return { toolName: "JSON 编辑器", href: "/json-editor", dataType: "json", label: "识别为 JSON 数据" };
+        }
+        // 3. SQL
+        if (/^(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|WITH)\b/i.test(raw)) {
+            return { toolName: "SQL 查询分析器", href: "/sql-architect", dataType: "sql", label: "识别为 SQL 查询" };
+        }
+        // 4. Secret
+        if (raw.includes("sk-") || raw.includes("ghp_") || raw.startsWith("eyJh") || /AKIA[0-9A-Z]{16}/.test(raw)) {
+            return { toolName: "敏感信息扫描器", href: "/developer-utilities#secret-scan", dataType: "text", label: "检测到敏感凭据" };
+        }
+        // 5. Diagram
+        if (raw.includes("@startuml") || raw.startsWith("graph ") || raw.startsWith("digraph ")) {
+            return { toolName: "架构图编辑器", href: "/diagram-editor", dataType: "text", label: "识别为架构图脚本" };
+        }
+        // 6. YAML
+        if (raw.startsWith("---\n") || (raw.includes(":\n") && raw.includes("  "))) {
+            return { toolName: "YAML 编辑器", href: "/developer-utilities#yaml-editor", dataType: "yaml", label: "识别为 YAML 配置" };
+        }
+
+        return null;
+    });
+
+    function handleSearchSubmit(e: SubmitEvent | KeyboardEvent) {
+        e.preventDefault();
+        if (detectedTarget && searchQuery.trim()) {
+            dataBridge.send("首页智能流转", detectedTarget.href, {
+                dataType: detectedTarget.dataType,
+                payload: searchQuery.trim(),
+                title: detectedTarget.label,
+            });
+            toastStore.success(`已载入 ${detectedTarget.toolName}`);
+            goto(detectedTarget.href);
+            return;
+        }
+
+        if (filteredTools.length > 0) {
+            goto(filteredTools[0].href);
+        }
+    }
+
+    function openCommandPalette() {
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("open-command-palette"));
+        }
+    }
+
+    function openStorageManager() {
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("open-storage-manager"));
+        }
+    }
+
+    // Tools categorization for Tiered Layout
+    const coreWorkspaceTools = $derived(
+        tools.filter(
+            (t) =>
+                t.category === "AI 智能中心" ||
+                t.category === "数据与架构工作台" ||
+                t.href === "/developer-utilities"
+        )
+    );
+
+    const microUtilityTools = $derived(
+        tools.filter(
+            (t) =>
+                t.category === "开发者聚合工作台" &&
+                t.href !== "/developer-utilities"
+        )
+    );
+
+    // Filter tools
+    let filteredTools = $derived.by(() => {
+        let list = tools;
+
+        if (selectedCategory === "favorites") {
+            list = list.filter((tool) => favorites.includes(tool.href));
+        } else if (selectedCategory !== "all") {
+            list = list.filter((tool) => tool.category === selectedCategory);
+        }
+
+        const q = searchQuery.trim().toLowerCase();
+        if (!q) return list;
+
+        return list.filter((tool) => {
+            const inName = tool.name.toLowerCase().includes(q);
+            const inDesc = tool.description.toLowerCase().includes(q);
+            const inKeywords = tool.keywords.some((k) => k.toLowerCase().includes(q));
+            const inCategory = tool.category.toLowerCase().includes(q);
+            return inName || inDesc || inKeywords || inCategory;
+        });
+    });
+
+    function getCategoryCount(catId: string): number {
+        if (catId === "all") return tools.length;
+        if (catId === "favorites") return favorites.length;
+        return tools.filter((t) => t.category === catId).length;
+    }
 </script>
 
 <svelte:head>
-    <title>Aone Toolkit - Developer Tools</title>
+    <title>Aone 工作台</title>
 </svelte:head>
 
-<div class="max-w-6xl mx-auto">
-    <!-- Header -->
-    <header class="mb-8">
-        <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-            Welcome to <span class="text-primary-500">Aone</span> Toolkit
-        </h1>
-        <p class="text-lg text-slate-600 dark:text-slate-400">
-            A collection of developer tools to boost your productivity.
-        </p>
-    </header>
+<div class="h-full overflow-y-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="mx-auto max-w-5xl space-y-8">
+        <!-- Top Header & Quick Commands -->
+        <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 class="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                    Aone 工作台
+                </h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    研发效能工具与 AI 协同环境
+                </p>
+            </div>
 
-    <DashboardStats />
-
-    <!-- Tools Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {#each tools as tool}
-            <a href={tool.href} class="group">
-                <Panel
-                    padding="none"
-                    class="h-full overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+            <div class="flex items-center gap-2 shrink-0">
+                <button
+                    type="button"
+                    onclick={openStorageManager}
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 bg-slate-100/80 hover:bg-slate-200/80 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 transition-colors cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
                 >
-                    <!-- Gradient Header -->
-                    <div class="h-2 bg-gradient-to-r {tool.color}"></div>
+                    <HardDrive class="h-3.5 w-3.5 text-slate-400" />
+                    <span>存储管理</span>
+                </button>
+                <button
+                    type="button"
+                    onclick={openCommandPalette}
+                    class="inline-flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-lg text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 bg-slate-100/80 hover:bg-slate-200/80 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 transition-colors cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                >
+                    <Command class="h-3.5 w-3.5 text-slate-400" />
+                    <span>命令面板</span>
+                    <kbd class="font-mono text-[10px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                        {isMac ? '⌘K' : 'Ctrl+K'}
+                    </kbd>
+                </button>
+            </div>
+        </header>
 
-                    <div class="p-5">
-                        <!-- Icon -->
-                        <div
-                            class="w-12 h-12 rounded-xl bg-gradient-to-br {tool.color} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300"
-                        >
-                            <span class="text-white">
-                                {#if tool.icon === "yaml"}
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke-width="1.5"
-                                        stroke="currentColor"
-                                        class="w-6 h-6"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
-                                        />
-                                    </svg>
-                                {:else if tool.icon === "table"}
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke-width="1.5"
-                                        stroke="currentColor"
-                                        class="w-6 h-6"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0 1 12 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M12 10.875v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125M13.125 12h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125M20.625 12c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5M12 14.625v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 14.625c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m0 1.5v-1.5m0 0c0-.621.504-1.125 1.125-1.125m0 0h7.5"
-                                        />
-                                    </svg>
-                                {:else if tool.icon === "json"}
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke-width="1.5"
-                                        stroke="currentColor"
-                                        class="w-6 h-6"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5"
-                                        />
-                                    </svg>
-                                {:else if tool.icon === "diagram"}
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke-width="1.5"
-                                        stroke="currentColor"
-                                        class="w-6 h-6"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z"
-                                        />
-                                    </svg>
-                                {:else if tool.icon === "prompt"}
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke-width="1.5"
-                                        stroke="currentColor"
-                                        class="w-6 h-6"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"
-                                        />
-                                    </svg>
-                                {:else if tool.icon === "agent"}
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke-width="1.5"
-                                        stroke="currentColor"
-                                        class="w-6 h-6"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
-                                        />
-                                    </svg>
-                                {:else if tool.icon === "diff"}
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke-width="1.5"
-                                        stroke="currentColor"
-                                        class="w-6 h-6"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
-                                        />
-                                    </svg>
-                                {:else if tool.icon === "regex"}
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke-width="1.5"
-                                        stroke="currentColor"
-                                        class="w-6 h-6"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418"
-                                        />
-                                    </svg>
-                                {/if}
-                            </span>
+        <!-- Search & Quick Navigation Input (Raycast/Spotlight Style) -->
+        <section class="relative">
+            <form onsubmit={handleSearchSubmit}>
+                <div class="relative flex items-center">
+                    <Search class="absolute left-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
+                    <input
+                        type="text"
+                        bind:value={searchQuery}
+                        placeholder="搜索工具、场景，或直接粘贴 JSON / cURL / SQL / 凭据直达..."
+                        class="w-full pl-10 pr-28 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-slate-400 dark:focus:border-slate-600 focus:outline-none transition-all shadow-2xs"
+                    />
+                    {#if searchQuery}
+                        <div class="absolute right-2.5 flex items-center gap-1.5">
+                            {#if detectedTarget}
+                                <button
+                                    type="submit"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+                                >
+                                    <span>在 {detectedTarget.toolName} 中打开</span>
+                                    <CornerDownLeft class="h-3 w-3" />
+                                </button>
+                            {:else}
+                                <button
+                                    type="button"
+                                    onclick={() => (searchQuery = "")}
+                                    class="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-2 py-1 cursor-pointer"
+                                >
+                                    清除
+                                </button>
+                            {/if}
                         </div>
+                    {/if}
+                </div>
+            </form>
+        </section>
 
-                        <!-- Content -->
-                        <h2
-                            class="text-lg font-semibold text-slate-900 dark:text-white mb-2 group-hover:text-primary-500 transition-colors"
-                        >
-                            {tool.name}
-                        </h2>
-                        <p
-                            class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed"
-                        >
-                            {tool.description}
-                        </p>
+        <!-- Category Tabs & View Switcher -->
+        <div class="flex items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+            <!-- Filter Tabs -->
+            <nav class="flex items-center gap-1 overflow-x-auto" aria-label="工具分类">
+                {#each categories as cat}
+                    {@const count = getCategoryCount(cat.id)}
+                    <button
+                        type="button"
+                        onclick={() => (selectedCategory = cat.id)}
+                        class="px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap {selectedCategory ===
+                        cat.id
+                            ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                            : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60'}"
+                    >
+                        <span>{cat.label}</span>
+                        <span class="text-[10px] opacity-60 font-mono">({count})</span>
+                    </button>
+                {/each}
+            </nav>
 
-                        <!-- Arrow -->
-                        <div
-                            class="mt-4 flex items-center text-sm font-medium text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity"
+            <!-- View Switcher (for search/filtered view) -->
+            <div class="flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-800 rounded-md shrink-0">
+                <button
+                    type="button"
+                    onclick={() => setViewMode("grid")}
+                    class="p-1 rounded transition-colors cursor-pointer {viewMode === 'grid'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-2xs'
+                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}"
+                    title="网格视图"
+                    aria-label="网格视图"
+                >
+                    <LayoutGrid class="h-3.5 w-3.5" />
+                </button>
+                <button
+                    type="button"
+                    onclick={() => setViewMode("compact")}
+                    class="p-1 rounded transition-colors cursor-pointer {viewMode === 'compact'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-2xs'
+                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}"
+                    title="列表视图"
+                    aria-label="列表视图"
+                >
+                    <List class="h-3.5 w-3.5" />
+                </button>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT AREA -->
+        {#if filteredTools.length === 0}
+            <!-- Empty State -->
+            <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center">
+                <p class="text-sm text-slate-500 dark:text-slate-400">未找到匹配的工具</p>
+                <button
+                    type="button"
+                    onclick={() => {
+                        selectedCategory = "all";
+                        searchQuery = "";
+                    }}
+                    class="mt-2 text-xs text-slate-700 dark:text-slate-300 underline underline-offset-4 cursor-pointer hover:opacity-80"
+                >
+                    重置筛选
+                </button>
+            </div>
+        {:else if searchQuery.trim() || selectedCategory !== "all"}
+            <!-- SEARCH / FILTERED MODE: Unified Flat List/Grid -->
+            <div class={viewMode === "grid" ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3" : "divide-y divide-slate-100 dark:divide-slate-800/80 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden"}>
+                {#each filteredTools as tool}
+                    {@const Icon = iconMap[tool.icon as keyof typeof iconMap] ?? Wrench}
+                    {@const isFav = favorites.includes(tool.href)}
+
+                    {#if viewMode === "grid"}
+                        <a
+                            href={tool.href}
+                            class="group relative flex flex-col justify-between rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/40 dark:hover:bg-slate-800/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-400"
                         >
-                            Open Tool
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke-width="2"
-                                stroke="currentColor"
-                                class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
-                                />
-                            </svg>
+                            <div>
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 group-hover:bg-slate-200/70 dark:group-hover:bg-slate-700/70 transition-colors">
+                                            <Icon class="h-3.5 w-3.5" />
+                                        </div>
+                                        <span class="text-xs font-semibold text-slate-900 dark:text-slate-100 group-hover:text-slate-950 dark:group-hover:text-white">
+                                            {tool.name}
+                                        </span>
+                                    </div>
+
+                                    <div class="flex items-center gap-1.5">
+                                        {#if tool.badge}
+                                            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                                {tool.badge}
+                                            </span>
+                                        {/if}
+                                        <button
+                                            type="button"
+                                            onclick={(e) => toggleFavorite(e, tool.href)}
+                                            class="p-1 rounded text-slate-300 hover:text-amber-400 dark:text-slate-600 dark:hover:text-amber-400 transition-colors {isFav ? 'text-amber-400! dark:text-amber-400!' : ''}"
+                                            title={isFav ? "取消收藏" : "加入收藏"}
+                                            aria-label={isFav ? "取消收藏" : "加入收藏"}
+                                        >
+                                            <Star class="h-3.5 w-3.5 {isFav ? 'fill-current' : ''}" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <p class="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                                    {tool.description}
+                                </p>
+                            </div>
+
+                            <div class="mt-3 flex items-center justify-between text-[11px] text-slate-400">
+                                <span>{tool.category}</span>
+                            </div>
+                        </a>
+                    {:else}
+                        <!-- Compact List Item -->
+                        <a
+                            href={tool.href}
+                            class="group flex items-center justify-between p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                        >
+                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                                <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                    <Icon class="h-3.5 w-3.5" />
+                                </div>
+                                <div class="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center sm:gap-4">
+                                    <span class="text-xs font-semibold text-slate-900 dark:text-slate-100 shrink-0">
+                                        {tool.name}
+                                    </span>
+                                    <span class="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                        {tool.description}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-3 shrink-0 ml-4">
+                                <span class="hidden sm:inline-block text-[11px] text-slate-400">
+                                    {tool.category}
+                                </span>
+                                <button
+                                    type="button"
+                                    onclick={(e) => toggleFavorite(e, tool.href)}
+                                    class="p-1 rounded text-slate-300 hover:text-amber-400 dark:text-slate-600 dark:hover:text-amber-400 transition-colors {isFav ? 'text-amber-400! dark:text-amber-400!' : ''}"
+                                    title={isFav ? "取消收藏" : "加入收藏"}
+                                >
+                                    <Star class="h-3.5 w-3.5 {isFav ? 'fill-current' : ''}" />
+                                </button>
+                            </div>
+                        </a>
+                    {/if}
+                {/each}
+            </div>
+        {:else}
+            <!-- DEFAULT TIERED WORKBENCH VIEW (Calm, structured, restrained) -->
+            <div class="space-y-9">
+                <!-- TIER 1: 核心生产力工作台 (Core Workspaces) -->
+                <section class="space-y-3.5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <Sparkles class="h-4 w-4 text-slate-400" />
+                            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                核心生产力工作台
+                            </h2>
                         </div>
+                        <span class="text-[11px] text-slate-400">
+                            {coreWorkspaceTools.length} 款工作流套件
+                        </span>
                     </div>
-                </Panel>
-            </a>
-        {/each}
+
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {#each coreWorkspaceTools as tool}
+                            {@const Icon = iconMap[tool.icon as keyof typeof iconMap] ?? Wrench}
+                            {@const isFav = favorites.includes(tool.href)}
+                            <a
+                                href={tool.href}
+                                class="group relative flex flex-col justify-between rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/40 dark:hover:bg-slate-800/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-400"
+                            >
+                                <div>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="flex items-center gap-2.5">
+                                            <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 group-hover:bg-slate-200/70 dark:group-hover:bg-slate-700/70 transition-colors">
+                                                <Icon class="h-3.5 w-3.5" />
+                                            </div>
+                                            <h3 class="text-xs font-semibold text-slate-900 dark:text-slate-100 group-hover:text-slate-950 dark:group-hover:text-white">
+                                                {tool.name}
+                                            </h3>
+                                        </div>
+
+                                        <div class="flex items-center gap-1.5">
+                                            {#if tool.badge}
+                                                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                                    {tool.badge}
+                                                </span>
+                                            {/if}
+                                            <button
+                                                type="button"
+                                                onclick={(e) => toggleFavorite(e, tool.href)}
+                                                class="p-1 rounded text-slate-300 hover:text-amber-400 dark:text-slate-600 dark:hover:text-amber-400 transition-colors {isFav ? 'text-amber-400! dark:text-amber-400!' : ''}"
+                                                title={isFav ? "取消收藏" : "加入收藏"}
+                                                aria-label={isFav ? "取消收藏" : "加入收藏"}
+                                            >
+                                                <Star class="h-3.5 w-3.5 {isFav ? 'fill-current' : ''}" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <p class="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                                        {tool.description}
+                                    </p>
+                                </div>
+
+                                <div class="mt-3 flex items-center justify-between text-[11px] text-slate-400">
+                                    <span>{tool.category}</span>
+                                </div>
+                            </a>
+                        {/each}
+                    </div>
+                </section>
+
+                <!-- TIER 2: 常用开发微工具 (Developer Micro-Tools Matrix) -->
+                <section class="space-y-3.5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <Boxes class="h-4 w-4 text-slate-400" />
+                            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                常用开发微工具
+                            </h2>
+                        </div>
+                        <a
+                            href="/developer-utilities"
+                            class="text-[11px] text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                        >
+                            进入工具箱全部 30+ 工具 &rarr;
+                        </a>
+                    </div>
+
+                    <div class="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                        {#each microUtilityTools as tool}
+                            {@const Icon = iconMap[tool.icon as keyof typeof iconMap] ?? Wrench}
+                            {@const isFav = favorites.includes(tool.href)}
+                            <a
+                                href={tool.href}
+                                class="group flex items-start gap-3 rounded-lg border border-slate-200/60 dark:border-slate-800/80 bg-white dark:bg-slate-900/80 p-3 transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-800/40"
+                            >
+                                <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors mt-0.5">
+                                    <Icon class="h-3.5 w-3.5" />
+                                </div>
+
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="text-xs font-medium text-slate-800 dark:text-slate-200 group-hover:text-slate-950 dark:group-hover:text-white">
+                                            {tool.name}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onclick={(e) => toggleFavorite(e, tool.href)}
+                                            class="p-0.5 rounded text-slate-300 hover:text-amber-400 dark:text-slate-700 dark:hover:text-amber-400 transition-colors {isFav ? 'text-amber-400! dark:text-amber-400!' : ''}"
+                                            title={isFav ? "取消收藏" : "加入收藏"}
+                                        >
+                                            <Star class="h-3 w-3 {isFav ? 'fill-current' : ''}" />
+                                        </button>
+                                    </div>
+                                    <p class="text-[11px] leading-snug text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5">
+                                        {tool.description}
+                                    </p>
+                                </div>
+                            </a>
+                        {/each}
+                    </div>
+                </section>
+            </div>
+        {/if}
     </div>
 </div>
+

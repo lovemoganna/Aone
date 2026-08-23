@@ -2,7 +2,7 @@
   import { fade, scale } from 'svelte/transition';
   import { cn } from '$lib/utils/cn';
 
-  export interface ContextMenuItem {
+  interface ContextMenuItem {
     id: string;
     label: string;
     icon?: any;
@@ -71,6 +71,7 @@
     role="menu"
   >
     {#each items as item}
+      {@const ItemIcon = item.icon}
       {#if item.separator}
         <div class="my-1 border-t border-slate-200 dark:border-slate-700"></div>
       {:else}
@@ -86,7 +87,7 @@
           role="menuitem"
         >
           {#if item.icon}
-            <svelte:component this={item.icon} class="w-4 h-4" />
+            <ItemIcon class="w-4 h-4" />
           {/if}
           <span class="flex-1">{item.label}</span>
           {#if item.shortcut}

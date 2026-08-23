@@ -34,7 +34,7 @@ except:
 SKIP_DIRS = {
     'node_modules', '.next', 'dist', 'build', '.git', '.github',
     '__pycache__', '.vscode', '.idea', 'coverage', 'test', 'tests',
-    '__tests__', 'spec', 'docs', 'documentation', 'examples'
+    '__tests__', 'spec', 'docs', 'documentation', 'examples', '.svelte-kit', 'archive'
 }
 
 # Files to skip (not pages)
@@ -49,6 +49,10 @@ def is_page_file(file_path: Path) -> bool:
     """Check if this file is likely a public-facing page."""
     name = file_path.name.lower()
     stem = file_path.stem.lower()
+    
+    # Skip SvelteKit base layout template
+    if name == 'app.html':
+        return False
     
     # Skip utility/config files
     if any(skip in name for skip in SKIP_PATTERNS):
@@ -84,6 +88,10 @@ def find_pages(project_path: Path) -> list:
         for f in project_path.glob(pattern):
             # Skip excluded directories
             if any(skip in f.parts for skip in SKIP_DIRS):
+                continue
+            
+            # Only audit files under 'src' directory
+            if 'src' not in [p.lower() for p in f.parts]:
                 continue
             
             # Check if it's likely a page

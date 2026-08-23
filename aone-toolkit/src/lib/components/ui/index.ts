@@ -1,3 +1,10 @@
 export { default as Button } from './Button.svelte';
+export { default as EmptyState } from './EmptyState.svelte';
+export { default as InlineAlert } from './InlineAlert.svelte';
 export { default as Input } from './Input.svelte';
 export { default as Panel } from './Panel.svelte';
+export { default as PanelHeader } from './PanelHeader.svelte';
+export { default as RadarChart } from './RadarChart.svelte';
+export { default as SectionHeader } from './SectionHeader.svelte';
+export { default as CodeEditor } from './CodeEditor.svelte';
+export { default as AgentAvatar } from './AgentAvatar.svelte';

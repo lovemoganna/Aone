@@ -31,7 +31,7 @@
     });
 </script>
 
-<div class="max-w-3xl mx-auto space-y-6 py-8">
+<div class="space-y-6 py-8 w-full">
     <!-- Controls -->
     <div
         class="flex flex-wrap gap-4 items-end bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800"
@@ -48,7 +48,7 @@
                 min="1"
                 max="20"
                 bind:value={paragraphs}
-                class="w-24 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-center font-mono"
+                class="input text-sm w-24"
             />
         </div>
         <div class="space-y-2">
@@ -63,10 +63,10 @@
                 min="10"
                 max="200"
                 bind:value={wordsPerPara}
-                class="w-24 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-center font-mono"
+                class="input text-sm w-24"
             />
         </div>
-        <Button onclick={generate} class="gap-2">
+        <Button onclick={generate} class="btn btn-ghost text-sm">
             <RefreshCw size={16} /> Generate
         </Button>
     </div>
@@ -76,7 +76,7 @@
         <textarea
             value={output}
             readonly
-            class="w-full h-96 p-6 font-serif text-lg leading-relaxed bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none resize-none text-slate-700 dark:text-slate-300"
+            class="textarea-editor shadow-inner bg-slate-100/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-600 dark:text-slate-400 w-full"
         ></textarea>
 
         {#if output}

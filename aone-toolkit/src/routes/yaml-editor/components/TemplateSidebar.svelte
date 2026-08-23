@@ -16,6 +16,10 @@
     let { onInsert, currentContent }: Props = $props();
 
     let searchTerm = $state("");
+    let templateStatus = $state<{
+        text: string;
+        type: "success" | "warning" | "error";
+    } | null>(null);
 
     // Modal State
     let modalOpen = $state(false);
@@ -74,7 +78,10 @@ services:
             try {
                 customTemplates = JSON.parse(saved);
             } catch (e) {
-                console.error("Failed to load templates", e);
+                templateStatus = {
+                    text: "Custom templates could not be loaded.",
+                    type: "warning",
+                };
             }
         }
     });
@@ -118,19 +125,30 @@ services:
             customTemplates = [...customTemplates, newTemplate];
         }
         saveTemplates();
+        templateStatus = {
+            text: editingTemplate ? "Template updated." : "Template saved.",
+            type: "success",
+        };
     }
 
     function deleteCustomTemplate(t: Template) {
         if (confirm(`Delete template ${t.name}?`)) {
             customTemplates = customTemplates.filter((ct) => ct !== t);
             saveTemplates();
+            templateStatus = { text: "Template deleted.", type: "success" };
+        } else {
+            templateStatus = { text: "Delete cancelled.", type: "warning" };
         }
     }
 
     // Quick Save Current
     function saveCurrentAsTemplate() {
         if (!currentContent || currentContent.trim() === "") {
-            return alert("Editor is empty");
+            templateStatus = {
+                text: "The editor is empty. Add YAML before saving a template.",
+                type: "error",
+            };
+            return;
         }
         // Prefill modal with current content
         editingTemplate = { name: "", content: currentContent, isCustom: true };
@@ -198,6 +216,20 @@ services:
     <div class="p-2">
         <Input placeholder="Search..." bind:value={searchTerm} />
     </div>
+
+    {#if templateStatus}
+        <div
+            class="mx-2 mb-2 rounded-md px-2 py-1.5 text-xs {templateStatus.type ===
+            'error'
+                ? 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300'
+                : templateStatus.type === 'warning'
+                  ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300'
+                  : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300'}"
+            role={templateStatus.type === "error" ? "alert" : "status"}
+        >
+            {templateStatus.text}
+        </div>
+    {/if}
 
     <div class="flex-1 overflow-auto p-2 space-y-4">
         <div>

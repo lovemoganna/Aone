@@ -4,7 +4,17 @@
  */
 
 import { browser } from '$app/environment';
-import type { Session, Message, SessionSummary } from '$lib/stores/agentStore.svelte';
+import type { Session, Message } from '$lib/stores/agentStore.svelte';
+
+interface SessionSummary {
+    id: string;
+    title: string;
+    overview: string;
+    keyInsights: string[];
+    actionItems: string[];
+    agentsUsed: string[];
+    createdAt: number;
+}
 
 const STORAGE_KEY = 'agent_studio_sessions';
 const MAX_SESSIONS = 100;

@@ -27,11 +27,15 @@ export interface Provider {
 // OpenAI-compatible stream parser (shared by most providers)
 function openAIStreamParser(line: string): string {
     if (line.startsWith('data: ')) {
-        const data = line.slice(6);
+        const data = line.slice(6).trim();
         if (data === '[DONE]') return '';
         try {
             const json = JSON.parse(data);
-            return json.choices?.[0]?.delta?.content || '';
+            const delta = json.choices?.[0]?.delta;
+            if (delta?.reasoning_content) {
+                return delta.reasoning_content;
+            }
+            return delta?.content || '';
         } catch { return ''; }
     }
     return '';

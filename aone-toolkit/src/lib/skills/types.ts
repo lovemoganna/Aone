@@ -109,8 +109,12 @@ export interface ISkillRegistry {
     getById(id: string): SkillDefinition | undefined;
     register(skill: SkillDefinition): void;
     unregister(id: string): boolean;
+    update(id: string, updates: Partial<SkillDefinition>): boolean;
+    duplicate(id: string): SkillDefinition;
     getByAgent(agentId: string): SkillDefinition[];
     getByType(type: SkillType): SkillDefinition[];
+    exportAll(): string;
+    importSkills(json: string): number;
 }
 
 // ============== Skill 执行器 ==============

@@ -3,9 +3,9 @@
  * 整合 Agent、Skill 和编排系统的统一状态管理
  */
 
-import { agentRegistry, type AgentDefinition } from './agents';
-import { skillRegistry, type SkillDefinition } from './skills';
-import { orchestrationEngine, BUILT_IN_SCENARIOS, type ScenarioPackage } from './orchestration';
+import { agentExecutor, agentRegistry, type AgentDefinition } from '../agents';
+import { skillExecutor, skillRegistry, type SkillDefinition } from '../skills';
+import { BUILT_IN_SCENARIOS, type ScenarioPackage } from '../orchestration';
 
 export interface CapabilityConfig {
     agentIds: string[];

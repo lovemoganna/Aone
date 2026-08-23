@@ -1,6 +1,9 @@
 // Table Data Converters
 import type { TableData } from './types';
 
+export type TableRecordValue = string | number | boolean | null;
+export type TableRecord = Record<string, TableRecordValue>;
+
 /**
  * Convert table data to Markdown format
  */
@@ -48,6 +51,77 @@ export function toCSV(data: TableData, delimiter: string = ','): string {
             return cell;
         }).join(delimiter);
     }).join('\n');
+}
+
+function normalizeHeader(value: string, fallback: string): string {
+    const cleaned = value.trim() || fallback;
+    return cleaned.replace(/\s+/g, '_');
+}
+
+function getUniqueHeaders(headers: string[]): string[] {
+    const seen = new Set<string>();
+    return headers.map((header, index) => {
+        let name = normalizeHeader(header, `field_${index + 1}`);
+        let suffix = 2;
+        while (seen.has(name)) {
+            name = `${name}_${suffix++}`;
+        }
+        seen.add(name);
+        return name;
+    });
+}
+
+function inferCellValue(value: string): TableRecordValue {
+    const trimmed = value.trim();
+    if (trimmed === '') return '';
+    if (/^null$/i.test(trimmed)) return null;
+    if (/^true$/i.test(trimmed)) return true;
+    if (/^false$/i.test(trimmed)) return false;
+    if (/^-?(?:\d+|\d*\.\d+)$/.test(trimmed)) return Number(trimmed);
+    return value;
+}
+
+export function tableToRecords(data: TableData): TableRecord[] {
+    if (data.length <= 1) return [];
+    const headers = getUniqueHeaders(data[0]);
+    return data.slice(1).map((row) =>
+        Object.fromEntries(
+            headers.map((header, index) => [header, inferCellValue(row[index] ?? '')]),
+        ) as TableRecord,
+    );
+}
+
+export function recordsToTableData(records: Record<string, unknown>[]): TableData {
+    if (records.length === 0) return [];
+    const headers = [
+        ...new Set(
+            records.flatMap((record) =>
+                record && typeof record === 'object' && !Array.isArray(record)
+                    ? Object.keys(record)
+                    : [],
+            ),
+        ),
+    ];
+    if (headers.length === 0) return [];
+    return [
+        headers,
+        ...records.map((record) =>
+            headers.map((header) => {
+                const value = record[header];
+                if (value === null || value === undefined) return '';
+                if (typeof value === 'object') return JSON.stringify(value);
+                return String(value);
+            }),
+        ),
+    ];
+}
+
+export function toObjectJSON(data: TableData): string {
+    return JSON.stringify(tableToRecords(data), null, 2);
+}
+
+export function recordsToJSON(records: Record<string, unknown>[]): string {
+    return JSON.stringify(records, null, 2);
 }
 
 /**

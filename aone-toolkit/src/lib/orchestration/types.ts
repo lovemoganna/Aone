@@ -8,11 +8,12 @@ import type { SkillDefinition } from '../skills/types';
 
 // ============== 编排节点类型 ==============
 
-export type OrchestrationNodeType = 
+export type OrchestrationNodeType =
     | 'agent'      // Agent 节点
     | 'skill'      // Skill 节点
     | 'condition'  // 条件分支
-    | 'parallel';  // 并行执行
+    | 'parallel'   // 并行执行
+    | 'subworkflow'; // 子工作流
 
 // ============== 节点定义 ==============
 
@@ -20,8 +21,11 @@ export interface OrchestrationNode {
     id: string;
     type: OrchestrationNodeType;
     name: string;
-    config: AgentNodeConfig | SkillNodeConfig | ConditionNodeConfig | ParallelNodeConfig;
+    config: AgentNodeConfig | SkillNodeConfig | ConditionNodeConfig | ParallelNodeConfig | SubworkflowNodeConfig;
     position?: { x: number; y: number };
+    
+    // 执行策略（可选）
+    executionPolicy?: ExecutionPolicy;
 }
 
 export interface AgentNodeConfig {
@@ -48,22 +52,58 @@ export interface ParallelNodeConfig {
     mergeStrategy: 'all' | 'first' | 'majority'; // 合并策略
 }
 
+export interface SubworkflowNodeConfig {
+    workflowId: string;                      // 引用的工作流 ID
+    inputMapping?: Record<string, string>;   // 输入映射
+    outputKey?: string;                      // 输出存储键
+    waitForCompletion: boolean;              // 是否等待子工作流完成
+    onError?: 'continue' | 'stop' | 'retry'; // 错误处理策略
+}
+
+// ============== 重试与超时配置 ==============
+
+export interface RetryConfig {
+    maxRetries: number;                        // 最大重试次数
+    retryDelay: number;                       // 重试延迟（毫秒）
+    backoff: 'none' | 'linear' | 'exponential'; // 退避策略
+    retryableErrors?: string[];               // 可重试的错误类型
+}
+
+export interface TimeoutConfig {
+    nodeTimeout: number;                       // 节点执行超时（毫秒）
+    workflowTimeout?: number;                  // 工作流总超时（毫秒）
+    enableTimeout: boolean;                    // 是否启用超时
+}
+
+// 合并的重试和超时配置
+export interface ExecutionPolicy {
+    retry?: RetryConfig;
+    timeout?: TimeoutConfig;
+}
+
 // ============== 工作流定义 ==============
 
 export interface OrchestrationWorkflow {
     id: string;
     name: string;
     description: string;
-    
+
     // 节点
     nodes: OrchestrationNode[];
-    
+
     // 边（节点连接）
     edges: OrchestrationEdge[];
-    
+
     // 入口节点
     entryNodeId: string;
-    
+
+    // 技能组合模板（可选）
+    skillTemplateId?: string;
+    skillTemplateConfig?: {
+        selectedOptionalSkills?: string[];
+        selectedMutualGroups?: string[][];
+    };
+
     // 元数据
     version: string;
     author?: string;
@@ -87,28 +127,34 @@ export interface ScenarioPackage {
     id: string;
     name: string;
     description: string;
-    
+
     // 推荐的工作流
     workflowId?: string;
-    
+
     // 推荐 Agent 组合
     recommendedAgents: string[];
-    
+
     // 推荐 Skill 组合
     recommendedSkills: string[];
-    
+
     // 入口引导语
     entryPrompt: string;
-    
+
     // 图标和颜色
     icon?: string;
     color?: string;
-    
+
     tags: string[];
     isBuiltIn: boolean;
 }
 
 // ============== 运行时 ==============
+
+export interface ExecutionOptions {
+    maxExecutionSteps?: number;
+    maxNodeVisits?: number;
+    branchTimeoutMs?: number;
+}
 
 export interface ExecutionContext {
     workflowId: string;
@@ -116,6 +162,7 @@ export interface ExecutionContext {
     userInput: string;
     variables: Record<string, any>;          // 运行时变量
     history: string[];
+    options?: ExecutionOptions;
 }
 
 export interface ExecutionResult {
@@ -141,17 +188,21 @@ export interface ExecutionLog {
 
 export interface IOrchestrationEngine {
     // 执行工作流
-    execute(workflow: OrchestrationWorkflow, context: ExecutionContext): Promise<ExecutionResult>;
-    
+    execute(
+        workflow: OrchestrationWorkflow,
+        context: ExecutionContext,
+        onProgress?: (log: ExecutionLog) => void
+    ): Promise<ExecutionResult>;
+
     // 暂停执行
     pause(executionId: string): void;
-    
+
     // 恢复执行
     resume(executionId: string): void;
-    
+
     // 取消执行
     cancel(executionId: string): void;
-    
+
     // 验证工作流
     validate(workflow: OrchestrationWorkflow): { valid: boolean; errors: string[] };
 }

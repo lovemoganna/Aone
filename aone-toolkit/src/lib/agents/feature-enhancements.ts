@@ -1,11 +1,10 @@
-<!--
+/*
   Agent Studio 功能增强模块 - 技术规格文档
   ========================================
   本文档定义了 25 个高价值、可落地的功能增强模块
   覆盖: 对话管理 | 数据分析 | 模板系统 | 协作 | 智能辅助 | 集成 | 个性化 | 教育 | 知识 | 性能 | 导出
--->
+ */
 
-<script lang="ts">
     /**
      * 模块 1: 思维建议器 (Thought Advisor)
      * - 解决的核心问题: 用户不知道该选哪个Agent
@@ -338,4 +337,3 @@
         intent: 'howto' | 'troubleshooting' | 'explanation' | 'example';
         context?: string;
     }
-</script>

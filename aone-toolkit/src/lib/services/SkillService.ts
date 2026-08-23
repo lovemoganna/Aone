@@ -233,11 +233,12 @@ export const SKILL_DEFINITIONS: Record<string, Skill> = {
 
 export class SkillService {
     /**
-     * Execute a specific skill using the AI.
+     * Execute a specific skill using the AI with real-time streaming support.
      */
     static async executeSkill(
         skillId: string,
         context: string,
+        onChunk?: (chunk: string) => void,
         signal?: AbortSignal
     ): Promise<string> {
         const skill = SKILL_DEFINITIONS[skillId];
@@ -251,6 +252,6 @@ export class SkillService {
         // We combine system and user prompt for the call
         const fullPrompt = `${systemPrompt}\n\n${prompt}`;
 
-        return await MetaFlowService.callAI(fullPrompt, undefined, signal);
+        return await MetaFlowService.callAI(fullPrompt, onChunk, signal);
     }
 }

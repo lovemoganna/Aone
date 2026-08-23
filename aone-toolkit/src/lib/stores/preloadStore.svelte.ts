@@ -68,23 +68,26 @@ function createPreloadStore() {
     config.set(DEFAULT_CONFIG);
   }
 
+  const prefetchedSet = new Set<string>();
+
   // Preload logic
-  function prefetch(url: string) {
-    if (!browser) return;
+  async function prefetch(url: string) {
+    if (!browser || !url) return;
     
     const currentConfig = get(config);
     if (!currentConfig.enabled) return;
 
-    // Check if already cached
-    const currentCache = get(cache);
-    const existing = currentCache.find((item) => item.url === url);
-    if (existing && currentConfig.cacheEnabled) return;
+    if (prefetchedSet.has(url)) return;
+    prefetchedSet.add(url);
 
-    // Create link element for preloading
-    const link = document.createElement('link');
-    link.rel = 'prefetch';
-    link.href = url;
-    document.head.appendChild(link);
+    try {
+      if (url.startsWith('/')) {
+        const { preloadData } = await import('$app/navigation');
+        await preloadData(url);
+      }
+    } catch {
+      // Fallback or ignore non-route prefetch
+    }
 
     // Add to cache
     if (currentConfig.cacheEnabled) {

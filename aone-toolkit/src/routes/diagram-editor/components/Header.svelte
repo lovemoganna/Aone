@@ -1,11 +1,14 @@
 <script lang="ts">
     import { diagramStore } from "../lib/store.svelte";
     import {
+        convertPlantUMLToGraphviz,
+        convertGraphvizToPlantUML,
+    } from "../lib/transformer";
+    import { getAutoFixes } from "../lib/autofix";
+    import {
         Sun,
         Moon,
         Download,
-        Settings,
-        HelpCircle,
         Code,
         Play,
         Book,
@@ -14,17 +17,20 @@
         ZapOff,
         Search,
         Keyboard,
-        Image,
-        ImageIcon,
+        Grid,
         Maximize,
         Minimize,
         History,
         Table,
-        Palette,
-        Sparkles,
-        Users,
         Cpu,
+        ArrowLeftRight,
+        Wrench,
+        MoreHorizontal,
+        FileText,
+        Plus,
+        X
     } from "lucide-svelte";
+    import { slide } from "svelte/transition";
 
     let {
         onRender,
@@ -61,328 +67,368 @@
         onCollab: () => void;
     }>();
 
+    let isMoreMenuOpen = $state(false);
+
+    let autoFixes = $derived(
+        diagramStore.error
+            ? getAutoFixes(diagramStore.error, diagramStore.code, diagramStore.mode)
+            : []
+    );
+
     function setMode(m: "plantuml" | "graphviz") {
         diagramStore.mode = m;
     }
 
-    // Share logic moved to ShareModal
+    function handleConvertFormat() {
+        diagramStore.takeSnapshot();
+        if (diagramStore.mode === "plantuml") {
+            diagramStore.code = convertPlantUMLToGraphviz(diagramStore.code);
+            diagramStore.mode = "graphviz";
+        } else {
+            diagramStore.code = convertGraphvizToPlantUML(diagramStore.code);
+            diagramStore.mode = "plantuml";
+        }
+        diagramStore.render();
+    }
+
+    function applyFirstAutofix() {
+        if (autoFixes.length > 0) {
+            diagramStore.takeSnapshot();
+            diagramStore.code = autoFixes[0].apply(diagramStore.code);
+            diagramStore.render();
+        }
+    }
+
+    // Tabs Management
+    let editingTabId = $state<string | null>(null);
+    let editName = $state("");
+
+    function handleTabClick(id: string) {
+        diagramStore.switchDocument(id);
+    }
+
+    function handleCloseTab(e: MouseEvent, id: string) {
+        e.stopPropagation();
+        diagramStore.closeDocument(id);
+    }
+
+    function handleNewTab() {
+        diagramStore.createDocument();
+    }
+
+    function startRename(id: string, currentName: string) {
+        editingTabId = id;
+        editName = currentName;
+    }
+
+    function commitRename(id: string) {
+        if (editName.trim()) {
+            const doc = diagramStore.documents.find((d) => d.id === id);
+            if (doc) {
+                doc.name = editName.trim();
+                diagramStore.saveState();
+            }
+        }
+        editingTabId = null;
+    }
+
+    function autofocus(node: HTMLElement) {
+        node.focus();
+    }
 </script>
 
+<svelte:window onkeydown={(e) => { if (e.key === "Escape") isMoreMenuOpen = false; }} />
+
 <header
-    class="flex items-center justify-between px-6 py-3 m-6 mb-2 rounded-2xl glass-pro transition-all duration-500 z-50 shrink-0 shadow-premium group/header hover:shadow-glow"
+    class="h-10 px-2.5 bg-white dark:bg-[#0b0f17] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 z-30 select-none text-slate-800 dark:text-slate-200"
 >
-    <!-- Logo -->
-    <div
-        class="flex items-center gap-3 group cursor-pointer"
-        onclick={() => window.location.reload()}
-    >
-        <div
-            class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-purple-600 flex items-center justify-center text-white glow-premium group-hover:scale-110 transition-transform duration-500"
-        >
-            <Code size={20} strokeWidth={2.5} />
-        </div>
-        <div class="flex flex-col">
-            <h1
-                class="font-black text-lg tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600"
-            >
-                AONE
-            </h1>
-            <span
-                class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500"
-                >Toolkit</span
-            >
-        </div>
-    </div>
-
-    <!-- Mode Switcher -->
-    <div
-        class="flex bg-gray-100/50 dark:bg-gray-800/50 p-1 rounded-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm"
-    >
-        <button
-            class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-300 {diagramStore.mode ===
-            'plantuml'
-                ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400 scale-105'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50'}"
-            onclick={() => setMode("plantuml")}
-        >
-            PlantUML
-        </button>
-        <button
-            class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-300 {diagramStore.mode ===
-            'graphviz'
-                ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400 scale-105'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50'}"
-            onclick={() => setMode("graphviz")}
-        >
-            Graphviz
-        </button>
-    </div>
-
-    <!-- Collaborators -->
-    {#if diagramStore.collaborators.length > 0}
-        <div
-            class="flex items-center gap-4 ml-6 pl-6 border-l border-gray-200/50 dark:border-gray-700/50"
-        >
-            <div class="flex -space-x-2 overflow-hidden">
-                {#each diagramStore.collaborators as user}
-                    <div
-                        class="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-gray-900 flex items-center justify-center text-[10px] font-bold text-white shadow-sm transition-transform hover:-translate-y-1 cursor-help"
-                        style="background-color: {user.color}"
-                        title={user.name}
-                    >
-                        {user.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                    </div>
-                {/each}
+    <!-- Left: Brand + Mode Switcher + Integrated Tabs -->
+    <div class="flex items-center gap-2 min-w-0 flex-1 mr-2">
+        <!-- Logo -->
+        <div class="flex items-center gap-1.5 pr-2 border-r border-slate-200 dark:border-slate-800 shrink-0">
+            <div class="w-5 h-5 rounded bg-slate-800 dark:bg-slate-200 flex items-center justify-center text-white dark:text-slate-900 shadow-xs">
+                <Code size={12} strokeWidth={2.5} />
             </div>
-            <div class="hidden lg:flex items-center gap-2">
-                <span class="relative flex h-2 w-2">
-                    <span
-                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"
-                    ></span>
-                    <span
-                        class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"
-                    ></span>
-                </span>
-                <span
-                    class="text-[10px] font-bold text-gray-400 uppercase tracking-widest"
-                >
-                    {diagramStore.collaborators.length} Online
-                </span>
-            </div>
+            <span class="font-bold text-xs tracking-tight text-slate-900 dark:text-slate-100 hidden sm:inline">
+                AONE <span class="text-slate-400 font-normal">Diagram</span>
+            </span>
         </div>
-    {/if}
 
-    {#if diagramStore.mode === "graphviz"}
-        <div class="ml-4 flex items-center gap-2 animate-fade-in">
-            <span
-                class="text-[10px] font-bold uppercase tracking-wider text-gray-400"
-                >Engine</span
+        <!-- Mode Switcher -->
+        <div class="flex bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-md border border-slate-200/80 dark:border-slate-700/60 text-xs shrink-0">
+            <button
+                type="button"
+                class="px-2 py-0.5 rounded font-medium transition-colors {diagramStore.mode === 'plantuml'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-semibold'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}"
+                onclick={() => setMode("plantuml")}
             >
-            <div class="relative group">
-                <select
-                    bind:value={diagramStore.engine}
-                    class="appearance-none bg-gray-100/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 pl-3 pr-8 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-colors"
-                >
-                    {#each ["dot", "circo", "fdp", "neato", "osage", "twopi"] as e}
-                        <option value={e}>{e}</option>
-                    {/each}
-                </select>
-                <!-- Custom Arrow -->
+                PlantUML
+            </button>
+            <button
+                type="button"
+                class="px-2 py-0.5 rounded font-medium transition-colors {diagramStore.mode === 'graphviz'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-semibold'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}"
+                onclick={() => setMode("graphviz")}
+            >
+                Graphviz
+            </button>
+        </div>
+
+        <!-- Integrated Documents Tab Strip -->
+        <div class="flex items-center gap-1 overflow-x-auto no-scrollbar min-w-0 pl-1">
+            {#each diagramStore.documents as doc (doc.id)}
                 <div
-                    class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50"
+                    class="flex items-center gap-1 px-2.5 h-7 text-xs rounded-md transition-colors cursor-pointer shrink-0 max-w-[150px] group/tab border
+                    {diagramStore.activeDocumentId === doc.id
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium border-slate-300/80 dark:border-slate-700'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-850 border-transparent'}"
+                    onclick={() => handleTabClick(doc.id)}
+                    ondblclick={() => startRename(doc.id, doc.name)}
+                    role="button"
+                    tabindex="0"
+                    onkeydown={(e) => e.key === "Enter" && handleTabClick(doc.id)}
                 >
-                    <svg
-                        width="10"
-                        height="10"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg
-                    >
-                </div>
-            </div>
-        </div>
-    {/if}
+                    <FileText size={11} class="opacity-60 shrink-0" />
 
-    <!-- Toolbar -->
-    <div
-        class="flex items-center gap-1.5 pl-4 border-l border-gray-200/50 dark:border-gray-700/50 ml-4"
-    >
+                    {#if editingTabId === doc.id}
+                        <input
+                            bind:value={editName}
+                            class="bg-white dark:bg-slate-900 border border-slate-400 outline-none text-xs w-full py-0 px-1 rounded text-slate-900 dark:text-slate-100"
+                            use:autofocus
+                            onblur={() => commitRename(doc.id)}
+                            onkeydown={(e) => {
+                                if (e.key === "Enter") commitRename(doc.id);
+                                if (e.key === "Escape") editingTabId = null;
+                            }}
+                            onclick={(e) => e.stopPropagation()}
+                        />
+                    {:else}
+                        <span class="truncate text-[11px]">{doc.name}</span>
+                    {/if}
+
+                    {#if diagramStore.documents.length > 1}
+                        <button
+                            type="button"
+                            class="p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded opacity-0 group-hover/tab:opacity-100 transition-opacity ml-auto"
+                            onclick={(e) => handleCloseTab(e, doc.id)}
+                            title="Close Tab"
+                            aria-label="关闭标签页"
+                        >
+                            <X size={10} />
+                        </button>
+                    {/if}
+                </div>
+            {/each}
+
+            <button
+                type="button"
+                class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors shrink-0"
+                onclick={handleNewTab}
+                title="New Diagram (Ctrl+N)"
+                aria-label="新建图表"
+            >
+                <Plus size={13} />
+            </button>
+        </div>
+
+        {#if autoFixes.length > 0}
+            <button
+                type="button"
+                class="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-medium flex items-center gap-1 shadow-xs transition-colors shrink-0"
+                title={autoFixes[0].description || autoFixes[0].label}
+                aria-label={`一键修复代码: ${autoFixes[0].label}`}
+                onclick={applyFirstAutofix}
+            >
+                <Wrench size={11} />
+                <span>Fix ({autoFixes[0].label})</span>
+            </button>
+        {/if}
+    </div>
+
+    <!-- Right: Primary Actions & Tool Groups -->
+    <div class="flex items-center gap-1 shrink-0">
+        <!-- Generate Button -->
         <button
-            class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl shadow-lg shadow-purple-500/20 transition-all duration-300 hover:-translate-y-0.5 active:scale-95 font-semibold text-sm group"
+            type="button"
+            class="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-md transition-colors"
+            title="Generate Diagram"
+            aria-label="生成架构图"
             onclick={onAIGen}
         >
-            <Sparkles
-                size={16}
-                class="group-hover:rotate-12 transition-transform"
-            />
-            AI Gen
+            <Cpu size={13} />
+            <span class="hidden sm:inline">Generate</span>
         </button>
 
+        <!-- Render Button -->
         <button
-            class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20 transition-all duration-300 hover:-translate-y-0.5 active:scale-95 font-semibold text-sm"
+            type="button"
+            class="flex items-center gap-1.5 px-3 py-1 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded-md font-semibold text-xs shadow-xs transition-colors"
+            aria-label="渲染架构图"
             onclick={onRender}
             disabled={diagramStore.isRendering}
         >
             <Play
-                size={16}
-                class={diagramStore.isRendering
-                    ? "animate-spin"
-                    : "fill-current"}
+                size={11}
+                class={diagramStore.isRendering ? "animate-spin" : "fill-current"}
             />
-            Render
+            <span>Render</span>
         </button>
 
         <!-- Divider -->
-        <div class="w-px h-6 bg-gray-200/50 dark:bg-gray-700/50 mx-1"></div>
+        <div class="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-0.5"></div>
 
+        <!-- Auto-Render Toggle -->
         <button
-            class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all duration-200 hover:-translate-y-0.5"
-            title="Export Image"
-            onclick={onExport}
-        >
-            <Download size={20} />
-        </button>
-        <button
-            class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all duration-200 hover:-translate-y-0.5"
-            title="Find & Replace (Ctrl+H)"
-            onclick={onFindReplace}
-        >
-            <Search size={20} />
-        </button>
-        <button
-            class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all duration-200 hover:-translate-y-0.5"
-            title="Local History"
-            onclick={onHistory}
-        >
-            <History size={20} />
-        </button>
-        <button
-            class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all duration-200 hover:-translate-y-0.5"
-            title="Accessibility View"
-            onclick={onAccessibility}
-        >
-            <Table size={20} />
-        </button>
-        <button
-            class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all duration-200 hover:-translate-y-0.5"
-            title="Keyboard Shortcuts (Ctrl+/)"
-            onclick={onShortcuts}
-        >
-            <Keyboard size={20} />
-        </button>
-
-        <!-- Divider -->
-        <div class="w-px h-6 bg-gray-200/50 dark:bg-gray-700/50 mx-1"></div>
-
-        <button
-            class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all duration-200 hover:-translate-y-0.5"
-            title="Theme Engine"
-            onclick={onTheme}
-        >
-            <Palette size={20} />
-        </button>
-        <button
-            class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all duration-200 hover:-translate-y-0.5"
-            title="Icon Browser"
-            onclick={onIcons}
-        >
-            <Image size={20} />
-        </button>
-        <button
-            class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all duration-200 hover:-translate-y-0.5"
-            title="Presentation Mode"
-            onclick={onPresent}
-        >
-            <Book size={20} />
-        </button>
-        <button
-            class="p-2 {diagramStore.focusMode
-                ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 ring-1 ring-indigo-500/30'
-                : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'} rounded-lg transition-all duration-200 hover:-translate-y-0.5"
-            title="Toggle Zen Mode"
-            onclick={() => (diagramStore.focusMode = !diagramStore.focusMode)}
-        >
-            {#if diagramStore.focusMode}
-                <Minimize size={20} />
-            {:else}
-                <Maximize size={20} />
-            {/if}
-        </button>
-
-        <button
-            class="p-2 transition-all duration-200 hover:-translate-y-0.5 rounded-lg {diagramStore.autoRender
-                ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20 ring-1 ring-amber-500/30 shadow-glow-sm'
-                : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
-            title={diagramStore.autoRender
-                ? "Auto-Render On"
-                : "Auto-Render Off"}
+            type="button"
+            class="p-1.5 rounded-md transition-colors {diagramStore.autoRender
+                ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40'
+                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}"
+            title={diagramStore.autoRender ? "Auto-Render: ON" : "Auto-Render: OFF"}
+            aria-label="切换实时自动渲染"
             onclick={() => (diagramStore.autoRender = !diagramStore.autoRender)}
         >
             {#if diagramStore.autoRender}
-                <Zap size={20} class="fill-current" />
+                <Zap size={14} class="fill-current" />
             {:else}
-                <ZapOff size={20} />
+                <ZapOff size={14} />
             {/if}
         </button>
 
+        <!-- Export -->
         <button
-            class="p-2 transition-all duration-200 hover:-translate-y-0.5 rounded-lg flex items-center gap-1.5 {diagramStore.qualityLevel ===
-            'high'
-                ? 'text-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30 shadow-glow-sm'
-                : diagramStore.qualityLevel === 'balanced'
-                  ? 'text-amber-500 bg-amber-500/10 ring-1 ring-amber-500/30'
-                  : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
-            title="Quality: {diagramStore.qualityLevel.toUpperCase()}"
-            onclick={() => {
-                const levels: ("performance" | "balanced" | "high")[] = [
-                    "performance",
-                    "balanced",
-                    "high",
-                ];
-                const next =
-                    levels[
-                        (levels.indexOf(diagramStore.qualityLevel) + 1) %
-                            levels.length
-                    ];
-                diagramStore.qualityLevel = next;
-                diagramStore.saveState();
-            }}
+            type="button"
+            class="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+            title="Export Diagram"
+            aria-label="导出图表"
+            onclick={onExport}
         >
-            <Cpu size={20} />
-            <span class="text-[10px] font-bold uppercase hidden xl:block"
-                >{diagramStore.qualityLevel === "high"
-                    ? "Ultra"
-                    : diagramStore.qualityLevel === "balanced"
-                      ? "Bal"
-                      : "Perf"}</span
-            >
+            <Download size={14} />
         </button>
 
+        <!-- Share -->
         <button
-            class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all duration-200 hover:-translate-y-0.5"
-            title="Share Diagram"
+            type="button"
+            class="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+            title="Share Diagram Link"
+            aria-label="分享图表链接"
             onclick={onShare}
         >
-            <Share2 size={20} />
+            <Share2 size={14} />
         </button>
 
-        <!-- Theme & More -->
-        <div
-            class="flex items-center gap-1 bg-gray-100/50 dark:bg-gray-800/50 p-1 rounded-lg ml-2"
+        <!-- Zen Mode -->
+        <button
+            type="button"
+            class="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+            title="Toggle Zen Focus Mode"
+            aria-label="切换沉浸专注模式"
+            onclick={() => (diagramStore.focusMode = !diagramStore.focusMode)}
         >
+            {#if diagramStore.focusMode}
+                <Minimize size={14} />
+            {:else}
+                <Maximize size={14} />
+            {/if}
+        </button>
+
+        <!-- More Tools Popover -->
+        <div class="relative">
             <button
-                class="p-1.5 transition-all duration-200 rounded-md {diagramStore.previewTheme ===
-                'dark'
-                    ? 'text-indigo-500 bg-white dark:bg-gray-700 shadow-sm'
-                    : 'text-gray-400 hover:text-gray-600'}"
-                title="Toggle Preview Theme"
-                onclick={() =>
-                    (diagramStore.previewTheme =
-                        diagramStore.previewTheme === "light"
-                            ? "dark"
-                            : "light")}
+                type="button"
+                class="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors {isMoreMenuOpen ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100' : ''}"
+                title="More Tools"
+                aria-label="更多工具"
+                onclick={() => (isMoreMenuOpen = !isMoreMenuOpen)}
             >
-                {#if diagramStore.previewTheme === "light"}
-                    <Image size={16} />
-                {:else}
-                    <ImageIcon size={16} />
-                {/if}
+                <MoreHorizontal size={14} />
             </button>
 
+            {#if isMoreMenuOpen}
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <div
+                    class="fixed inset-0 z-40"
+                    onclick={() => (isMoreMenuOpen = false)}
+                ></div>
+                <div
+                    class="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl py-1 z-50 text-xs"
+                    transition:slide={{ duration: 100 }}
+                >
+                    <button
+                        type="button"
+                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                        onclick={() => { handleConvertFormat(); isMoreMenuOpen = false; }}
+                    >
+                        <ArrowLeftRight size={13} />
+                        <span>Convert Syntax Format</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                        onclick={() => { onFindReplace(); isMoreMenuOpen = false; }}
+                    >
+                        <Search size={13} />
+                        <span>Find & Replace (Ctrl+F)</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                        onclick={() => { onHistory(); isMoreMenuOpen = false; }}
+                    >
+                        <History size={13} />
+                        <span>Version History (Ctrl+H)</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                        onclick={() => { onIcons(); isMoreMenuOpen = false; }}
+                    >
+                        <Grid size={13} />
+                        <span>Icon Browser</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                        onclick={() => { onPresent(); isMoreMenuOpen = false; }}
+                    >
+                        <Book size={13} />
+                        <span>Presentation Mode</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                        onclick={() => { onAccessibility(); isMoreMenuOpen = false; }}
+                    >
+                        <Table size={13} />
+                        <span>Accessibility View</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                        onclick={() => { onShortcuts(); isMoreMenuOpen = false; }}
+                    >
+                        <Keyboard size={13} />
+                        <span>Keyboard Shortcuts</span>
+                    </button>
+                </div>
+            {/if}
+        </div>
+
+        <!-- Theme toggles -->
+        <div class="flex items-center bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-md border border-slate-200/80 dark:border-slate-700/60 ml-0.5">
             <button
-                class="p-1.5 text-gray-400 hover:text-indigo-500 transition-all duration-200 rounded-md"
-                onclick={() =>
-                    document.documentElement.classList.toggle("dark")}
+                type="button"
+                class="p-1 rounded text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors"
+                title="Toggle UI Theme"
+                aria-label="切换浅色/深色主题"
+                onclick={() => document.documentElement.classList.toggle("dark")}
             >
-                <Sun size={16} class="hidden dark:block" />
-                <Moon size={16} class="block dark:hidden" />
+                <Sun size={12} class="hidden dark:block" />
+                <Moon size={12} class="block dark:hidden" />
             </button>
         </div>
     </div>
 </header>
+

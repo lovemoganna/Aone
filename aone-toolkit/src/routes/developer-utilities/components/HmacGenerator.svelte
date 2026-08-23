@@ -51,18 +51,18 @@
 
 <div class="h-full flex flex-col gap-6">
     <!-- Controls -->
-    <div class="flex flex-col md:flex-row gap-4">
+    <div class="flex flex-col md:flex-row gap-6 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-sm">
         <div class="flex-1 space-y-2">
             <label
                 for="hmac-input"
-                class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+                class="label-section"
                 >Message</label
             >
             <input
                 id="hmac-input"
                 type="text"
                 bind:value={input}
-                class="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-primary-500 transition-all font-mono text-sm"
+                class="input text-sm w-full"
                 placeholder="Message to sign"
             />
         </div>
@@ -70,14 +70,14 @@
         <div class="flex-1 space-y-2">
             <label
                 for="hmac-secret"
-                class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+                class="label-section"
                 >Secret Key</label
             >
             <input
                 id="hmac-secret"
                 type="text"
                 bind:value={secret}
-                class="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-primary-500 transition-all font-mono text-sm"
+                class="input text-sm w-full"
                 placeholder="Secret key"
             />
         </div>
@@ -85,29 +85,27 @@
         <div class="space-y-2 w-full md:w-48">
             <label
                 for="hmac-algo"
-                class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+                class="label-section"
                 >Algorithm</label
             >
-            <div class="relative">
-                <select
-                    id="hmac-algo"
-                    bind:value={algo}
-                    class="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-primary-500 appearance-none"
-                >
-                    <option value="SHA-256">SHA-256</option>
-                    <option value="SHA-512">SHA-512</option>
-                    <option value="SHA-1">SHA-1</option>
-                </select>
-            </div>
+            <select
+                id="hmac-algo"
+                bind:value={algo}
+                class="input py-1.5 px-3 text-sm w-full cursor-pointer bg-transparent"
+            >
+                <option value="SHA-256">SHA-256</option>
+                <option value="SHA-512">SHA-512</option>
+                <option value="SHA-1">SHA-1</option>
+            </select>
         </div>
     </div>
 
     <!-- Output -->
-    <div class="space-y-2 relative">
-        <div class="flex justify-between">
+    <div class="flex flex-col gap-3 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-sm">
+        <div class="flex justify-between items-center">
             <label
                 for="hmac-output"
-                class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+                class="label-section"
                 >HMAC Signature (Hex)</label
             >
             {#if error}
@@ -118,21 +116,22 @@
             {/if}
         </div>
 
-        <div class="relative">
+        <div class="relative min-h-[350px]">
             <textarea
                 id="hmac-output"
                 value={output}
                 readonly
-                class="w-full h-32 p-4 font-mono text-sm bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none resize-none text-slate-700 dark:text-slate-300"
+                class="textarea-editor w-full"
                 placeholder="Signature will appear here..."
             ></textarea>
 
             {#if output}
-                <div class="absolute top-2 right-2">
+                <div class="absolute top-3 right-3">
                     <Button
                         variant="ghost"
                         size="sm"
                         onclick={() => navigator.clipboard.writeText(output)}
+                        class="btn btn-secondary text-sm shadow-sm"
                     >
                         <Copy size={14} class="mr-1" /> Copy
                     </Button>

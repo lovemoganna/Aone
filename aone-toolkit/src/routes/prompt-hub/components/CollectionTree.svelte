@@ -10,6 +10,13 @@
         X,
     } from "lucide-svelte";
     import { slide } from "svelte/transition";
+    import type { Collection } from "../lib/types";
+
+    let {
+        onDeleteCollection,
+    } = $props<{
+        onDeleteCollection: (collection: Collection) => void;
+    }>();
 
     let isCreating = $state(false);
     let newName = $state("");
@@ -38,18 +45,9 @@
         }
     }
 
-    function handleDelete(e: MouseEvent, id: string) {
+    function handleDelete(e: MouseEvent, collection: Collection) {
         e.stopPropagation();
-        if (
-            confirm(
-                "Delete collection? Prompts inside will remain but be removed from this collection.",
-            )
-        ) {
-            promptStore.deleteCollection(id);
-            if (promptStore.activeCollectionId === id) {
-                promptStore.activeCollectionId = null;
-            }
-        }
+        onDeleteCollection(collection);
     }
 
     function selectCollection(id: string) {
@@ -57,25 +55,25 @@
             promptStore.activeCollectionId = null;
         } else {
             promptStore.activeCollectionId = id;
-            promptStore.activeTagId = null;
-            promptStore.activeFilter = "all";
         }
     }
 </script>
 
-<div class="mt-6">
-    <div class="flex items-center justify-between px-2 mb-2">
+<div>
+    <div class="flex items-center justify-between px-1 mb-1.5">
         <h3
-            class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+            class="text-[11px] font-bold text-slate-400 uppercase tracking-wider"
         >
-            Collections
+            集合分类
         </h3>
         <button
-            class="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            type="button"
+            class="p-1 rounded text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             onclick={() => (isCreating = true)}
-            title="New Collection"
+            title="新建集合"
+            aria-label="新建集合"
         >
-            <Plus size={14} />
+            <Plus size={13} />
         </button>
     </div>
 
@@ -85,30 +83,36 @@
 
             {#if editingId === collection.id}
                 <div
-                    class="flex items-center gap-1 px-2 py-1 bg-white dark:bg-gray-800 border border-indigo-500 rounded-lg"
+                    class="flex items-center gap-1 px-2 py-1 bg-white dark:bg-slate-800 border border-indigo-500 rounded-md"
                 >
                     <input
                         type="text"
                         bind:value={editingName}
-                        class="w-full text-sm bg-transparent outline-none text-gray-900 dark:text-gray-100 min-w-0"
+                        class="w-full text-xs bg-transparent outline-none text-slate-900 dark:text-slate-100 min-w-0"
                         onkeydown={(e) => e.key === "Enter" && handleUpdate()}
                     />
                     <button
-                        class="text-green-500"
+                        type="button"
+                        class="text-emerald-500 hover:text-emerald-600 p-0.5"
                         onclick={handleUpdate}
-                        aria-label="Confirm update"><Check size={14} /></button
+                        aria-label="确认修改"
                     >
+                        <Check size={13} />
+                    </button>
                     <button
-                        class="text-gray-400"
+                        type="button"
+                        class="text-slate-400 hover:text-slate-600 p-0.5"
                         onclick={() => (editingId = null)}
-                        aria-label="Cancel edit"><X size={14} /></button
+                        aria-label="取消修改"
                     >
+                        <X size={13} />
+                    </button>
                 </div>
             {:else}
                 <div
-                    class="group flex items-center justify-between px-2 py-2 rounded-lg cursor-pointer transition-colors text-sm {isActive
-                        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+                    class="group flex items-center justify-between px-2.5 py-1.5 rounded-md cursor-pointer transition-colors text-xs {isActive
+                        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 font-semibold'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}"
                     onclick={() => selectCollection(collection.id)}
                     onkeydown={(e) =>
                         e.key === "Enter" && selectCollection(collection.id)}
@@ -117,28 +121,34 @@
                 >
                     <div class="flex items-center gap-2 min-w-0">
                         {#if isActive}
-                            <FolderOpen size={16} class="flex-shrink-0" />
+                            <FolderOpen size={14} class="shrink-0 text-indigo-600 dark:text-indigo-400" />
                         {:else}
-                            <Folder size={16} class="flex-shrink-0" />
+                            <Folder size={14} class="shrink-0 text-slate-400" />
                         {/if}
                         <span class="truncate">{collection.name}</span>
                     </div>
 
-                    <div class="hidden group-hover:flex items-center gap-1">
+                    <div class="hidden group-hover:flex items-center gap-0.5">
                         <button
-                            class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                            type="button"
+                            class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors rounded"
                             onclick={(e) => {
                                 e.stopPropagation();
                                 startEdit(collection.id, collection.name);
                             }}
+                            title="重命名集合"
+                            aria-label="重命名集合"
                         >
-                            <Edit2 size={12} />
+                            <Edit2 size={11} />
                         </button>
                         <button
-                            class="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                            onclick={(e) => handleDelete(e, collection.id)}
+                            type="button"
+                            class="p-1 text-slate-400 hover:text-rose-500 transition-colors rounded"
+                            onclick={(e) => handleDelete(e, collection)}
+                            title="删除集合"
+                            aria-label="删除集合"
                         >
-                            <Trash2 size={12} />
+                            <Trash2 size={11} />
                         </button>
                     </div>
                 </div>
@@ -146,37 +156,43 @@
         {/each}
 
         {#if isCreating}
-            <div transition:slide class="px-2 py-1">
+            <div transition:slide class="px-1 py-1">
                 <div
-                    class="flex items-center gap-1 px-2 py-1 bg-white dark:bg-gray-800 border border-indigo-500 rounded-lg"
+                    class="flex items-center gap-1 px-2 py-1 bg-white dark:bg-slate-800 border border-indigo-500 rounded-md"
                 >
-                    <Folder size={16} class="text-gray-400 flex-shrink-0" />
+                    <Folder size={14} class="text-slate-400 shrink-0" />
                     <input
                         type="text"
                         bind:value={newName}
-                        class="w-full text-sm bg-transparent outline-none text-gray-900 dark:text-gray-100 min-w-0"
-                        placeholder="Name..."
+                        class="w-full text-xs bg-transparent outline-none text-slate-900 dark:text-slate-100 min-w-0"
+                        placeholder="输入集合名称..."
                         onkeydown={(e) => e.key === "Enter" && handleCreate()}
                     />
                     <button
-                        class="text-green-500"
+                        type="button"
+                        class="text-emerald-500 hover:text-emerald-600 p-0.5"
                         onclick={handleCreate}
-                        aria-label="Confirm create"><Check size={14} /></button
+                        aria-label="确认创建"
                     >
+                        <Check size={13} />
+                    </button>
                     <button
-                        class="text-gray-400"
+                        type="button"
+                        class="text-slate-400 hover:text-slate-600 p-0.5"
                         onclick={() => (isCreating = false)}
-                        aria-label="Cancel create"><X size={14} /></button
+                        aria-label="取消创建"
                     >
+                        <X size={13} />
+                    </button>
                 </div>
             </div>
         {/if}
 
         {#if promptStore.collections.length === 0 && !isCreating}
             <div
-                class="px-2 py-4 text-center text-xs text-gray-400 border border-dashed border-gray-200 dark:border-gray-800 rounded-lg"
+                class="px-2 py-3 text-center text-[11px] text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-md"
             >
-                No collections yet
+                暂无集合
             </div>
         {/if}
     </div>

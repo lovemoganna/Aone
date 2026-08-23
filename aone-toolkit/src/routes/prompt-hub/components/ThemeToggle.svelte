@@ -33,7 +33,7 @@
 <button
     onclick={toggleTheme}
     class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-    title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+    title={isDark ? "切换为浅色模式" : "切换为深色模式"}
 >
     {#if isDark}
         <Sun size={18} class="text-yellow-500" />
