@@ -205,16 +205,19 @@
 
         <!-- 分组工具矩阵导航 -->
         {#each groupedTools as group}
-            <div class="pt-2">
+            <div class="pt-2.5">
                 <!-- 分组标题与 Badge -->
                 <div
                     class="px-2 pb-1.5 flex items-center justify-between transition-opacity duration-150
                     {$sidebarCollapsed ? 'hidden' : 'hidden lg:flex'}"
                 >
-                    <span class="text-[11px] font-semibold tracking-wider text-slate-400 dark:text-slate-400 uppercase">
-                        {group.title}
-                    </span>
-                    <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-medium {group.badge.tagColor}">
+                    <div class="flex items-center gap-1.5 min-w-0">
+                        <span class="w-1.5 h-1.5 rounded-full shrink-0 {group.badge.dotColor}"></span>
+                        <span class="text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-400 uppercase truncate">
+                            {group.title}
+                        </span>
+                    </div>
+                    <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-mono font-medium {group.badge.tagColor}">
                         {group.tools.length}
                     </span>
                 </div>
@@ -224,12 +227,18 @@
                     <div class="h-0.5 w-4 rounded-full bg-slate-200 dark:bg-slate-800"></div>
                 </div>
 
-                <!-- 组内工具条目 -->
-                <div class="space-y-0.5">
+                <!-- 组内工具条目：统一增加层级缩进与微弱导向线 -->
+                <div class="space-y-0.5 {$sidebarCollapsed ? '' : 'lg:pl-2 lg:ml-1 lg:border-l lg:border-slate-200/50 dark:lg:border-slate-800/50'}">
                     {#each group.tools as tool}
                         {@const Icon = iconMap[tool.icon] ?? Wrench}
                         {@const targetPath = `${base}${tool.href}`}
-                        {@const isActive = $page.url.pathname === targetPath || $page.url.pathname.startsWith(targetPath + "/")}
+                        {@const isHashTool = tool.href.includes("#")}
+                        {@const currentFullPath = `${$page.url.pathname}${$page.url.hash || ""}`}
+                        {@const isActive = isHashTool
+                            ? currentFullPath === targetPath
+                            : tool.href === "/developer-utilities"
+                                ? $page.url.pathname === targetPath && (!$page.url.hash || $page.url.hash === "#jwt")
+                                : $page.url.pathname === targetPath || $page.url.pathname.startsWith(targetPath + "/")}
                         <a
                             href={targetPath}
                             class="flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs transition-all duration-150 group relative

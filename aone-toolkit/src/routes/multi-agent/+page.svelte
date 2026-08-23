@@ -291,7 +291,7 @@
     <title>多 Agent 协作工作台 - Aone Toolkit</title>
 </svelte:head>
 
-<div class="h-[calc(100vh-3.5rem)] flex flex-col bg-slate-100 dark:bg-slate-950 p-2 sm:p-3">
+<div class="h-full flex flex-col bg-slate-100 dark:bg-slate-950 p-2 sm:p-3">
     <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
         <!-- Top Clean Engineering Navigation Header -->
         <header class="border-b border-slate-200 dark:border-slate-800 px-4 py-2.5 bg-slate-50/70 dark:bg-slate-900/90 shrink-0">

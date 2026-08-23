@@ -17,6 +17,7 @@
     import { dataBridge } from "$lib/stores/dataBridge";
     import HandoffDropdown from "$lib/components/ui/HandoffDropdown.svelte";
     import { toastStore } from "$lib/stores/toastStore.svelte";
+    import { CodeBlock } from "$lib/components/ui";
 
     let { textA = "", textB = "" } = $props<{
         textA?: string;
@@ -488,7 +489,12 @@
                                 <Copy size={11} /> 复制 Patch
                             </button>
                         </div>
-                        <pre class="p-3 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-x-auto text-slate-800 dark:text-slate-200 leading-relaxed">{gitPatchText || "无差异"}</pre>
+                        <CodeBlock
+                            code={gitPatchText || "无差异"}
+                            language="diff"
+                            showHeader={false}
+                            wrapLines={true}
+                        />
                     </div>
                 {/if}
             </div>

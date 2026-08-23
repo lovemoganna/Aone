@@ -4,7 +4,7 @@
     import { EditorView, basicSetup } from "codemirror";
     import { EditorState, Compartment, StateField, StateEffect, RangeSet } from "@codemirror/state";
     import { oneDark } from "@codemirror/theme-one-dark";
-    import { keymap, Decoration } from "@codemirror/view";
+    import { keymap, Decoration, scrollPastEnd } from "@codemirror/view";
     import { defaultKeymap } from "@codemirror/commands";
     import { search, searchKeymap } from "@codemirror/search";
 
@@ -12,8 +12,10 @@
         value: string;
         language?: string; // 'json' | 'yaml' | 'html' | 'css' | 'sql' | 'javascript' | 'typescript' | 'cpp' | 'java' | 'text'
         readOnly?: boolean;
+        lineWrapping?: boolean;
         placeholder?: string;
         errorLine?: number | null;
+        fontSize?: string;
         onChange?: (newValue: string) => void;
     }
 
@@ -21,8 +23,10 @@
         value = $bindable(),
         language = "text",
         readOnly = false,
+        lineWrapping = true,
         placeholder = "",
         errorLine = null,
+        fontSize = "12px",
         onChange
     }: Props = $props();
 
@@ -32,6 +36,7 @@
     const themeCompartment = new Compartment();
     const languageCompartment = new Compartment();
     const readOnlyCompartment = new Compartment();
+    const lineWrappingCompartment = new Compartment();
     const setErrorLine = StateEffect.define<number | null>();
 
     const errorLineField = StateField.define({
@@ -70,7 +75,14 @@
                         to: view.state.doc.length,
                         insert: currentValue || "",
                     },
+                    effects: [
+                        EditorView.scrollIntoView(0)
+                    ]
                 });
+                if (view.scrollDOM) {
+                    view.scrollDOM.scrollTop = 0;
+                }
+                view.requestMeasure();
             }
         }
     });
@@ -92,6 +104,17 @@
             view.dispatch({
                 effects: readOnlyCompartment.reconfigure(EditorState.readOnly.of(isReadOnly)),
             });
+        }
+    });
+
+    // Effect to update line wrapping dynamically
+    $effect(() => {
+        const isWrapping = lineWrapping;
+        if (view) {
+            view.dispatch({
+                effects: lineWrappingCompartment.reconfigure(isWrapping ? EditorView.lineWrapping : []),
+            });
+            view.requestMeasure();
         }
     });
 
@@ -201,10 +224,13 @@
                     view.dispatch({
                         effects: languageCompartment.reconfigure(ext),
                     });
+                    view.requestMeasure();
                 }
             });
         }
     });
+
+    let resizeObserver: ResizeObserver | null = null;
 
     onMount(async () => {
         if (!editorElement) return;
@@ -217,11 +243,13 @@
             doc: value || "",
             extensions: [
                 basicSetup,
+                scrollPastEnd(),
                 keymap.of([...defaultKeymap, ...searchKeymap]),
                 search(),
                 languageCompartment.of(initialLangExt),
                 themeCompartment.of(currentTheme === "dark" ? oneDark : []),
                 readOnlyCompartment.of(EditorState.readOnly.of(readOnly)),
+                lineWrappingCompartment.of(lineWrapping ? EditorView.lineWrapping : []),
                 errorLineField,
                 EditorView.updateListener.of((update) => {
                     if (update.docChanged) {
@@ -237,11 +265,17 @@
                 EditorView.theme({
                     "&": { 
                         height: "100%",
-                        fontSize: "14px",
-                        fontFamily: "'JetBrains Mono', 'Fira Code', ui-monospace, monospace"
+                        fontSize: fontSize || "12px",
+                        fontFamily: "'Victor Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace"
                     },
-                    ".cm-scroller": { overflow: "auto" },
-                    ".cm-content": { padding: "10px 0" },
+                    ".cm-scroller": {
+                        overflow: "auto",
+                        fontFamily: "inherit",
+                        userSelect: "text",
+                    },
+                    ".cm-content": {
+                        paddingTop: "10px",
+                    },
                     "&.cm-focused": { outline: "none" },
                 }),
             ],
@@ -251,25 +285,46 @@
             state,
             parent: editorElement,
         });
+
+        // Ensure editor view measures exact dimensions on mount and resize
+        resizeObserver = new ResizeObserver(() => {
+            if (view) {
+                view.requestMeasure();
+            }
+        });
+        resizeObserver.observe(editorElement);
     });
 
     onDestroy(() => {
+        resizeObserver?.disconnect();
         view?.destroy();
     });
 </script>
 
 <div
     bind:this={editorElement}
-    class="h-full w-full bg-white dark:bg-[#0A0A0A] overflow-hidden"
+    class="w-full h-full relative bg-white dark:bg-[#0A0A0A] overflow-hidden"
     class:cm-dark={$theme === "dark"}
 ></div>
 
 <style>
-    /* Custom styling for matching design tokens */
     :global(.cm-editor) {
-        height: 100%;
-        max-width: 100%;
+        position: absolute !important;
+        inset: 0 !important;
+        height: 100% !important;
+        width: 100% !important;
+        outline: none !important;
         background-color: transparent !important;
+    }
+    :global(.cm-scroller) {
+        height: 100% !important;
+        overflow: scroll !important;
+        font-family: inherit !important;
+        user-select: text !important;
+    }
+    :global(.cm-content) {
+        padding-top: 10px !important;
+        min-height: 100%;
     }
     :global(.cm-gutters) {
         background-color: rgba(248, 250, 252, 0.5) !important;

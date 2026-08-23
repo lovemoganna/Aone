@@ -65,8 +65,15 @@
                     }
                 }),
                 EditorView.theme({
-                    "&": { height: "100%" },
-                    ".cm-scroller": { overflow: "auto" },
+                    "&": { height: "100%", fontSize: "12px" },
+                    ".cm-scroller": {
+                        overflow: "auto",
+                        fontFamily: "var(--font-mono, 'JetBrains Mono', 'Fira Code', Consolas, monospace)",
+                        lineHeight: "1.55",
+                    },
+                    ".cm-gutters": {
+                        fontSize: "11px",
+                    },
                 }),
             ],
         });
@@ -84,7 +91,7 @@
 
 <div
     bind:this={editorElement}
-    class="h-full w-full text-base"
+    class="h-full w-full font-mono text-xs"
     class:cm-dark={isDark}
 ></div>
 
@@ -93,5 +100,6 @@
     :global(.cm-editor) {
         height: 100%;
         outline: none;
+        font-size: 12px;
     }
 </style>

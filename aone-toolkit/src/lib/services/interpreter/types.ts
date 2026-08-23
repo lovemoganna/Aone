@@ -43,6 +43,12 @@ export interface ExecutionResult {
     timestamp: number;
 }
 
+export interface TableSchemaColumn {
+    name: string;
+    type?: string;
+    nullable?: boolean;
+}
+
 export interface MountedFile {
     id: string;
     name: string;
@@ -50,8 +56,16 @@ export interface MountedFile {
     type: string; // 'csv' | 'json' | 'parquet' | 'tsv' | 'text'
     tableName: string;
     rowCount?: number;
+    columns?: TableSchemaColumn[];
     fileObject: File;
     uploadedAt: number;
+}
+
+export interface QueryTab {
+    id: string;
+    title: string;
+    language: SupportedLanguage;
+    code: string;
 }
 
 export interface SnippetTemplate {

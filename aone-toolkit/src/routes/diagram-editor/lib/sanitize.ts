@@ -17,9 +17,15 @@ export function sanitizeSvg(svgContent: string): string {
     // 2. Remove all inline event handlers (e.g., onclick, onload, onerror)
     clean = clean.replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
 
-    // 3. Remove javascript: and data: text/html in href / xlink:href
-    clean = clean.replace(/\s(xlink:)?href\s*=\s*["']?\s*javascript:[^"'>\s]+/gi, '');
-    clean = clean.replace(/\s(xlink:)?href\s*=\s*["']?\s*data:text\/html[^"'>\s]+/gi, '');
+    // 4. Force root SVG background to transparent
+    clean = clean.replace(/(<svg\b[^>]*)\sstyle="([^"]*)"/gi, (match, p1, p2) => {
+        const newStyle = p2.replace(/background(-color)?:\s*[^;]+;?/gi, '') + ';background:transparent;';
+        return `${p1} style="${newStyle}"`;
+    });
+
+    // 5. Replace solid white/light background rects and polygons (Graphviz / PlantUML base canvas background)
+    clean = clean.replace(/(<g[^>]*id="graph0"[^>]*>\s*<polygon[^>]*fill=)(["'])(?:white|#ffffff|#fff|#FFFFFF)\2/gi, '$1$2transparent$2 stroke="transparent"');
+    clean = clean.replace(/(<rect[^>]*id="background"[^>]*fill=)(["'])[^"']*\2/gi, '$1$2transparent$2');
 
     return clean;
 }

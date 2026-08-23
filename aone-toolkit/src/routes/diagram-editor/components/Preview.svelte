@@ -54,30 +54,6 @@
 
     let inlineInputRef = $state<HTMLInputElement>();
 
-    function copyToClipboard() {
-        if (!safeSvg) return;
-        navigator.clipboard.writeText(safeSvg).then(() => {
-            copied = true;
-            setTimeout(() => (copied = false), 2000);
-        });
-    }
-
-    async function copyImageToClipboard() {
-        if (!safeSvg) return;
-        try {
-            const blob = await exportToBlob(safeSvg, "png", 2);
-            if (navigator.clipboard && window.ClipboardItem) {
-                await navigator.clipboard.write([
-                    new ClipboardItem({ "image/png": blob }),
-                ]);
-                copiedImage = true;
-                setTimeout(() => (copiedImage = false), 2000);
-            }
-        } catch (e) {
-            console.error("Failed to copy image to clipboard", e);
-        }
-    }
-
     function handleDrop(e: DragEvent) {
         e.preventDefault();
         const file = e.dataTransfer?.files[0];
@@ -121,33 +97,22 @@
     function handleMouseDown(e: MouseEvent) {
         startDrag = { x: e.clientX, y: e.clientY };
 
-        // Space + Left Click, Middle click or Alt+Click = Pan
-        if (e.button === 1 || (e.button === 0 && (e.altKey || isSpacePressed))) {
-            e.preventDefault();
-            isDragging = true;
-            dragMode = "pan";
-            startPan = { ...diagramStore.pan };
-            if (container) container.style.cursor = "grabbing";
+        // Check if clicked inside a button or control
+        const target = e.target as HTMLElement;
+        if (target.closest("button, input, [role='button'], a")) {
             return;
         }
 
-        // Left click
-        if (e.button === 0) {
-            const target = e.target as HTMLElement;
-            if (target.closest("button, input, [role='button'], a")) {
-                return;
-            }
+        const nodeElement = target.closest(".node, .edge, .cluster") as SVGGElement;
 
-            const nodeElement = target.closest(".node") as SVGGElement;
+        if (nodeElement && e.button === 0 && !e.altKey && !isSpacePressed) {
+            const id =
+                nodeElement.querySelector("title")?.textContent?.trim() ||
+                nodeElement.id ||
+                "";
 
-            if (nodeElement) {
-                const id =
-                    nodeElement.querySelector("title")?.textContent?.trim() ||
-                    nodeElement.id ||
-                    "";
-
+            if (id) {
                 if (e.shiftKey) {
-                    // Shift + Click: toggle multi-selection
                     if (diagramStore.multiSelection.includes(id)) {
                         diagramStore.multiSelection =
                             diagramStore.multiSelection.filter((x) => x !== id);
@@ -157,29 +122,17 @@
                             id,
                         ];
                     }
+                } else {
                     diagramStore.selectedElementId = id;
-                    diagramStore.isInspectorOpen = true;
-                    return;
-                }
-
-                diagramStore.selectedElementId = id;
-                if (!diagramStore.multiSelection.includes(id)) {
                     diagramStore.multiSelection = [id];
                 }
                 diagramStore.isInspectorOpen = true;
-
-                isDragging = true;
-                dragMode = "element";
-                const override = diagramStore.overrides[id] || {};
-                startElementPos = {
-                    x: override.x || 0,
-                    y: override.y || 0,
-                };
-                e.preventDefault();
-                return;
             }
+            return;
+        }
 
-            // Clicked on canvas background / non-node diagram area -> Pan canvas freely
+        // Left click on background, Middle click, Space+drag, or Alt+drag -> Pan Canvas
+        if (e.button === 0 || e.button === 1) {
             handleSelection(e);
             isDragging = true;
             dragMode = "pan";
@@ -231,25 +184,7 @@
         }
     }
 
-    function handleMouseUp(e: MouseEvent) {
-        if (!isDragging) return;
-
-        if (dragMode === "element" && diagramStore.selectedElementId) {
-            const dx = e.clientX - startDrag.x;
-            const dy = e.clientY - startDrag.y;
-            const s = diagramStore.scale;
-            const finalX = startElementPos.x + dx / s;
-            const finalY = startElementPos.y + dy / s;
-
-            if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
-                diagramStore.updateNodePosition(
-                    diagramStore.selectedElementId,
-                    finalX,
-                    finalY
-                );
-            }
-        }
-
+    function handleMouseUp() {
         isDragging = false;
         if (container) container.style.cursor = isSpacePressed ? "grab" : "";
     }
@@ -276,7 +211,7 @@
         const target = e.target as HTMLElement;
         const nodeElement = target.closest(".node, .edge, .cluster") as SVGGElement;
 
-        if (nodeElement) {
+        if (nodeElement && container) {
             const id =
                 nodeElement.querySelector("title")?.textContent?.trim() ||
                 nodeElement.id ||
@@ -284,11 +219,24 @@
 
             if (id) {
                 diagramStore.selectedElementId = id;
-                diagramStore.isInspectorOpen = true;
                 const def = diagramStore.definitions.get(id);
                 if (def && onNavigate) {
                     onNavigate(def.line);
                 }
+
+                // Compute exact position on container for inline editing
+                const nodeRect = nodeElement.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                const textEl = nodeElement.querySelector("text");
+                const initialText = textEl?.textContent?.trim() || id;
+
+                editingText = {
+                    elementId: id,
+                    initialText,
+                    currentText: initialText,
+                    x: Math.max(12, nodeRect.left - containerRect.left + (nodeRect.width / 2) - 70),
+                    y: Math.max(12, nodeRect.top - containerRect.top + (nodeRect.height / 2) - 14),
+                };
             }
         }
     }
@@ -303,7 +251,7 @@
         editingText = null;
     }
 
-    function fitToScreen() {
+    export function fitToScreen() {
         if (!svgContainer || !container) return;
         const svgEl = svgContainer.querySelector("svg");
         if (svgEl) {
@@ -317,6 +265,8 @@
             diagramStore.resetView();
         }
     }
+
+
 
     // Run Analysis for layers
     $effect(() => {
@@ -513,73 +463,61 @@
         </div>
     {/if}
 
-    <!-- Canvas Controls Toolbar (Bottom Right) -->
-    <div
-        class="absolute bottom-3 right-3 flex items-center gap-0.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-1.5 py-1 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 z-20 text-slate-600 dark:text-slate-300"
-    >
-        <span class="text-[11px] font-mono px-1.5 text-slate-500 dark:text-slate-400">
-            {Math.round(diagramStore.scale * 100)}%
-        </span>
-        <button
-            class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 transition-colors"
-            title="Zoom Out"
-            aria-label="缩小画布"
-            onclick={() =>
-                (diagramStore.scale = Math.max(0.1, diagramStore.scale - 0.25))}
+    <!-- Floating Context Action Pill for Selected Node (Bottom Center) -->
+    {#if diagramStore.selectedElementId}
+        <div
+            class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg shadow-lg border border-slate-200 dark:border-slate-800 z-20 text-xs text-slate-700 dark:text-slate-200"
         >
-            <ZoomOut size={14} />
-        </button>
-        <button
-            class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 transition-colors"
-            title="Zoom In"
-            aria-label="放大画布"
-            onclick={() =>
-                (diagramStore.scale = Math.min(10, diagramStore.scale + 0.25))}
-        >
-            <ZoomIn size={14} />
-        </button>
+            <div class="flex items-center gap-1.5 pr-2 border-r border-slate-200 dark:border-slate-800 font-mono text-[11px] font-semibold text-slate-800 dark:text-slate-100 max-w-[140px] truncate">
+                <span>{diagramStore.selectedElementId}</span>
+            </div>
 
-        <button
-            class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 transition-colors"
-            title="Fit to Screen"
-            aria-label="适应画布"
-            onclick={fitToScreen}
-        >
-            <Crosshair size={14} />
-        </button>
+            <!-- Quick Colors -->
+            <div class="flex items-center gap-1">
+                {#each ["#eff6ff", "#f0fdf4", "#fefce8", "#fff1f2", "#faf5ff"] as color}
+                    <button
+                        type="button"
+                        class="w-4 h-4 rounded border border-black/10 dark:border-white/10 hover:scale-125 transition-transform"
+                        style="background-color: {color}"
+                        onclick={() => {
+                            if (diagramStore.selectedElementId) {
+                                diagramStore.updateElementProperty("color", color);
+                                diagramStore.render();
+                            }
+                        }}
+                        title="Quick Color {color}"
+                        aria-label="Color {color}"
+                    ></button>
+                {/each}
+            </div>
 
-        <div class="w-px h-3.5 bg-slate-200 dark:bg-slate-800 mx-0.5"></div>
+            <div class="w-px h-3.5 bg-slate-200 dark:bg-slate-800"></div>
 
-        <button
-            class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors {copiedImage
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100'}"
-            title="Copy PNG Image"
-            aria-label="复制PNG图片"
-            onclick={copyImageToClipboard}
-        >
-            {#if copiedImage}
-                <Check size={14} />
-            {:else}
-                <ImageIcon size={14} />
-            {/if}
-        </button>
+            <!-- Full Inspector Button -->
+            <button
+                type="button"
+                class="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-medium transition-colors"
+                onclick={() => (diagramStore.isInspectorOpen = true)}
+            >
+                Inspector
+            </button>
 
-        <button
-            class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors {copied
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100'}"
-            title="Copy SVG Vector"
-            aria-label="复制SVG矢量代码"
-            onclick={copyToClipboard}
-        >
-            {#if copied}
-                <Check size={14} />
-            {:else}
-                <Copy size={14} />
-            {/if}
-        </button>
-    </div>
+            <!-- Deselect / Clear -->
+            <button
+                type="button"
+                class="p-0.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                onclick={() => {
+                    diagramStore.selectedElementId = null;
+                    diagramStore.multiSelection = [];
+                }}
+                title="Deselect"
+                aria-label="取消选中"
+            >
+                <AlertCircle size={13} class="hidden" />
+                <span class="text-xs px-1">✕</span>
+            </button>
+        </div>
+    {/if}
 
 
 
@@ -689,5 +627,20 @@
 
     :global(svg text) {
         font-family: var(--preview-font, sans-serif) !important;
+    }
+
+    :global(svg) {
+        background: transparent !important;
+        background-color: transparent !important;
+    }
+
+    :global(svg > rect#background),
+    :global(svg > rect:first-of-type[fill="#FFFFFF"]),
+    :global(svg > rect:first-of-type[fill="white"]),
+    :global(svg > rect:first-of-type[fill="#ffffff"]),
+    :global(svg g.graph > polygon:first-child),
+    :global(svg g#graph0 > polygon:first-child) {
+        fill: transparent !important;
+        stroke: transparent !important;
     }
 </style>

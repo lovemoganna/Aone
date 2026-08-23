@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { Panel, Button, EmptyState, InlineAlert, CodeEditor } from "$lib/components/ui";
+    import { Panel, Button, EmptyState, InlineAlert, CodeEditor, CodeBlock } from "$lib/components/ui";
     import ToolWorkspace from "$lib/components/layout/ToolWorkspace.svelte";
     import { 
         Terminal, 
@@ -819,7 +819,12 @@
                                         </div>
 
                                         {#if parsed.bodyType === 'json'}
-                                            <pre class="p-3 bg-slate-50 dark:bg-slate-900/40 border border-slate-150 dark:border-slate-850 rounded-lg font-mono text-xs text-slate-800 dark:text-emerald-400 overflow-x-auto whitespace-pre">{formattedBody}</pre>
+                                            <CodeBlock
+                                                code={formattedBody}
+                                                language="json"
+                                                showHeader={false}
+                                                class="!my-0"
+                                            />
                                         {:else if parsed.bodyType === 'url-encoded'}
                                             <!-- Structured Url-Encoded Table -->
                                             <div class="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-lg">
@@ -844,7 +849,13 @@
                                                 </table>
                                             </div>
                                         {:else}
-                                            <pre class="p-3 bg-slate-50 dark:bg-slate-900/40 border border-slate-150 dark:border-slate-850 rounded-lg font-mono text-xs text-slate-700 dark:text-slate-300 overflow-x-auto whitespace-pre-wrap">{parsed.body}</pre>
+                                            <CodeBlock
+                                                code={parsed.body}
+                                                language="plaintext"
+                                                showHeader={false}
+                                                wrapLines={true}
+                                                class="!my-0"
+                                            />
                                         {/if}
                                     </div>
                                 {/if}

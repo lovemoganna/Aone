@@ -7,4 +7,5 @@ export { default as PanelHeader } from './PanelHeader.svelte';
 export { default as RadarChart } from './RadarChart.svelte';
 export { default as SectionHeader } from './SectionHeader.svelte';
 export { default as CodeEditor } from './CodeEditor.svelte';
+export { default as CodeBlock } from './CodeBlock.svelte';
 export { default as AgentAvatar } from './AgentAvatar.svelte';

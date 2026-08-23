@@ -31,17 +31,21 @@ export function validatePlantUML(code: string): ValidationResult {
         const trimmed = line.trim();
         const lineNum = i + 1;
 
-        // Check for @startuml / @enduml
-        if (trimmed.startsWith('@startuml')) {
+        if (trimmed.startsWith("'") || trimmed.startsWith("/'") || trimmed.startsWith("//")) {
+            return;
+        }
+
+        // Check for @startuml, @startmindmap, @startwbs, @startgantt, @startjson, etc.
+        if (/^@start[a-z0-9_]*/i.test(trimmed)) {
             if (hasStart) {
-                errors.push({ line: lineNum, message: 'Duplicate @startuml declaration', type: 'structure' });
+                errors.push({ line: lineNum, message: 'Duplicate start declaration', type: 'structure' });
             }
             hasStart = true;
             startLine = lineNum;
         }
-        if (trimmed.startsWith('@enduml')) {
+        if (/^@end[a-z0-9_]*/i.test(trimmed)) {
             if (!hasStart) {
-                errors.push({ line: lineNum, message: '@enduml without matching @startuml', type: 'structure' });
+                errors.push({ line: lineNum, message: 'End tag without matching start tag', type: 'structure' });
             }
             hasEnd = true;
         }
@@ -50,20 +54,14 @@ export function validatePlantUML(code: string): ValidationResult {
         if (trimmed.includes('->') && !trimmed.includes(':') && !trimmed.startsWith('@') && !trimmed.startsWith("'")) {
             warnings.push({ line: lineNum, message: 'Arrow without message text (consider adding description)' });
         }
-
-        // Check unbalanced brackets
-        const openBrackets = (trimmed.match(/{/g) || []).length;
-        const closeBrackets = (trimmed.match(/}/g) || []).length;
-        if (openBrackets !== closeBrackets && !trimmed.endsWith('{') && !trimmed.startsWith('}')) {
-            // Might be multi-line, so just warn
-        }
     });
 
     if (!hasStart && code.trim().length > 0) {
-        errors.push({ line: 1, message: 'Missing @startuml declaration', type: 'structure' });
+        errors.push({ line: 1, message: 'Missing @start declaration', type: 'structure' });
     }
+
     if (hasStart && !hasEnd) {
-        errors.push({ line: lines.length, message: 'Missing @enduml declaration', type: 'structure' });
+        errors.push({ line: lines.length, message: 'Missing @end declaration', type: 'structure' });
     }
 
     return {
@@ -86,6 +84,11 @@ export function validateGraphviz(code: string): ValidationResult {
         const trimmed = line.trim();
         const lineNum = i + 1;
 
+        // Skip comment lines
+        if (trimmed.startsWith('//') || trimmed.startsWith('#') || trimmed.startsWith('/*')) {
+            return;
+        }
+
         // Check for graph/digraph declaration
         if (trimmed.match(/^(strict\s+)?(di)?graph\s+/i)) {
             hasGraph = true;
@@ -95,13 +98,13 @@ export function validateGraphviz(code: string): ValidationResult {
         braceCount += (trimmed.match(/{/g) || []).length;
         braceCount -= (trimmed.match(/}/g) || []).length;
 
-        // Check for common issues
-        if (trimmed.includes('->') && !trimmed.includes('digraph') && code.includes('graph ') && !code.includes('digraph')) {
+        // Check for directed arrow in undirected graph
+        if (trimmed.includes('->') && !trimmed.includes('digraph') && code.match(/\bgraph\s+[^\{]+/i) && !code.match(/\bdigraph\s+[^\{]+/i)) {
             errors.push({ line: lineNum, message: 'Using -> (directed edge) in undirected graph. Use -- instead.', type: 'syntax' });
         }
 
         // Check for missing semicolons (common in Graphviz)
-        if (trimmed.length > 0 && !trimmed.endsWith(';') && !trimmed.endsWith('{') && !trimmed.endsWith('}') && !trimmed.startsWith('//') && !trimmed.startsWith('#')) {
+        if (trimmed.length > 0 && !trimmed.endsWith(';') && !trimmed.endsWith('{') && !trimmed.endsWith('}')) {
             warnings.push({ line: lineNum, message: 'Statement may be missing semicolon' });
         }
     });

@@ -15,7 +15,7 @@ export function toMarkdown(data: TableData): string {
 
     // Calculate column widths
     for (let col = 0; col < maxCols; col++) {
-        colWidths[col] = Math.max(3, ...data.map(row => (row[col] || '').length));
+        colWidths[col] = Math.max(3, ...data.map(row => (row[col] || '').replace(/\|/g, '\\|').length));
     }
 
     const lines: string[] = [];
@@ -23,7 +23,7 @@ export function toMarkdown(data: TableData): string {
     data.forEach((row, rowIndex) => {
         const cells = [];
         for (let col = 0; col < maxCols; col++) {
-            const cell = row[col] || '';
+            const cell = (row[col] || '').replace(/\|/g, '\\|');
             cells.push(cell.padEnd(colWidths[col]));
         }
         lines.push('| ' + cells.join(' | ') + ' |');
@@ -44,11 +44,12 @@ export function toMarkdown(data: TableData): string {
 export function toCSV(data: TableData, delimiter: string = ','): string {
     return data.map(row => {
         return row.map(cell => {
+            const str = String(cell ?? '');
             // Escape quotes and wrap in quotes if necessary
-            if (cell.includes(delimiter) || cell.includes('"') || cell.includes('\n')) {
-                return '"' + cell.replace(/"/g, '""') + '"';
+            if (str.includes(delimiter) || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+                return '"' + str.replace(/"/g, '""') + '"';
             }
-            return cell;
+            return str;
         }).join(delimiter);
     }).join('\n');
 }

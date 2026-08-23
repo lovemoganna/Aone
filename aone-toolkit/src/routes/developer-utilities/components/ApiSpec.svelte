@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { toastStore } from "$lib/stores/toastStore.svelte";
+    import { CodeBlock } from "$lib/components/ui";
     import {
         Plus, Trash2, Copy, Check, Download, FileJson, FileText,
         AlertTriangle, AlertCircle, CheckCircle2,
@@ -970,13 +971,31 @@
             </div>
 
             <!-- Right Content Inspector -->
-            <div class="flex-1 overflow-auto p-3 font-mono text-xs bg-slate-50/30 dark:bg-slate-950/40">
+            <div class="flex-1 overflow-auto p-3 bg-slate-50/30 dark:bg-slate-950/40">
                 {#if rightTab === "doc"}
-                    <pre class="leading-relaxed whitespace-pre-wrap">{generateMarkdown()}</pre>
+                    <CodeBlock
+                        code={generateMarkdown()}
+                        language="markdown"
+                        showHeader={false}
+                        wrapLines={true}
+                        class="!my-0"
+                    />
                 {:else if rightTab === "curl"}
-                    <pre class="leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{generateCurlCommand()}</pre>
+                    <CodeBlock
+                        code={generateCurlCommand()}
+                        language="bash"
+                        showHeader={false}
+                        wrapLines={true}
+                        class="!my-0"
+                    />
                 {:else if rightTab === "json"}
-                    <pre class="leading-relaxed whitespace-pre-wrap">{generateOpenApiJson()}</pre>
+                    <CodeBlock
+                        code={generateOpenApiJson()}
+                        language="json"
+                        showHeader={false}
+                        wrapLines={true}
+                        class="!my-0"
+                    />
                 {:else if rightTab === "validation"}
                     <div class="space-y-2 font-sans">
                         {#if validationIssues.length === 0}

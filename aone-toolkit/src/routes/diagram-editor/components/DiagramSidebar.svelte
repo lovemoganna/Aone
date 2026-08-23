@@ -7,6 +7,7 @@
         Sparkles,
         ChevronLeft,
         ChevronRight,
+        ChevronDown,
         Search,
         Plus,
         Trash2,
@@ -25,7 +26,9 @@
         Layout,
         FolderTree,
         Folder,
-        Box as BoxIcon
+        Box as BoxIcon,
+        Clock,
+        GitCompare
     } from "lucide-svelte";
     import { parseHierarchicalTree, type TreeNode } from "../lib/parser";
     import LayoutManager from "./LayoutManager.svelte";
@@ -49,15 +52,30 @@
     }
 
     let activeTab = $state<
-        "outline" | "templates" | "snippets" | "diagnostics" | "refactor"
+        "outline" | "templates" | "snippets" | "history" | "diagnostics"
     >("outline");
+
+    export function openTab(tab: "outline" | "templates" | "snippets" | "history" | "diagnostics") {
+        activeTab = tab;
+        setCollapsed(false);
+    }
+
+    let activeHistory = $derived(
+        diagramStore.documents.find(
+            (d) => d.id === diagramStore.activeDocumentId,
+        )?.history || [],
+    );
+    let sortedHistory = $derived([...activeHistory].reverse());
+
+    function formatTime(ts: number) {
+        return new Date(ts).toLocaleTimeString();
+    }
 
     let outlineTree = $derived(
         parseHierarchicalTree(diagramStore.code, diagramStore.mode)
     );
     let searchQuery = $state("");
     let newSnippetName = $state("");
-    let selectedCategory = $state("All");
 
     function handleDragStart(e: DragEvent, code: string) {
         if (e.dataTransfer) {
@@ -66,27 +84,64 @@
         }
     }
 
-    const categories = [
-        "All",
-        ...Array.from(new Set(TEMPLATES.map((t) => t.category || "Other"))),
-    ];
+    const CATEGORY_META: Record<string, { label: string; tag: string }> = {
+        'UML: Structure': { label: 'UML 结构建模', tag: 'Structure' },
+        'UML: Behavior': { label: 'UML 行为交互', tag: 'Behavior' },
+        'System: Architecture': { label: '系统与云架构', tag: 'Arch' },
+        'System: Patterns': { label: '系统设计模式', tag: 'Patterns' },
+        'System: Data': { label: '数据与存储建模', tag: 'Data' },
+        'System: Engineering': { label: '工程与 DevOps', tag: 'DevOps' },
+        'Business: Process': { label: '业务流程与泳道', tag: 'Process' },
+        'Business: Strategy': { label: '战略规划与导图', tag: 'Strategy' },
+        'Design: Patterns': { label: '代码设计模式', tag: 'Design' },
+        'Graphviz: Layouts': { label: 'Graphviz 布局算法', tag: 'Graphviz' },
+        'Graphviz: Features': { label: 'Graphviz 进阶特性', tag: 'Graphviz' },
+        'PlantUML: Features': { label: 'PlantUML 高级特性', tag: 'PlantUML' },
+        'PlantUML: DSLs': { label: '专用领域语言 (DSL)', tag: 'DSL' },
+    };
 
-    let filteredTemplates = $derived(
-        TEMPLATES.filter((t) => {
-            const matchesCategory =
-                selectedCategory === "All" || t.category === selectedCategory;
-            const searchLower = searchQuery.toLowerCase();
-            const matchesSearch =
-                t.name.toLowerCase().includes(searchLower) ||
-                t.code.toLowerCase().includes(searchLower) ||
-                (t.category && t.category.toLowerCase().includes(searchLower));
-            return matchesCategory && matchesSearch;
-        }),
-    );
+    let expandedCategories = $state<Record<string, boolean>>({});
+
+    function toggleCategory(cat: string) {
+        expandedCategories[cat] = !expandedCategories[cat];
+    }
+
+    let groupedTemplates = $derived.by(() => {
+        const query = searchQuery.trim().toLowerCase();
+        const groups: { category: string; label: string; tag: string; items: typeof TEMPLATES }[] = [];
+        const seenCategories = new Set<string>();
+
+        for (const t of TEMPLATES) {
+            const cat = t.category || 'Other';
+            if (!seenCategories.has(cat)) seenCategories.add(cat);
+        }
+
+        for (const cat of seenCategories) {
+            const items = TEMPLATES.filter(t => (t.category || 'Other') === cat && (
+                !query ||
+                t.name.toLowerCase().includes(query) ||
+                t.code.toLowerCase().includes(query) ||
+                cat.toLowerCase().includes(query)
+            ));
+
+            if (items.length > 0) {
+                const meta = CATEGORY_META[cat] || { label: cat, tag: 'Other' };
+                groups.push({
+                    category: cat,
+                    label: meta.label,
+                    tag: meta.tag,
+                    items
+                });
+            }
+        }
+
+        return groups;
+    });
 
     function loadTemplate(template: any) {
         diagramStore.code = template.code;
         diagramStore.mode = template.mode;
+        diagramStore.resetView();
         diagramStore.render();
     }
 
@@ -110,11 +165,39 @@
     let lintData = $derived(
         lintingService.lint(diagramStore.code, diagramStore.mode)
     );
+
+    let sidebarWidth = $state(320);
+    let isResizingSidebar = $state(false);
+
+    function handleMouseDownResizer(e: MouseEvent) {
+        e.preventDefault();
+        isResizingSidebar = true;
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+    }
+
+    function handleMouseMoveGlobal(e: MouseEvent) {
+        if (!isResizingSidebar) return;
+        sidebarWidth = Math.max(260, Math.min(580, e.clientX));
+    }
+
+    function handleMouseUpGlobal() {
+        if (isResizingSidebar) {
+            isResizingSidebar = false;
+            document.body.style.cursor = "";
+            document.body.style.userSelect = "";
+        }
+    }
 </script>
 
+<svelte:window
+    onmousemove={handleMouseMoveGlobal}
+    onmouseup={handleMouseUpGlobal}
+/>
+
 <aside
-    class="h-full flex-shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0b0f17] flex select-none overflow-hidden transition-[width] duration-200 z-10"
-    style="width: {isCollapsed ? 48 : 288}px;"
+    class="h-full flex-shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#090d14] flex select-none overflow-hidden {isResizingSidebar ? '' : 'transition-[width] duration-150'} z-10 relative"
+    style="width: {isCollapsed ? 48 : sidebarWidth}px;"
 >
     <!-- Tab Icons (Docked Activity Bar) -->
     <div
@@ -198,21 +281,21 @@
 
         <button
             type="button"
-            class="p-2 rounded-md transition-colors {activeTab === 'refactor' && !isCollapsed
+            class="p-2 rounded-md transition-colors {activeTab === 'history' && !isCollapsed
                 ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/70 dark:hover:bg-slate-800'}"
             onclick={() => {
-                if (activeTab === 'refactor' && !isCollapsed) {
+                if (activeTab === 'history' && !isCollapsed) {
                     setCollapsed(true);
                 } else {
-                    activeTab = 'refactor';
+                    activeTab = 'history';
                     setCollapsed(false);
                 }
             }}
-            title="Refactoring Tools"
-            aria-label="Refactoring Tools"
+            title="Version History & Snapshots"
+            aria-label="Version History & Snapshots"
         >
-            <Wrench size={15} />
+            <History size={15} />
         </button>
 
         <div class="mt-auto pt-2 border-t border-slate-200 dark:border-slate-800 w-full flex justify-center">
@@ -235,7 +318,7 @@
     <!-- Content (Expanded Mode) -->
     {#if !isCollapsed}
         <div
-            class="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0b0f17]"
+            class="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#090d14]"
         >
             <div
                 class="h-9 px-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/40 dark:bg-slate-900/30"
@@ -258,66 +341,94 @@
 
             <div class="flex-1 overflow-y-auto">
                 {#if activeTab === "templates"}
-                    <div class="p-2.5 space-y-2.5">
-                        <div class="relative">
+                    <div class="p-2 space-y-2 h-full flex flex-col min-h-0">
+                        <!-- Search Bar -->
+                        <div class="relative shrink-0">
                             <Search
                                 size={13}
                                 class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
                             />
                             <input
                                 type="text"
-                                placeholder="Filter templates..."
+                                placeholder="搜索 100+ 架构图与语法模板..."
                                 bind:value={searchQuery}
-                                class="w-full pl-8 pr-2.5 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-xs focus:ring-1 focus:ring-slate-400 outline-none placeholder:text-slate-400 text-slate-800 dark:text-slate-200"
+                                class="w-full pl-8 pr-7 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-xs focus:ring-1 focus:ring-slate-400 outline-none placeholder:text-slate-400 text-slate-800 dark:text-slate-200"
                             />
-                        </div>
-
-                        <div
-                            class="flex gap-1 overflow-x-auto no-scrollbar pb-0.5"
-                        >
-                            {#each categories as cat}
+                            {#if searchQuery}
                                 <button
-                                    class="px-2 py-0.5 rounded text-[10px] font-medium whitespace-nowrap border transition-colors
-                                    {selectedCategory === cat
-                                        ? 'bg-slate-900 dark:bg-slate-100 border-slate-900 dark:border-slate-100 text-white dark:text-slate-900 font-semibold'
-                                        : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}"
-                                    onclick={() => (selectedCategory = cat)}
+                                    type="button"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                                    onclick={() => (searchQuery = "")}
+                                    title="Clear search"
                                 >
-                                    {cat}
+                                    <X size={12} />
                                 </button>
-                            {/each}
+                            {/if}
                         </div>
 
-                        <div class="space-y-1">
-                            {#each filteredTemplates as t}
-                                <div
-                                    class="w-full text-left p-2 rounded border border-slate-200/70 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-400 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group relative cursor-pointer"
-                                    role="button"
-                                    tabindex="0"
-                                    draggable="true"
-                                    ondragstart={(e) =>
-                                        handleDragStart(e, t.code)}
-                                    onclick={() => loadTemplate(t)}
-                                    onkeydown={(e) =>
-                                        e.key === "Enter" && loadTemplate(t)}
-                                >
-                                    <div
-                                        class="flex items-center justify-between mb-0.5"
+                        <!-- Vertical Categories Accordion List -->
+                        <div class="space-y-1.5 pb-3">
+                            {#each groupedTemplates as group (group.category)}
+                                {@const isExpanded = searchQuery.trim() !== '' || !!expandedCategories[group.category]}
+                                <div class="border border-slate-200/80 dark:border-slate-800 rounded-md overflow-hidden bg-slate-50/40 dark:bg-slate-900/30">
+                                    <!-- Vertical Group Header -->
+                                    <button
+                                        type="button"
+                                        class="w-full px-2.5 py-1.5 flex items-center justify-between text-left hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors select-none group/hdr"
+                                        onclick={() => toggleCategory(group.category)}
                                     >
-                                        <span
-                                            class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate"
-                                            >{t.name}</span
-                                        >
-                                        <span
-                                            class="text-[9px] uppercase px-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 font-mono"
-                                            >{t.mode}</span
-                                        >
-                                    </div>
-                                    <p
-                                        class="text-[10px] text-slate-400 line-clamp-1 font-mono opacity-80"
-                                    >
-                                        {t.code}
-                                    </p>
+                                        <div class="flex items-center gap-1.5 min-w-0">
+                                            <span class="text-slate-400 group-hover/hdr:text-slate-700 dark:group-hover/hdr:text-slate-200 transition-colors">
+                                                {#if isExpanded}
+                                                    <ChevronDown size={13} />
+                                                {:else}
+                                                    <ChevronRight size={13} />
+                                                {/if}
+                                            </span>
+                                            <span class="text-xs font-semibold text-slate-800 dark:text-slate-200 tracking-tight">
+                                                {group.label}
+                                            </span>
+                                            <span class="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                                                ({group.tag})
+                                            </span>
+                                        </div>
+
+                                        <span class="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold shrink-0">
+                                            {group.items.length}
+                                        </span>
+                                    </button>
+
+                                    <!-- Template Items in this Group -->
+                                    {#if isExpanded}
+                                        <div class="pl-4 pr-1.5 py-1.5 space-y-1 bg-white dark:bg-[#090d14] border-t border-slate-100 dark:border-slate-800/60 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-px before:bg-slate-200 dark:before:bg-slate-800">
+                                            {#each group.items as t (t.id)}
+                                                <div
+                                                    class="w-full text-left pl-2.5 pr-2 py-1.5 rounded-md border border-slate-200/60 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-800/60 transition-all group relative cursor-pointer"
+                                                    role="button"
+                                                    tabindex="0"
+                                                    draggable="true"
+                                                    ondragstart={(e) => handleDragStart(e, t.code)}
+                                                    onclick={() => loadTemplate(t)}
+                                                    onkeydown={(e) => e.key === "Enter" && loadTemplate(t)}
+                                                >
+                                                    <div class="flex items-center justify-between gap-1 mb-0.5">
+                                                        <div class="flex items-center gap-1.5 min-w-0">
+                                                            <span class="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 group-hover:bg-blue-500 transition-colors shrink-0"></span>
+                                                            <span class="text-xs font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-slate-900 dark:group-hover:text-white">
+                                                                {t.name}
+                                                            </span>
+                                                        </div>
+                                                        <span class="text-[9px] uppercase px-1 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-mono shrink-0 font-medium">
+                                                            {t.mode === 'plantuml' ? 'PUML' : 'DOT'}
+                                                        </span>
+                                                    </div>
+                                                    <p class="text-[10px] text-slate-400 line-clamp-1 font-mono opacity-70 pl-2.5">
+                                                        {t.code.replace(/\s+/g, ' ')}
+                                                    </p>
+                                                </div>
+                                            {/each}
+                                        </div>
+                                    {/if}
                                 </div>
                             {/each}
                         </div>
@@ -569,47 +680,81 @@
                             </div>
                         {/if}
                     </div>
-                {:else if activeTab === "refactor"}
-                    <div class="p-2.5 space-y-3">
-                        <div class="space-y-2">
+                {:else if activeTab === "history"}
+                    <div class="p-2.5 space-y-2.5">
+                        <div class="flex items-center justify-between">
                             <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                                Structural Refactors
+                                Snapshots ({sortedHistory.length})
                             </span>
-
                             <button
-                                class="w-full p-2.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-400 dark:hover:border-slate-600 transition-colors text-left group"
-                                onclick={() => applyRefactor("wrap")}
+                                type="button"
+                                class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded text-[10px] font-medium transition-colors"
+                                onclick={() => diagramStore.takeSnapshot()}
                             >
-                                <div class="flex items-center gap-2 mb-1">
-                                    <Layers size={14} class="text-slate-700 dark:text-slate-300" />
-                                    <div class="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                                        Wrap in Container
-                                    </div>
-                                </div>
-                                <p class="text-[10px] text-slate-400">
-                                    Group all nodes into a Package/Subgraph
-                                </p>
-                            </button>
-
-                            <button
-                                class="w-full p-2.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-400 dark:hover:border-slate-600 transition-colors text-left group"
-                                onclick={() => applyRefactor("c4")}
-                            >
-                                <div class="flex items-center gap-2 mb-1">
-                                    <Layout size={14} class="text-slate-700 dark:text-slate-300" />
-                                    <div class="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                                        Convert to C4 Architecture
-                                    </div>
-                                </div>
-                                <p class="text-[10px] text-slate-400">
-                                    Transform diagram syntax to C4 Context model
-                                </p>
+                                Take Snapshot
                             </button>
                         </div>
+
+                        {#if sortedHistory.length === 0}
+                            <div class="text-center py-10 text-slate-400 text-xs">
+                                <Clock class="mx-auto mb-2 opacity-40" size={20} />
+                                <p>No snapshots yet</p>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Snapshots are auto-captured on render</p>
+                            </div>
+                        {:else}
+                            <div class="space-y-1.5 overflow-y-auto">
+                                {#each sortedHistory as item}
+                                    <div
+                                        class="p-2 rounded border border-slate-200/70 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-400 dark:hover:border-slate-600 transition-colors group flex items-center justify-between"
+                                    >
+                                        <div class="min-w-0">
+                                            <div class="text-xs font-mono font-medium text-slate-800 dark:text-slate-200">
+                                                {formatTime(item.timestamp)}
+                                            </div>
+                                            <div class="text-[10px] text-slate-400 font-mono">
+                                                {item.code.length} chars
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            {#if onDiff}
+                                                <button
+                                                    type="button"
+                                                    class="p-1 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
+                                                    title="Diff with Current"
+                                                    onclick={() => onDiff?.(item.code)}
+                                                >
+                                                    <GitCompare size={13} />
+                                                </button>
+                                            {/if}
+                                            <button
+                                                type="button"
+                                                class="p-1 text-slate-500 hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded transition-colors"
+                                                title="Restore Snapshot"
+                                                onclick={() => {
+                                                    diagramStore.restoreHistory(item);
+                                                }}
+                                            >
+                                                <RotateCcw size={13} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                {/each}
+                            </div>
+                        {/if}
                     </div>
                 {/if}
             </div>
         </div>
+
+        <!-- Resizer handle -->
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+        <div
+            class="w-1 hover:w-1.5 hover:bg-blue-500/80 active:bg-blue-600 bg-transparent hover:cursor-col-resize transition-all z-20 shrink-0 select-none {isResizingSidebar ? 'bg-blue-500 w-1.5' : ''}"
+            role="separator"
+            aria-label="Resize sidebar"
+            onmousedown={handleMouseDownResizer}
+        ></div>
     {/if}
 </aside>
 

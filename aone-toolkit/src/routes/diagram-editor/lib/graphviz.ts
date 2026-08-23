@@ -12,8 +12,8 @@ async function getViz() {
 export async function renderGraphviz(code: string, engine: string = 'dot'): Promise<string> {
     try {
         const viz = await getViz();
-        const result = viz.renderSVGElement(code, { engine });
-        return result.outerHTML;
+        const svg = viz.renderString(code, { engine, format: 'svg' });
+        return svg;
     } catch (e) {
         // Reset instance in case of worker crash
         vizInstance = null;

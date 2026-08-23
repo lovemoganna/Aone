@@ -3,8 +3,10 @@ import { browser } from '$app/environment';
 
 function createSidebarStore() {
     const getInitialState = (): boolean => {
-        if (!browser) return false;
-        return localStorage.getItem('sidebar-collapsed') === 'true';
+        if (!browser) return true;
+        const stored = localStorage.getItem('sidebar-collapsed');
+        if (stored === null) return true; // 默认隐藏/折叠左侧侧边栏
+        return stored === 'true';
     };
 
     const { subscribe, set, update } = writable<boolean>(getInitialState());

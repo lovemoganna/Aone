@@ -146,7 +146,7 @@
                     class="flex-1 border rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-950 p-4 overflow-y-auto"
                 >
                     <pre
-                        class="font-mono text-sm text-slate-800 dark:text-slate-200">{tsOutput}</pre>
+                        class="font-mono text-xs text-slate-800 dark:text-slate-200">{tsOutput}</pre>
                 </div>
             </div>
 

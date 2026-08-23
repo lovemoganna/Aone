@@ -11,58 +11,44 @@
         Download,
         Code,
         Play,
-        Book,
         Share2,
         Zap,
         ZapOff,
-        Search,
         Keyboard,
-        Grid,
         Maximize,
         Minimize,
-        History,
-        Table,
         Cpu,
         ArrowLeftRight,
         Wrench,
         MoreHorizontal,
-        FileText,
-        Plus,
-        X
+        PanelLeftClose,
+        PanelLeft,
+        Settings,
+        Users,
+        Grid
     } from "lucide-svelte";
     import { slide } from "svelte/transition";
 
     let {
+        isSidebarOpen = true,
+        onToggleSidebar,
         onRender,
         onExport,
         onSettings,
-        onHelp,
-        onSnippets,
-        onTemplates,
         onShare,
         onShortcuts,
-        onFindReplace,
-        onPresent,
         onIcons,
-        onHistory,
-        onAccessibility,
-        onTheme,
         onAIGen,
+        onCollab,
     } = $props<{
+        isSidebarOpen?: boolean;
+        onToggleSidebar?: () => void;
         onRender: () => void;
         onExport: () => void;
         onSettings: () => void;
-        onHelp: () => void;
-        onSnippets: () => void;
-        onTemplates: () => void;
         onShare: () => void;
         onShortcuts: () => void;
-        onFindReplace: () => void;
-        onPresent: () => void;
         onIcons: () => void;
-        onHistory: () => void;
-        onAccessibility: () => void;
-        onTheme: () => void;
         onAIGen: () => void;
         onCollab: () => void;
     }>();
@@ -98,68 +84,47 @@
             diagramStore.render();
         }
     }
-
-    // Tabs Management
-    let editingTabId = $state<string | null>(null);
-    let editName = $state("");
-
-    function handleTabClick(id: string) {
-        diagramStore.switchDocument(id);
-    }
-
-    function handleCloseTab(e: MouseEvent, id: string) {
-        e.stopPropagation();
-        diagramStore.closeDocument(id);
-    }
-
-    function handleNewTab() {
-        diagramStore.createDocument();
-    }
-
-    function startRename(id: string, currentName: string) {
-        editingTabId = id;
-        editName = currentName;
-    }
-
-    function commitRename(id: string) {
-        if (editName.trim()) {
-            const doc = diagramStore.documents.find((d) => d.id === id);
-            if (doc) {
-                doc.name = editName.trim();
-                diagramStore.saveState();
-            }
-        }
-        editingTabId = null;
-    }
-
-    function autofocus(node: HTMLElement) {
-        node.focus();
-    }
 </script>
 
 <svelte:window onkeydown={(e) => { if (e.key === "Escape") isMoreMenuOpen = false; }} />
 
 <header
-    class="h-10 px-2.5 bg-white dark:bg-[#0b0f17] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 z-30 select-none text-slate-800 dark:text-slate-200"
+    class="h-10 px-3 bg-white dark:bg-[#090d14] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 z-30 select-none text-slate-800 dark:text-slate-200"
 >
-    <!-- Left: Brand + Mode Switcher + Integrated Tabs -->
-    <div class="flex items-center gap-2 min-w-0 flex-1 mr-2">
+    <!-- Left: Sidebar Toggle + Brand + Mode Switcher -->
+    <div class="flex items-center gap-2.5 min-w-0">
+        {#if onToggleSidebar}
+            <button
+                type="button"
+                class="p-1 rounded text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onclick={onToggleSidebar}
+                title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+                aria-label="切换侧边栏"
+            >
+                {#if isSidebarOpen}
+                    <PanelLeftClose size={15} />
+                {:else}
+                    <PanelLeft size={15} />
+                {/if}
+            </button>
+        {/if}
+
         <!-- Logo -->
-        <div class="flex items-center gap-1.5 pr-2 border-r border-slate-200 dark:border-slate-800 shrink-0">
-            <div class="w-5 h-5 rounded bg-slate-800 dark:bg-slate-200 flex items-center justify-center text-white dark:text-slate-900 shadow-xs">
+        <div class="flex items-center gap-1.5 pr-2.5 border-r border-slate-200 dark:border-slate-800 shrink-0">
+            <div class="w-5 h-5 rounded bg-slate-900 dark:bg-slate-100 flex items-center justify-center text-white dark:text-slate-900 shadow-2xs">
                 <Code size={12} strokeWidth={2.5} />
             </div>
-            <span class="font-bold text-xs tracking-tight text-slate-900 dark:text-slate-100 hidden sm:inline">
+            <span class="font-bold text-xs tracking-tight text-slate-900 dark:text-slate-100">
                 AONE <span class="text-slate-400 font-normal">Diagram</span>
             </span>
         </div>
 
         <!-- Mode Switcher -->
-        <div class="flex bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-md border border-slate-200/80 dark:border-slate-700/60 text-xs shrink-0">
+        <div class="flex bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded border border-slate-200 dark:border-slate-700/60 text-xs shrink-0 font-medium">
             <button
                 type="button"
-                class="px-2 py-0.5 rounded font-medium transition-colors {diagramStore.mode === 'plantuml'
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-semibold'
+                class="px-2 py-0.5 rounded transition-colors {diagramStore.mode === 'plantuml'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-semibold'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}"
                 onclick={() => setMode("plantuml")}
             >
@@ -167,8 +132,8 @@
             </button>
             <button
                 type="button"
-                class="px-2 py-0.5 rounded font-medium transition-colors {diagramStore.mode === 'graphviz'
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-semibold'
+                class="px-2 py-0.5 rounded transition-colors {diagramStore.mode === 'graphviz'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-semibold'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}"
                 onclick={() => setMode("graphviz")}
             >
@@ -176,67 +141,10 @@
             </button>
         </div>
 
-        <!-- Integrated Documents Tab Strip -->
-        <div class="flex items-center gap-1 overflow-x-auto no-scrollbar min-w-0 pl-1">
-            {#each diagramStore.documents as doc (doc.id)}
-                <div
-                    class="flex items-center gap-1 px-2.5 h-7 text-xs rounded-md transition-colors cursor-pointer shrink-0 max-w-[150px] group/tab border
-                    {diagramStore.activeDocumentId === doc.id
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium border-slate-300/80 dark:border-slate-700'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-850 border-transparent'}"
-                    onclick={() => handleTabClick(doc.id)}
-                    ondblclick={() => startRename(doc.id, doc.name)}
-                    role="button"
-                    tabindex="0"
-                    onkeydown={(e) => e.key === "Enter" && handleTabClick(doc.id)}
-                >
-                    <FileText size={11} class="opacity-60 shrink-0" />
-
-                    {#if editingTabId === doc.id}
-                        <input
-                            bind:value={editName}
-                            class="bg-white dark:bg-slate-900 border border-slate-400 outline-none text-xs w-full py-0 px-1 rounded text-slate-900 dark:text-slate-100"
-                            use:autofocus
-                            onblur={() => commitRename(doc.id)}
-                            onkeydown={(e) => {
-                                if (e.key === "Enter") commitRename(doc.id);
-                                if (e.key === "Escape") editingTabId = null;
-                            }}
-                            onclick={(e) => e.stopPropagation()}
-                        />
-                    {:else}
-                        <span class="truncate text-[11px]">{doc.name}</span>
-                    {/if}
-
-                    {#if diagramStore.documents.length > 1}
-                        <button
-                            type="button"
-                            class="p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded opacity-0 group-hover/tab:opacity-100 transition-opacity ml-auto"
-                            onclick={(e) => handleCloseTab(e, doc.id)}
-                            title="Close Tab"
-                            aria-label="关闭标签页"
-                        >
-                            <X size={10} />
-                        </button>
-                    {/if}
-                </div>
-            {/each}
-
-            <button
-                type="button"
-                class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors shrink-0"
-                onclick={handleNewTab}
-                title="New Diagram (Ctrl+N)"
-                aria-label="新建图表"
-            >
-                <Plus size={13} />
-            </button>
-        </div>
-
         {#if autoFixes.length > 0}
             <button
                 type="button"
-                class="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-medium flex items-center gap-1 shadow-xs transition-colors shrink-0"
+                class="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-medium flex items-center gap-1 shadow-2xs transition-colors shrink-0"
                 title={autoFixes[0].description || autoFixes[0].label}
                 aria-label={`一键修复代码: ${autoFixes[0].label}`}
                 onclick={applyFirstAutofix}
@@ -252,20 +160,21 @@
         <!-- Generate Button -->
         <button
             type="button"
-            class="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-md transition-colors"
-            title="Generate Diagram"
+            class="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded transition-colors"
+            title="Generate with AI"
             aria-label="生成架构图"
             onclick={onAIGen}
         >
             <Cpu size={13} />
-            <span class="hidden sm:inline">Generate</span>
+            <span class="hidden sm:inline">AI Gen</span>
         </button>
 
         <!-- Render Button -->
         <button
             type="button"
-            class="flex items-center gap-1.5 px-3 py-1 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded-md font-semibold text-xs shadow-xs transition-colors"
-            aria-label="渲染架构图"
+            class="flex items-center gap-1.5 px-3 py-1 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded font-semibold text-xs shadow-2xs transition-colors"
+            aria-label="渲染架构图 (Ctrl+Enter)"
+            title="Render Diagram (Ctrl+Enter)"
             onclick={onRender}
             disabled={diagramStore.isRendering}
         >
@@ -282,8 +191,8 @@
         <!-- Auto-Render Toggle -->
         <button
             type="button"
-            class="p-1.5 rounded-md transition-colors {diagramStore.autoRender
-                ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40'
+            class="p-1.5 rounded transition-colors {diagramStore.autoRender
+                ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40'
                 : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}"
             title={diagramStore.autoRender ? "Auto-Render: ON" : "Auto-Render: OFF"}
             aria-label="切换实时自动渲染"
@@ -338,8 +247,8 @@
             <button
                 type="button"
                 class="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors {isMoreMenuOpen ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100' : ''}"
-                title="More Tools"
-                aria-label="更多工具"
+                title="More Options"
+                aria-label="更多选项"
                 onclick={() => (isMoreMenuOpen = !isMoreMenuOpen)}
             >
                 <MoreHorizontal size={14} />
@@ -358,7 +267,7 @@
                 >
                     <button
                         type="button"
-                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
                         onclick={() => { handleConvertFormat(); isMoreMenuOpen = false; }}
                     >
                         <ArrowLeftRight size={13} />
@@ -366,23 +275,7 @@
                     </button>
                     <button
                         type="button"
-                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
-                        onclick={() => { onFindReplace(); isMoreMenuOpen = false; }}
-                    >
-                        <Search size={13} />
-                        <span>Find & Replace (Ctrl+F)</span>
-                    </button>
-                    <button
-                        type="button"
-                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
-                        onclick={() => { onHistory(); isMoreMenuOpen = false; }}
-                    >
-                        <History size={13} />
-                        <span>Version History (Ctrl+H)</span>
-                    </button>
-                    <button
-                        type="button"
-                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
                         onclick={() => { onIcons(); isMoreMenuOpen = false; }}
                     >
                         <Grid size={13} />
@@ -390,33 +283,33 @@
                     </button>
                     <button
                         type="button"
-                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
-                        onclick={() => { onPresent(); isMoreMenuOpen = false; }}
+                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                        onclick={() => { onCollab(); isMoreMenuOpen = false; }}
                     >
-                        <Book size={13} />
-                        <span>Presentation Mode</span>
+                        <Users size={13} />
+                        <span>Live Collaboration</span>
                     </button>
                     <button
                         type="button"
-                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
-                        onclick={() => { onAccessibility(); isMoreMenuOpen = false; }}
-                    >
-                        <Table size={13} />
-                        <span>Accessibility View</span>
-                    </button>
-                    <button
-                        type="button"
-                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
                         onclick={() => { onShortcuts(); isMoreMenuOpen = false; }}
                     >
                         <Keyboard size={13} />
                         <span>Keyboard Shortcuts</span>
                     </button>
+                    <button
+                        type="button"
+                        class="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                        onclick={() => { onSettings(); isMoreMenuOpen = false; }}
+                    >
+                        <Settings size={13} />
+                        <span>Settings</span>
+                    </button>
                 </div>
             {/if}
         </div>
 
-        <!-- Theme toggles -->
+        <!-- UI Theme Toggle -->
         <div class="flex items-center bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-md border border-slate-200/80 dark:border-slate-700/60 ml-0.5">
             <button
                 type="button"
@@ -431,4 +324,3 @@
         </div>
     </div>
 </header>
-

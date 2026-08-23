@@ -26,7 +26,7 @@ export interface UserPreferences {
 const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'system',
   language: 'zh',
-  sidebarCollapsed: false,
+  sidebarCollapsed: true,
   commandPaletteHistory: [],
   recentAgents: [],
   recentSkills: [],

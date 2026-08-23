@@ -610,7 +610,7 @@
     <title>Mock 数据生成器 - Aone Toolkit</title>
 </svelte:head>
 
-<div class="h-[calc(100vh-3rem)] p-4 overflow-hidden max-w-[1600px] mx-auto flex flex-col space-y-3">
+<div class="h-full p-2 sm:p-3 overflow-hidden max-w-[1600px] mx-auto flex flex-col space-y-3">
     <!-- Purpose statement & header banner -->
     <div class="bg-slate-50/70 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-2xs">
         <div>

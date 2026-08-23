@@ -1650,7 +1650,11 @@ print "Event 1"
         name: 'EBNF (Railroad Diagram)',
         mode: 'plantuml',
         category: 'System: Engineering',
-        code: `}
+        code: `@startuml
+ebnf
+  expression = term , { ("+" | "-") , term } ;
+  term = factor , { ("*" | "/") , factor } ;
+  factor = identifier | number | "(" , expression , ")" ;
 @enduml`
     },
     {
@@ -2535,6 +2539,886 @@ http - p1
     
     struct1:f1 -> struct2:f0;
     struct1:f2 -> struct3:here;
+}`
+    },
+    {
+        id: 'puml-service-mesh',
+        name: 'Service Mesh (Istio / Envoy)',
+        mode: 'plantuml',
+        category: 'System: Architecture',
+        code: `@startuml
+skinparam backgroundColor transparent
+skinparam componentStyle uml2
+
+package "Control Plane (Istiod)" {
+    [Pilot (Traffic)] as pilot
+    [Citadel (mTLS / CA)] as citadel
+    [Galley (Config)] as galley
+}
+
+package "Data Plane Pod A" {
+    [Service A Container] as svc_a
+    [Envoy Sidecar Proxy] as envoy_a
+    svc_a <-> envoy_a : localhost:8080
+}
+
+package "Data Plane Pod B" {
+    [Envoy Sidecar Proxy] as envoy_b
+    [Service B Container] as svc_b
+    envoy_b <-> svc_b : localhost:8080
+}
+
+pilot --> envoy_a : xDS (Route Rules)
+pilot --> envoy_b : xDS (Route Rules)
+citadel --> envoy_a : Issue Certificate
+citadel --> envoy_b : Issue Certificate
+
+envoy_a <--> envoy_b : mTLS Encrypted Wire
+@enduml`
+    },
+    {
+        id: 'puml-multi-active-dc',
+        name: 'Multi-Active DC (异地多活架构)',
+        mode: 'plantuml',
+        category: 'System: Architecture',
+        code: `@startuml
+skinparam backgroundColor transparent
+
+cloud "Global Anycast DNS / GSLB" as gslb
+
+package "Region East DC (机房 A)" {
+    [Ingress Gateway A] as gw_a
+    [Core Service A] as svc_a
+    database "MySQL Cluster A (Master)" as db_a
+    gw_a --> svc_a
+    svc_a --> db_a
+}
+
+package "Region West DC (机房 B)" {
+    [Ingress Gateway B] as gw_b
+    [Core Service B] as svc_b
+    database "MySQL Cluster B (Master)" as db_b
+    gw_b --> svc_b
+    svc_b --> db_b
+}
+
+gslb --> gw_a : 路由分配 (Sharding 0-499)
+gslb --> gw_b : 路由分配 (Sharding 500-999)
+
+db_a <--> db_b : 双向异步增量同步 (Otter / Canal)
+svc_a ..> gw_b : 跨单元纠错 RPC 转发
+@enduml`
+    },
+    {
+        id: 'puml-oauth2-flow',
+        name: 'OAuth 2.0 Auth Code + PKCE',
+        mode: 'plantuml',
+        category: 'UML: Behavior',
+        code: `@startuml
+autonumber
+actor User as "用户 / Browser"
+participant SPA as "前端应用 (SPA / Client)"
+participant AuthServer as "认证中心 (IdP / Auth0)"
+participant ResourceServer as "业务 API (Resource Server)"
+
+User -> SPA : 1. 点击登录 (Login)
+SPA -> SPA : 2. 生成 code_verifier & code_challenge (S256)
+SPA -> AuthServer : 3. 重定向授权请求 (code_challenge, client_id)
+AuthServer -> User : 4. 渲染登录 & 授权确认页
+User -> AuthServer : 5. 提交凭据并授权
+AuthServer -> SPA : 6. 重定向返回 Authorization Code
+SPA -> AuthServer : 7. POST /oauth/token (code + code_verifier)
+AuthServer -> AuthServer : 8. 校验 code_challenge == SHA256(verifier)
+AuthServer -> SPA : 9. 颁发 Access Token & ID Token (JWT)
+SPA -> ResourceServer : 10. 请求业务接口 (Bearer AccessToken)
+ResourceServer -> ResourceServer : 11. 验证签名 (JWKS) 与 Scope
+ResourceServer -> SPA : 12. 返回业务数据 (200 OK)
+@enduml`
+    },
+    {
+        id: 'puml-cache-aside',
+        name: 'Cache-Aside & 防击穿流转',
+        mode: 'plantuml',
+        category: 'System: Data',
+        code: `@startuml
+start
+:收到数据查询请求 (Key);
+if (布隆过滤器 (BloomFilter) 判断是否存在?) then (不存在)
+    #Pink:直接返回 404 / 空对象 (防穿透);
+    stop
+else (可能存在)
+    :查询 Redis 缓存;
+    if (Redis 命中缓存?) then (是)
+        #LightGreen:返回缓存数据 (Cache Hit);
+        stop
+    else (否 / Cache Miss)
+        :获取分布式互斥锁 (SETNX mutex_key);
+        if (获取锁成功?) then (是)
+            :查询底层数据库 (DB);
+            :将数据写回 Redis (附带随机过期时间 TTL);
+            :释放分布式锁;
+            #LightGreen:返回查询结果;
+            stop
+        else (锁竞争中)
+            :休眠 50ms 后重试查询 Redis;
+            stop
+        endif
+    endif
+endif
+@enduml`
+    },
+    {
+        id: 'dot-rbtree',
+        name: 'Red-Black Tree (红黑树平衡结构)',
+        mode: 'graphviz',
+        category: 'System: Data',
+        code: `digraph RedBlackTree {
+    rankdir=TB;
+    node [fontname="monospace", fontsize=11, style=filled, shape=circle, width=0.5, fontcolor=white];
+    edge [arrowsize=0.7];
+
+    // Nodes
+    13 [fillcolor="#1e293b", label="13 (B)"];
+    8  [fillcolor="#dc2626", label="8 (R)"];
+    17 [fillcolor="#dc2626", label="17 (R)"];
+    1  [fillcolor="#1e293b", label="1 (B)"];
+    11 [fillcolor="#1e293b", label="11 (B)"];
+    15 [fillcolor="#1e293b", label="15 (B)"];
+    25 [fillcolor="#1e293b", label="25 (B)"];
+    22 [fillcolor="#dc2626", label="22 (R)"];
+    27 [fillcolor="#dc2626", label="27 (R)"];
+
+    // NIL Leaves
+    node [shape=box, width=0.3, height=0.2, fillcolor="#334155", label="NIL", fontsize=9];
+    nil1; nil2; nil3; nil4; nil5; nil6; nil7; nil8;
+
+    // Edges
+    13 -> 8;
+    13 -> 17;
+    8 -> 1;
+    8 -> 11;
+    17 -> 15;
+    17 -> 25;
+    25 -> 22;
+    25 -> 27;
+
+    1 -> nil1; 1 -> nil2;
+    11 -> nil3; 11 -> nil4;
+    15 -> nil5; 15 -> nil6;
+    22 -> nil7; 27 -> nil8;
+}`
+    },
+    {
+        id: 'puml-canary-deploy',
+        name: 'Canary Release (金丝雀渐进发布)',
+        mode: 'plantuml',
+        category: 'System: Engineering',
+        code: `@startuml
+skinparam backgroundColor transparent
+
+cloud "Client Traffic (100%)" as clients
+node "API Gateway / Nginx / Envoy" as gw
+
+package "Stable Environment (Baseline v1.0)" {
+    [Service Pods v1 (4 Replicas)] as pods_v1
+    database "Shared DB" as db
+}
+
+package "Canary Environment (Candidate v2.0)" {
+    [Canary Pod v2 (1 Replica)] as pods_v2
+}
+
+clients --> gw
+gw --> pods_v1 : 90% 正常流量
+gw --> pods_v2 : 10% 金丝雀流量 / 特征流量 (Header: test-user)
+
+pods_v1 --> db
+pods_v2 --> db : 兼容模式访问
+
+note bottom of pods_v2
+  Prometheus & Grafana 监控:
+  - 错误率 <= 0.01%
+  - P99 延时对比
+  - 业务转换率
+end note
+@enduml`
+    },
+    {
+        id: 'puml-package-arch',
+        name: 'Clean Architecture (分层依赖倒置)',
+        mode: 'plantuml',
+        category: 'UML: Structure',
+        code: `@startuml
+skinparam backgroundColor transparent
+skinparam componentStyle uml2
+
+package "1. Frameworks & Drivers (外层基础设施)" #F1F5F9 {
+    [REST Controllers] as Web
+    [MySQL / Redis DB] as InfraDB
+    [MQ Producer / Consumer] as InfraMQ
+}
+
+package "2. Interface Adapters (适配层)" #E2E8F0 {
+    [Repositories Impl] as Repos
+    [Presenters / DTOs] as DTOs
+}
+
+package "3. Application Business Rules (用例层)" #CBD5E1 {
+    [Order UseCases] as UseCases
+    interface "OrderRepository" as IOrderRepo
+}
+
+package "4. Enterprise Business Rules (领域核心层)" #94A3B8 {
+    entity "Order Aggregate" as Order
+    entity "OrderItem" as Item
+    entity "Money ValueObject" as Money
+}
+
+Web --> DTOs
+DTOs --> UseCases
+Repos ..|> IOrderRepo
+UseCases --> IOrderRepo
+UseCases --> Order
+Order *-- Item
+Order *-- Money
+InfraDB <-- Repos
+InfraMQ <-- Repos
+@enduml`
+    },
+    {
+        id: 'puml-websocket-flow',
+        name: 'WebSocket 双向长连与心跳保活',
+        mode: 'plantuml',
+        category: 'UML: Behavior',
+        code: `@startuml
+autonumber
+actor Client as "Web / App 客户端"
+participant Gateway as "API 网关 (WS Ingress)"
+participant WSServer as "WebSocket 集群节点"
+participant RedisPubSub as "Redis Pub/Sub (跨节点广播)"
+
+== 1. HTTP 握手与协议升级 (Handshake) ==
+Client -> Gateway: GET /ws (Upgrade: websocket, Sec-WebSocket-Key)
+Gateway -> WSServer: 路由建立连接
+WSServer --> Client: 101 Switching Protocols (握手成功)
+
+== 2. 全双工通信与跨节点广播 ==
+Client -> WSServer: 客户端发送业务消息 (TEXT Payload)
+WSServer -> RedisPubSub: PUBLISH room_101 {msg}
+RedisPubSub -> WSServer: 广播事件通知
+WSServer -> Client: 下发实时推送 (PUSH Notification)
+
+== 3. 心跳检测保活 (Ping / Pong) ==
+loop 每隔 30 秒
+    Client -> WSServer: PING (0x9)
+    WSServer --> Client: PONG (0xA)
+end
+
+== 4. 异常断线与自动重连 ==
+Client x- WSServer: 网络中断 / 超时未收到 Pong
+Client -> Client: 指数退避算法等待 (Backoff: 1s, 2s, 4s...)
+Client -> Gateway: 发起重新握手 (Re-Connect)
+@enduml`
+    },
+    {
+        id: 'puml-order-lifecycle',
+        name: '订单履约全生命周期状态机',
+        mode: 'plantuml',
+        category: 'UML: Behavior',
+        code: `@startuml
+skinparam backgroundColor transparent
+
+[*] --> PendingPayment : 用户下单 (Create Order)
+
+state PendingPayment {
+    [*] --> Unpaid
+    Unpaid --> Paid : 支付成功 (Pay Callback)
+    Unpaid --> Cancelled : 支付超时 (TTL 15m) / 主动取消
+}
+
+state Paid {
+    [*] --> Auditing : 风控审核
+    Auditing --> StockAllocated : 锁库存通过
+    Auditing --> Refunded : 风控拦截 (Auto Refund)
+}
+
+state InFulfillment {
+    StockAllocated --> Picking : 仓库配货
+    Picking --> Packed : 打包完成
+    Packed --> Shipping : 物流揽收 (Carrier Scanned)
+}
+
+state InTransit {
+    Shipping --> OutForDelivery : 派件中
+    OutForDelivery --> Delivered : 签收成功
+}
+
+Delivered --> Completed : 确认收货 (7天自动完结)
+Delivered --> AfterSale : 发起售后/退换货 (Return & Refund)
+AfterSale --> Refunded : 售后审核通过退款
+AfterSale --> Completed : 售后驳回
+
+Cancelled --> [*]
+Completed --> [*]
+Refunded --> [*]
+@enduml`
+    },
+    {
+        id: 'puml-kafka-dlq',
+        name: 'Kafka 流处理与死信队列 (DLQ)',
+        mode: 'plantuml',
+        category: 'System: Architecture',
+        code: `@startuml
+skinparam backgroundColor transparent
+skinparam componentStyle uml2
+
+queue "orders-topic (主业务 Topic)" as main_topic
+node "Order Consumer Cluster" as consumer
+queue "orders-retry-topic (重试 Topic: 退避 5m)" as retry_topic
+queue "orders-dlq (死信队列 Dead Letter Queue)" as dlq_topic
+database "Audit Log DB" as db
+actor "DevOps / SRE 告警平台" as ops
+
+[Producer Service] --> main_topic : 发送订单事件
+main_topic --> consumer : 拉取消息消费
+
+consumer --> db : 消费成功 -> 写入数据库
+consumer --> retry_topic : 消费异常 (抛出可恢复错误) -> 发送重试队列
+retry_topic --> consumer : 重新消费 (最多重试 3 次)
+consumer --> dlq_topic : 达到最大重试次数 -> 投递死信队列
+dlq_topic --> ops : 触发 P2 严重告警 & 人工介入对账
+@enduml`
+    },
+    {
+        id: 'puml-transactional-outbox',
+        name: 'Transactional Outbox & CDC 发件箱',
+        mode: 'plantuml',
+        category: 'System: Patterns',
+        code: `@startuml
+autonumber
+actor Client as "客户端请求"
+participant OrderService as "订单微服务 (Order Service)"
+database OrderDB as "本地事务数据库 (MySQL)"
+participant Debezium as "CDC 引擎 (Debezium / Canal)"
+queue Kafka as "消息总线 (Kafka Cluster)"
+participant InventoryService as "下游库存微服务"
+
+Client -> OrderService : 提交订单 (Create Order)
+activate OrderService
+OrderService -> OrderDB : 开启本地 ACID 事务
+OrderService -> OrderDB : 1. 插入订单表 (INSERT orders)
+OrderService -> OrderDB : 2. 插入发件箱表 (INSERT outbox_events)
+OrderService -> OrderDB : 提交事务 (COMMIT)
+deactivate OrderService
+
+OrderDB -> Debezium : 3. 读取 Binlog 增量数据 (CDC 流式监听)
+Debezium -> Kafka : 4. 投递事件到 Topic: order-created
+Kafka -> InventoryService : 5. 下游消费事件并扣减库存
+InventoryService -> InventoryService : 6. 幂等消费校验 (EventID Deduplication)
+@enduml`
+    },
+    {
+        id: 'puml-db-sharding',
+        name: 'MySQL 读写分离与分库分表拓扑',
+        mode: 'plantuml',
+        category: 'System: Data',
+        code: `@startuml
+skinparam backgroundColor transparent
+skinparam componentStyle uml2
+
+node "App Services Cluster" as apps
+node "Sharding-Proxy / MyCat 中间件" as proxy
+
+package "DB Cluster 01 (分片 1: UserID % 2 == 0)" {
+    database "Master DB 01 (写节点)" as m1
+    database "Slave DB 01-A (读节点)" as s1_a
+    database "Slave DB 01-B (读节点)" as s1_b
+    m1 .right.> s1_a : Binlog 异步/半同步复制
+    m1 .right.> s1_b : Binlog 异步/半同步复制
+}
+
+package "DB Cluster 02 (分片 2: UserID % 2 == 1)" {
+    database "Master DB 02 (写节点)" as m2
+    database "Slave DB 02-A (读节点)" as s2_a
+    database "Slave DB 02-B (读节点)" as s2_b
+    m2 .right.> s2_a : Binlog 异步/半同步复制
+    m2 .right.> s2_b : Binlog 异步/半同步复制
+}
+
+apps --> proxy : SQL 查询 / 写入
+proxy --> m1 : Write SQL (INSERT / UPDATE)
+proxy --> s1_a : Read SQL (SELECT 负载均衡)
+proxy --> m2 : Write SQL (分片路由)
+proxy --> s2_a : Read SQL (分片查询)
+@enduml`
+    },
+    {
+        id: 'dot-lsm-tree',
+        name: 'LSM-Tree 存储引擎架构 (RocksDB)',
+        mode: 'graphviz',
+        category: 'System: Data',
+        code: `digraph LSMTree {
+    rankdir=LR;
+    node [fontname="monospace", fontsize=10, shape=record, style=filled, fillcolor="#F8FAFC", color="#64748B"];
+    edge [fontname="sans-serif", fontsize=9, color="#475569"];
+
+    subgraph cluster_mem {
+        label="Memory (RAM)";
+        bgcolor="#F1F5F9";
+        style=dashed;
+        
+        wal [label="Write-Ahead Log (WAL)|{Append Only|Crash Recovery}", fillcolor="#FEE2E2", color="#EF4444"];
+        memtable [label="Active MemTable (SkipList)|{Key-Value Buffer|Concurrent Writes}", fillcolor="#DCFCE7", color="#22C55E"];
+        imm_memtable [label="Immutable MemTable|{Read Only|Waiting to Flush}", fillcolor="#FEF9C3", color="#EAB308"];
+    }
+
+    subgraph cluster_disk {
+        label="Disk Storage (SSTables)";
+        bgcolor="#E2E8F0";
+        
+        subgraph cluster_l0 {
+            label="Level 0 (Flushed from MemTable)";
+            l0_1 [label="SSTable 0-1|Keys: 10-80"];
+            l0_2 [label="SSTable 0-2|Keys: 30-120"];
+        }
+        
+        subgraph cluster_l1 {
+            label="Level 1 (Compacted & Non-overlapping)";
+            l1_1 [label="SSTable 1-1|Keys: 0-100"];
+            l1_2 [label="SSTable 1-2|Keys: 101-200"];
+            l1_3 [label="SSTable 1-3|Keys: 201-300"];
+        }
+    }
+
+    write_req [label="Write Request\\n(Put / Delete)", shape=ellipse, fillcolor="#DBEAFE", color="#3B82F6"];
+    write_req -> wal [label="1. Append"];
+    write_req -> memtable [label="2. Write Buffer"];
+    memtable -> imm_memtable [label="Buffer Full"];
+    imm_memtable -> l0_1 [label="Minor Flush", style=bold, color="#2563EB"];
+    l0_1 -> l1_1 [label="Major Compaction", style=dotted, color="#D97706"];
+    l0_2 -> l1_2 [label="Merge Sort", style=dotted, color="#D97706"];
+}`
+    },
+    {
+        id: 'puml-gitops-argocd',
+        name: 'GitOps & ArgoCD 声明式持续部署',
+        mode: 'plantuml',
+        category: 'System: Engineering',
+        code: `@startuml
+skinparam backgroundColor transparent
+
+actor Developer as "研发人员"
+entity GitApp as "应用代码仓库 (App Repo)"
+entity GitConfig as "K8s 配置仓库 (Manifests Repo)"
+node "CI Pipeline (GitHub Actions)" as ci
+node "ArgoCD Controller" as argocd
+node "Kubernetes Production Cluster" as k8s
+
+Developer -> GitApp : 1. git push (新功能代码)
+GitApp -> ci : 2. 触发 CI 流水线 (Lint, Test, Build)
+ci -> ci : 3. 构建并推送 Docker 镜像 (Registry)
+ci -> GitConfig : 4. 自动更新镜像版本 Tag (Git Commit)
+
+argocd -> GitConfig : 5. 定期检测目标状态 (Git Poll / Webhook)
+argocd -> k8s : 6. 对比集群实时状态 (Live State vs Desired State)
+argocd -> k8s : 7. 差异同步 (Auto Sync & Rolling Update Pods)
+k8s --> argocd : 8. 反馈就绪探针状态 (Healthy / Synced)
+@enduml`
+    },
+    {
+        id: 'puml-opentelemetry',
+        name: 'OpenTelemetry 可观测性链路追踪体系',
+        mode: 'plantuml',
+        category: 'System: Engineering',
+        code: `@startuml
+skinparam backgroundColor transparent
+skinparam componentStyle uml2
+
+package "Application Services (Instrumentation)" {
+    [Order Service (OTel SDK)] as svc_order
+    [Payment Service (OTel SDK)] as svc_pay
+    [User Service (OTel SDK)] as svc_user
+}
+
+node "OpenTelemetry Collector" as otel_collector {
+    [OTLP Receiver (gRPC/HTTP)] as rx
+    [Batch / Memory Processors] as proc
+    [Exporters] as exp
+    rx --> proc
+    proc --> exp
+}
+
+package "Observability Backend Platforms" {
+    database "Prometheus (Metrics 指标)" as prom
+    database "Jaeger / Tempo (Traces 分布式链路)" as jaeger
+    database "Loki / Elasticsearch (Logs 日志)" as loki
+    node "Grafana Unified Dashboard" as grafana
+}
+
+svc_order --> rx : OTLP Traces/Metrics
+svc_pay --> rx : OTLP Traces/Metrics
+svc_user --> rx : OTLP Traces/Metrics
+
+exp --> prom : Export Metrics
+exp --> jaeger : Export Spans
+exp --> loki : Export Structured Logs
+
+grafana --> prom : 查询性能指标
+grafana --> jaeger : 关联追踪链路
+grafana --> loki : 聚合排查日志
+@enduml`
+    },
+    {
+        id: 'puml-ecommerce-fulfillment',
+        name: '跨部门电商履约协同泳道图',
+        mode: 'plantuml',
+        category: 'Business: Process',
+        code: `@startuml
+skinparam backgroundColor transparent
+
+|#F8FAFC|用户 (Customer)|
+start
+:提交订单并在线支付;
+
+|#F1F5F9|支付与风控系统 (Risk & Payment)|
+:扣款成功，风控规则校验;
+if (风控检测是否异常?) then (存在高危风险)
+    :拦截交易并原路退款;
+    |用户 (Customer)|
+    :收到交易失败短信;
+    stop
+else (正常交易)
+endif
+
+|#E2E8F0|仓储与履约中台 (WMS / Fulfillment)|
+:分配最优就近发货仓库;
+:下发拣货单并打包称重;
+
+|#CBD5E1|物流干线与配送 (Logistics & Delivery)|
+:快递网点揽收与扫码分拣;
+:干线运输至末端配送站;
+:快递员派送上门并扫码签收;
+
+|用户 (Customer)|
+:收到商品，验货并确认收货;
+:对商品与配送服务进行评价;
+stop
+@enduml`
+    },
+    {
+        id: 'dot-bplus-tree',
+        name: 'B+ Tree 多路平衡索引结构',
+        mode: 'graphviz',
+        category: 'Graphviz: Features',
+        code: `digraph BPlusTree {
+    rankdir=TB;
+    node [fontname="monospace", fontsize=10, shape=record, style=filled, fillcolor="#F8FAFC", color="#475569"];
+    edge [color="#64748B", arrowsize=0.7];
+
+    // Root Node
+    root [label="<p0> | 50 | <p1> ", fillcolor="#DBEAFE", color="#2563EB", penwidth=1.5];
+
+    // Internal Nodes (Index Layer)
+    node1 [label="<p0> | 20 | <p1> | 35 | <p2> "];
+    node2 [label="<p0> | 65 | <p1> | 80 | <p2> "];
+
+    // Leaf Nodes (Data Layer with Doubly-Linked Pointers)
+    node [fillcolor="#DCFCE7", color="#16A34A"];
+    leaf1 [label="<f0> 10 | <f1> 15 | <next> ->"];
+    leaf2 [label="<f0> 20 | <f1> 25 | <f2> 30 | <next> ->"];
+    leaf3 [label="<f0> 35 | <f1> 42 | <next> ->"];
+    leaf4 [label="<f0> 50 | <f1> 58 | <next> ->"];
+    leaf5 [label="<f0> 65 | <f1> 72 | <next> ->"];
+    leaf6 [label="<f0> 80 | <f1> 90 | <f2> 99"];
+
+    // Root to Internal Connections
+    root:p0 -> node1;
+    root:p1 -> node2;
+
+    // Internal to Leaves
+    node1:p0 -> leaf1;
+    node1:p1 -> leaf2;
+    node1:p2 -> leaf3;
+
+    node2:p0 -> leaf4;
+    node2:p1 -> leaf5;
+    node2:p2 -> leaf6;
+
+    // Doubly-Linked Leaves (Sequential Scan Range Query)
+    edge [color="#E11D48", style=dashed, constraint=false, arrowhead=vee];
+    leaf1:next -> leaf2;
+    leaf2:next -> leaf3;
+    leaf3:next -> leaf4;
+    leaf4:next -> leaf5;
+    leaf5:next -> leaf6;
+}`
+    },
+    {
+        id: 'puml-zero-trust',
+        name: 'Zero Trust (零信任安全架构)',
+        mode: 'plantuml',
+        category: 'System: Architecture',
+        code: `@startuml
+skinparam backgroundColor transparent
+skinparam componentStyle uml2
+
+actor "User / Device" as user
+node "Policy Enforcement Point (PEP 网关)" as pep
+node "Policy Decision Point (PDP 策略引擎)" as pdp
+database "Identity & Context (IAM / Risk Engine)" as iam
+package "Microservices Resource Cluster" {
+    [Order Service] as svc_order
+    [Payment Service] as svc_pay
+}
+
+user -> pep : 1. 携带 mTLS 客户端证书 & JWT 请求
+pep -> pdp : 2. 评估访问策略 (Evaluate Request)
+pdp <-> iam : 3. 查询实时用户角色、设备合规与风险评分
+pdp --> pep : 4. 决策结果: Permit (允许) / Deny (拒绝)
+pep -> svc_order : 5. 注入短期最小权限 Token 转发请求
+svc_order -> svc_pay : 6. 服务间 mTLS 加密通信 (Zero Trust East-West)
+@enduml`
+    },
+    {
+        id: 'puml-jwt-refresh-rotation',
+        name: 'JWT 双令牌轮转与防重放',
+        mode: 'plantuml',
+        category: 'System: Patterns',
+        code: `@startuml
+autonumber
+actor Client as "SPA / 移动客户端"
+participant AuthServer as "认证服务器 (Auth Center)"
+database Redis as "Token 黑名单与家族 (Redis)"
+participant API as "业务 API 网关"
+
+Client -> API : 1. 发送业务请求 (Header: AccessToken)
+API --> Client : 2. 返回 401 Unauthorized (AccessToken 已过期)
+Client -> AuthServer : 3. POST /auth/refresh (RefreshToken_v1)
+AuthServer -> Redis : 4. 检查 RefreshToken_v1 是否已废弃/泄露
+alt RefreshToken_v1 在黑名单中 (检测到重放攻击)
+    AuthServer -> Redis : 吊销该 Token 家族下的所有 RefreshToken
+    AuthServer --> Client : 403 Forbidden (强制重新登录)
+else RefreshToken_v1 合法
+    AuthServer -> Redis : 废弃 RefreshToken_v1 并加入黑名单
+    AuthServer -> Redis : 存储新 RefreshToken_v2 (TTL 7d)
+    AuthServer --> Client : 返回新 AccessToken_v2 (TTL 15m) + RefreshToken_v2
+    Client -> API : 5. 使用新 AccessToken_v2 重试原请求 (200 OK)
+end
+@enduml`
+    },
+    {
+        id: 'puml-distributed-lock',
+        name: 'Redis 分布式锁与看门狗续期',
+        mode: 'plantuml',
+        category: 'System: Patterns',
+        code: `@startuml
+skinparam backgroundColor transparent
+
+start
+:客户端申请分布式锁 (LockKey);
+:生成唯一客户端标识 (UUID / RequestId);
+:执行 Redis 命令: SET key uuid NX PX 30000;
+
+if (SETNX 是否成功获取锁?) then (成功)
+    #LightGreen:启动后台看门狗线程 (Watchdog Daemon);
+    fork
+        :执行核心业务逻辑 (Business Transaction);
+    fork again
+        while (业务逻辑未结束?) is (执行中)
+            :休眠 lock_ttl / 3 (10秒);
+            :执行 Lua 脚本续期 (PEXPIRE key 30000);
+        endwhile
+    end fork
+    :执行 Lua 脚本安全释放锁 (校验 UUID 一致性后 DEL);
+    :终止看门狗线程;
+    #LightGreen:业务成功返回;
+    stop
+else (锁已被其他节点持有)
+    if (是否配置重试策略?) then (重试)
+        :计算指数退避抖动时间 (Jitter Sleep 50~200ms);
+        :递归重新尝试获取锁;
+        stop
+    else (不重试)
+        #Pink:快速失败 (Fail-Fast 抛出 LockAcquireException);
+        stop
+    endif
+endif
+@enduml`
+    },
+    {
+        id: 'puml-raft-consensus',
+        name: 'Raft 分布式共识与日志复制',
+        mode: 'plantuml',
+        category: 'System: Architecture',
+        code: `@startuml
+autonumber
+participant Client as "Client 写入客户端"
+participant Leader as "Node A (Leader)"
+participant Follower1 as "Node B (Follower)"
+participant Follower2 as "Node C (Follower)"
+
+Client -> Leader : 1. 写入数据指令: SET x = 100
+Leader -> Leader : 2. 写入本地 Uncommitted Log
+Leader -> Follower1 : 3. AppendEntries RPC (Term=1, Log=[SET x=100])
+Leader -> Follower2 : 3. AppendEntries RPC (Term=1, Log=[SET x=100])
+
+Follower1 -> Follower1 : 4. 写入本地日志并响应
+Follower1 --> Leader : 5. AppendEntries Success
+Follower2 -> Follower2 : 4. 写入本地日志并响应
+Follower2 --> Leader : 5. AppendEntries Success
+
+Leader -> Leader : 6. 达到多数派提交 Quorum (2/3 节点写入)
+Leader -> Leader : 7. 提交日志到状态机 (Commit Log & State Machine)
+Leader --> Client : 8. 返回写入成功 (200 OK)
+
+Leader -> Follower1 : 9. 下次心跳同步 CommitIndex (Follower 提交本地日志)
+Leader -> Follower2 : 9. 下次心跳同步 CommitIndex (Follower 提交本地日志)
+@enduml`
+    },
+    {
+        id: 'puml-lambda-kappa',
+        name: 'Kappa 实时流计算与湖仓一体',
+        mode: 'plantuml',
+        category: 'System: Data',
+        code: `@startuml
+skinparam backgroundColor transparent
+skinparam componentStyle uml2
+
+cloud "Event Sources (IoT / Logs / CDC)" as sources
+
+package "Kappa 实时处理管道 (Real-time Stream)" {
+    queue "Kafka / Pulsar (Append-Only Log)" as mq
+    node "Apache Flink (流计算引擎)" as flink
+    database "Apache Iceberg / Hudi (湖仓一体湖表)" as lake
+    database "ClickHouse / StarRocks (OLAP 实时分析库)" as olap
+}
+
+package "Serving & Query Layer" {
+    [BI Dashboard / Grafana] as bi
+    [Real-time AI Feature Store] as ai
+}
+
+sources --> mq : 实时事件流注入
+mq --> flink : 毫秒级流式消费
+flink --> lake : 微批持久化落湖 (ACID Upsert)
+flink --> olap : 实时聚合指标落地
+olap --> bi : 秒级多维分析查询
+lake --> ai : 特征提取与离线回溯计算
+@enduml`
+    },
+    {
+        id: 'puml-cor-pipeline',
+        name: 'Chain of Responsibility (责任链管道)',
+        mode: 'plantuml',
+        category: 'Design: Patterns',
+        code: `@startuml
+skinparam backgroundColor transparent
+skinparam classAttributeIconSize 0
+
+interface Handler {
+    + setNext(handler: Handler): Handler
+    + handle(request: Request): Response
+}
+
+abstract class AbstractHandler implements Handler {
+    - nextHandler: Handler
+    + setNext(handler: Handler): Handler
+    + handle(request: Request): Response
+}
+
+class AuthFilter extends AbstractHandler {
+    + handle(request: Request): Response
+}
+
+class RateLimitFilter extends AbstractHandler {
+    + handle(request: Request): Response
+}
+
+class ValidationFilter extends AbstractHandler {
+    + handle(request: Request): Response
+}
+
+class BusinessHandler extends AbstractHandler {
+    + handle(request: Request): Response
+}
+
+AuthFilter --> RateLimitFilter : next
+RateLimitFilter --> ValidationFilter : next
+ValidationFilter --> BusinessHandler : next
+@enduml`
+    },
+    {
+        id: 'dot-trie-prefix',
+        name: 'Trie 字典树 (前缀匹配结构)',
+        mode: 'graphviz',
+        category: 'Graphviz: Layouts',
+        code: `digraph TrieTree {
+    rankdir=TB;
+    node [fontname="monospace", fontsize=11, shape=circle, style=filled, fillcolor="#F8FAFC", color="#475569", width=0.4];
+    edge [fontname="monospace", fontsize=10, color="#64748B", arrowsize=0.7];
+
+    root [label="ROOT", fillcolor="#DBEAFE", color="#2563EB", shape=doublecircle];
+    
+    // Level 1
+    root -> n_c [label=" c"];
+    root -> n_t [label=" t"];
+
+    // Branch: cat, car, cap
+    n_c [label="c"];
+    n_c -> n_a [label=" a"];
+    n_a [label="a"];
+    
+    n_a -> w_cat [label=" t"];
+    n_a -> w_car [label=" r"];
+    n_a -> w_cap [label=" p"];
+
+    w_cat [label="cat", shape=doublecircle, fillcolor="#DCFCE7", color="#16A34A"];
+    w_car [label="car", shape=doublecircle, fillcolor="#DCFCE7", color="#16A34A"];
+    w_cap [label="cap", shape=doublecircle, fillcolor="#DCFCE7", color="#16A34A"];
+
+    // Branch: to, tea
+    n_t [label="t"];
+    n_t -> w_to [label=" o"];
+    n_t -> n_e [label=" e"];
+    
+    w_to [label="to", shape=doublecircle, fillcolor="#DCFCE7", color="#16A34A"];
+    n_e [label="e"];
+    n_e -> w_tea [label=" a"];
+    w_tea [label="tea", shape=doublecircle, fillcolor="#DCFCE7", color="#16A34A"];
+}`
+    },
+    {
+        id: 'dot-flow-network',
+        name: 'Max Flow (最大流网络流图)',
+        mode: 'graphviz',
+        category: 'Graphviz: Layouts',
+        code: `digraph MaxFlowNetwork {
+    rankdir=LR;
+    node [shape=circle, fontname="monospace", fontsize=11, style=filled, fillcolor="#F1F5F9", color="#475569", width=0.5];
+    edge [fontname="sans-serif", fontsize=10, color="#334155", arrowsize=0.8];
+
+    s [label="S (源点)", fillcolor="#DCFCE7", color="#16A34A", shape=doublecircle];
+    t [label="T (汇点)", fillcolor="#FEE2E2", color="#DC2626", shape=doublecircle];
+    
+    v1 [label="V1"];
+    v2 [label="V2"];
+    v3 [label="V3"];
+    v4 [label="V4"];
+
+    s -> v1 [label=" 10/16", color="#2563EB", penwidth=1.8];
+    s -> v2 [label=" 12/13", color="#2563EB", penwidth=2.0];
+    
+    v1 -> v2 [label=" 0/4"];
+    v1 -> v3 [label=" 10/12", color="#2563EB", penwidth=1.8];
+    
+    v2 -> v1 [label=" 4/10"];
+    v2 -> v4 [label=" 8/14", color="#2563EB", penwidth=1.5];
+    
+    v3 -> v2 [label=" 0/9"];
+    v3 -> t  [label=" 19/20", color="#2563EB", penwidth=2.2];
+    
+    v4 -> v3 [label=" 7/7", color="#D97706", penwidth=1.5];
+    v4 -> t  [label=" 4/4", color="#D97706", penwidth=1.2];
 }`
     }
 ];

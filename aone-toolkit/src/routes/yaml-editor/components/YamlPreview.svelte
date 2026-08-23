@@ -1,11 +1,5 @@
 <script lang="ts">
-    import hljs from "highlight.js/lib/core";
-    import yaml from "highlight.js/lib/languages/yaml";
-    import json from "highlight.js/lib/languages/json";
-    import "highlight.js/styles/atom-one-dark.css";
-
-    hljs.registerLanguage("yaml", yaml);
-    hljs.registerLanguage("json", json);
+    import { CodeBlock } from "$lib/components/ui";
 
     interface Props {
         value: string;
@@ -15,68 +9,47 @@
     let { value, data }: Props = $props();
 
     let mode = $state<"yaml" | "json">("yaml");
-    let highlightedCode = $derived.by(() => {
-        try {
-            if (mode === "yaml") {
-                if (value) {
-                    return hljs.highlight(value, {
-                        language: "yaml",
-                    }).value;
-                }
-                return "";
-            } else {
-                let jsonStr = "";
-                if (data !== undefined) {
-                    jsonStr = JSON.stringify(data, null, 2);
-                }
-                if (jsonStr) {
-                    return hljs.highlight(jsonStr, {
-                        language: "json",
-                    }).value;
-                }
-                return "";
-            }
-        } catch (e) {
-            console.error("Highlight error", e);
+    let currentCode = $derived.by(() => {
+        if (mode === "yaml") {
             return value || "";
         }
+        if (data !== undefined) {
+            return JSON.stringify(data, null, 2);
+        }
+        return "";
     });
-
-    function copyContent() {
-        const text =
-            mode === "yaml" ? value : JSON.stringify(data, null, 2) || "";
-        navigator.clipboard.writeText(text);
-        // Toast?
-    }
 </script>
 
-<div
-    class="h-full bg-slate-50 dark:bg-slate-950 overflow-hidden flex flex-col relative group"
->
-    <div
-        class="absolute right-4 top-4 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
-    >
-        <div
-            class="bg-white dark:bg-slate-800 rounded-lg p-1 border border-slate-200 dark:border-slate-700 shadow-sm flex text-xs"
-        >
+<div class="h-full bg-slate-50 dark:bg-slate-950 overflow-hidden flex flex-col p-3">
+    <div class="flex items-center justify-between pb-2 mb-1 border-b border-slate-200 dark:border-slate-800">
+        <div class="text-xs font-semibold text-slate-700 dark:text-slate-300">
+            预览与格式转换
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700 shadow-2xs flex text-xs">
             <button
-                class="px-2 py-1 rounded-md {mode === 'yaml'
-                    ? 'bg-slate-100 dark:bg-slate-700 font-medium text-slate-800 dark:text-slate-200'
-                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}"
+                type="button"
+                class="px-2.5 py-1 rounded-md font-medium transition cursor-pointer {mode === 'yaml'
+                    ? 'bg-indigo-600 text-white font-semibold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'}"
                 onclick={() => (mode = "yaml")}>YAML</button
             >
             <button
-                class="px-2 py-1 rounded-md {mode === 'json'
-                    ? 'bg-slate-100 dark:bg-slate-700 font-medium text-slate-800 dark:text-slate-200'
-                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}"
+                type="button"
+                class="px-2.5 py-1 rounded-md font-medium transition cursor-pointer {mode === 'json'
+                    ? 'bg-indigo-600 text-white font-semibold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'}"
                 onclick={() => (mode = "json")}>JSON</button
             >
         </div>
     </div>
 
-    <div class="flex-1 overflow-auto p-4 custom-scrollbar">
-        <pre class="font-mono text-sm leading-relaxed"><code
-                class="language-{mode}">{@html highlightedCode}</code
-            ></pre>
+    <div class="flex-1 overflow-auto custom-scrollbar">
+        <CodeBlock
+            code={currentCode}
+            language={mode}
+            showLineNumbers={true}
+            showHeader={false}
+            class="!my-0 h-full"
+        />
     </div>
 </div>

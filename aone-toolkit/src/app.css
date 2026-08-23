@@ -54,19 +54,40 @@
 @layer base {
   html {
     font-family: 'Noto Sans SC', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   body {
-    @apply bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100;
+    @apply bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-xs sm:text-sm;
     transition: background-color var(--transition-normal), color var(--transition-normal);
+  }
+
+  h1 {
+    @apply text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-slate-50;
+  }
+
+  h2 {
+    @apply text-sm sm:text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100;
+  }
+
+  h3 {
+    @apply text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200;
   }
 
   code,
   pre,
   .font-mono {
     font-family: 'JetBrains Mono', 'Fira Code', Monaco, Consolas, monospace;
+  }
+
+  pre,
+  pre code,
+  .code-block {
+    font-size: 12.5px;
+    line-height: 1.6;
   }
 
   /* Focus styles */
@@ -285,117 +306,211 @@
 /* Refined Code & JSON Highlighting System */
 .rich-markdown pre,
 .prose pre,
+.code-block-wrapper pre,
 pre code {
   font-family: 'JetBrains Mono', 'Fira Code', Monaco, Consolas, monospace !important;
-  font-size: 11.5px !important;
-  line-height: 1.55 !important;
+  font-size: 12.5px !important;
+  line-height: 1.6 !important;
 }
 
 pre code.hljs {
   padding: 0.85rem 1rem !important;
   background: transparent !important;
+  color: #1e293b !important;
+}
+
+:global(.dark) pre code.hljs,
+.dark pre code.hljs,
+.code-block-wrapper pre code.hljs {
   color: #f1f5f9 !important;
 }
 
-/* Custom High-Contrast Palette for JSON & Code */
-.code-container code .hljs-attr,
-.rich-markdown code .hljs-attr,
-.hljs-attr {
-  color: #38bdf8 !important;
+/* Custom High-Contrast Palette for JSON & Code (Light / Dark) */
+.hljs-attr,
+.hljs-variable,
+.hljs-template-variable {
+  color: #0284c7 !important;
   font-weight: 600 !important;
 }
+:global(.dark) .hljs-attr,
+:global(.dark) .hljs-variable,
+.dark .hljs-attr,
+.dark .hljs-variable,
+.code-container code .hljs-attr,
+.rich-markdown code .hljs-attr {
+  color: #38bdf8 !important;
+}
 
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+  color: #16a34a !important;
+}
+:global(.dark) .hljs-string,
+:global(.dark) .hljs-symbol,
+.dark .hljs-string,
+.dark .hljs-symbol,
 .code-container code .hljs-string,
-.rich-markdown code .hljs-string,
-.hljs-string {
+.rich-markdown code .hljs-string {
   color: #4ade80 !important;
 }
 
-.code-container code .hljs-number,
-.rich-markdown code .hljs-number,
-.hljs-number {
-  color: #fbbf24 !important;
+.hljs-number,
+.hljs-meta,
+.hljs-link {
+  color: #d97706 !important;
   font-weight: 500 !important;
 }
+:global(.dark) .hljs-number,
+:global(.dark) .hljs-meta,
+.dark .hljs-number,
+.dark .hljs-meta,
+.code-container code .hljs-number,
+.rich-markdown code .hljs-number {
+  color: #fbbf24 !important;
+}
 
+.hljs-literal,
+.hljs-keyword,
+.hljs-boolean,
+.hljs-selector-tag,
+.hljs-type,
+.hljs-built_in {
+  color: #db2777 !important;
+  font-weight: 600 !important;
+}
+:global(.dark) .hljs-literal,
+:global(.dark) .hljs-keyword,
+:global(.dark) .hljs-boolean,
+.dark .hljs-literal,
+.dark .hljs-keyword,
+.dark .hljs-boolean,
 .code-container code .hljs-literal,
 .code-container code .hljs-keyword,
 .code-container code .hljs-boolean,
 .rich-markdown code .hljs-literal,
 .rich-markdown code .hljs-keyword,
-.rich-markdown code .hljs-boolean,
-.hljs-literal,
-.hljs-keyword,
-.hljs-boolean {
+.rich-markdown code .hljs-boolean {
   color: #f472b6 !important;
-  font-weight: 600 !important;
 }
 
+.hljs-punctuation,
+.hljs-operator {
+  color: #64748b !important;
+}
+:global(.dark) .hljs-punctuation,
+:global(.dark) .hljs-operator,
+.dark .hljs-punctuation,
+.dark .hljs-operator,
 .code-container code .hljs-punctuation,
-.rich-markdown code .hljs-punctuation,
-.hljs-punctuation {
+.rich-markdown code .hljs-punctuation {
   color: #94a3b8 !important;
 }
 
-.code-container code .hljs-comment,
-.rich-markdown code .hljs-comment,
-.hljs-comment {
+.hljs-comment,
+.hljs-quote {
   color: #64748b !important;
   font-style: italic !important;
 }
+:global(.dark) .hljs-comment,
+:global(.dark) .hljs-quote,
+.dark .hljs-comment,
+.dark .hljs-quote,
+.code-container code .hljs-comment,
+.rich-markdown code .hljs-comment {
+  color: #94a3b8 !important;
+}
 
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.function_,
+.hljs-section,
+.hljs-function {
+  color: #4f46e5 !important;
+  font-weight: 700 !important;
+}
+:global(.dark) .hljs-title,
+:global(.dark) .hljs-title.class_,
+:global(.dark) .hljs-title.function_,
+:global(.dark) .hljs-section,
+:global(.dark) .hljs-function,
+.dark .hljs-title,
+.dark .hljs-section,
 .code-container code .hljs-title,
 .code-container code .hljs-section,
 .rich-markdown code .hljs-title,
-.rich-markdown code .hljs-section,
-.hljs-title,
-.hljs-section {
+.rich-markdown code .hljs-section {
   color: #818cf8 !important;
-  font-weight: 700 !important;
 }
 
-.code-container code .hljs-bullet,
-.rich-markdown code .hljs-bullet,
 .hljs-bullet {
-  color: #38bdf8 !important;
+  color: #0284c7 !important;
   font-weight: 600 !important;
 }
+:global(.dark) .hljs-bullet,
+.dark .hljs-bullet,
+.code-container code .hljs-bullet,
+.rich-markdown code .hljs-bullet {
+  color: #38bdf8 !important;
+}
 
-.code-container code .hljs-emphasis,
-.rich-markdown code .hljs-emphasis,
 .hljs-emphasis {
   font-style: italic !important;
+  color: #db2777 !important;
+}
+:global(.dark) .hljs-emphasis,
+.dark .hljs-emphasis,
+.code-container code .hljs-emphasis,
+.rich-markdown code .hljs-emphasis {
   color: #f472b6 !important;
 }
 
-.code-container code .hljs-strong,
-.rich-markdown code .hljs-strong,
 .hljs-strong {
   font-weight: 700 !important;
+  color: #d97706 !important;
+}
+:global(.dark) .hljs-strong,
+.dark .hljs-strong,
+.code-container code .hljs-strong,
+.rich-markdown code .hljs-strong {
   color: #fbbf24 !important;
 }
 
-.code-container code .hljs-link,
-.rich-markdown code .hljs-link,
 .hljs-link {
-  color: #60a5fa !important;
+  color: #2563eb !important;
   text-decoration: underline !important;
 }
+:global(.dark) .hljs-link,
+.dark .hljs-link,
+.code-container code .hljs-link,
+.rich-markdown code .hljs-link {
+  color: #60a5fa !important;
+}
 
-.code-container code .hljs-code,
-.rich-markdown code .hljs-code,
 .hljs-code {
-  color: #4ade80 !important;
-  background: rgba(255, 255, 255, 0.05) !important;
+  color: #16a34a !important;
+  background: rgba(0, 0, 0, 0.05) !important;
   padding: 0.1rem 0.3rem !important;
   border-radius: 4px !important;
 }
+:global(.dark) .hljs-code,
+.dark .hljs-code,
+.code-container code .hljs-code,
+.rich-markdown code .hljs-code {
+  color: #4ade80 !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
 
-.code-container code .hljs-quote,
-.rich-markdown code .hljs-quote,
 .hljs-quote {
-  color: #94a3b8 !important;
+  color: #64748b !important;
   font-style: italic !important;
+}
+:global(.dark) .hljs-quote,
+.dark .hljs-quote,
+.code-container code .hljs-quote,
+.rich-markdown code .hljs-quote {
+  color: #94a3b8 !important;
 }
 
 /* ==========================================================================
@@ -523,7 +638,7 @@ pre code.hljs {
 
 .rich-markdown pre code {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px !important;
+  font-size: 12px !important;
   line-height: 1.55 !important;
   padding: 0.65rem 0.85rem !important;
   display: block;

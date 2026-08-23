@@ -1,9 +1,10 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui";
-  import { Copy, Download, Check } from "lucide-svelte";
+  import { Copy, Download, Check, WrapText, FileCode } from "lucide-svelte";
   import type { OutputFormat } from "../lib/types";
   import { FORMAT_CONFIG } from "../lib/types";
   import ExportDropdown from "./ExportDropdown.svelte";
+  import { toastStore } from "$lib/stores/toastStore.svelte";
 
   interface Props {
     content: string;
@@ -26,30 +27,31 @@
   let isCopying = $state(false);
   let isDownloading = $state(false);
   let copied = $state(false);
+  let isWrap = $state(false);
 
   const charCount = $derived(content.length);
   const lineCount = $derived(content ? content.split("\n").length : 0);
   const formatLabel = $derived(format ? FORMAT_CONFIG[format].label : "文本");
   const formatExt = $derived(format ? FORMAT_CONFIG[format].ext : ".txt");
-  const outputSummary = $derived(
-    `${formatLabel} 输出, ${lineCount} 行, ${charCount} 字符`,
-  );
 
   async function handleCopyClick() {
-    if (isCopying) return;
+    if (isCopying || !content) return;
 
     isCopying = true;
     try {
       await onCopy();
       copied = true;
+      toastStore.success(`已复制 ${formatLabel} 到剪贴板`);
       setTimeout(() => (copied = false), 2000);
+    } catch {
+      toastStore.error("复制失败，请手动选择复制");
     } finally {
       isCopying = false;
     }
   }
 
   async function handleDownloadClick() {
-    if (isDownloading) return;
+    if (isDownloading || !content) return;
 
     isDownloading = true;
     try {
@@ -60,34 +62,45 @@
   }
 </script>
 
-<div class="output-container">
-  <div class="toolbar">
-    <div class="heading-group">
-      <h3 class="title">转换与导出结果</h3>
-      <p id="output-help" class="description">
-        支持直接复制文本内容、下载当前 {formatLabel} ({formatExt}) 或导出其他格式文件。
-      </p>
-    </div>
-    <div class="toolbar-group">
-      <span class="stats" aria-label={outputSummary}>
-        <strong class="text-indigo-600 dark:text-indigo-400">{formatLabel}</strong>
-        <span>{lineCount} 行</span>
-        <span>{charCount} 字符</span>
+<div class="flex flex-col gap-2.5">
+  <!-- Toolbar -->
+  <div class="flex items-center justify-between gap-2 flex-wrap">
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono font-medium bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
+        <FileCode class="h-3 w-3 text-indigo-500" />
+        <span>{formatLabel}</span>
+        <span class="text-slate-400">({formatExt})</span>
       </span>
+      <span class="text-xs font-mono text-slate-400">
+        {lineCount} 行 • {charCount} 字符
+      </span>
+    </div>
+
+    <div class="flex items-center gap-1.5 justify-end">
+      <!-- Wrap Text Toggle -->
+      <button
+        type="button"
+        onclick={() => (isWrap = !isWrap)}
+        class="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer {isWrap ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-medium' : ''}"
+        title="切换自动换行"
+      >
+        <WrapText class="h-3 w-3 text-slate-400" />
+        <span>换行</span>
+      </button>
 
       <button
         type="button"
         onclick={handleCopyClick}
         disabled={isCopying || !content}
-        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-medium text-xs text-slate-700 shadow-xs hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-        title="复制转换后内容"
+        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors cursor-pointer"
+        title="复制输出内容到剪贴板"
       >
         {#if copied}
-          <Check class="h-3.5 w-3.5 text-emerald-600" />
-          <span>已复制</span>
+          <Check class="h-3 w-3 text-emerald-500" />
+          <span class="text-emerald-600 dark:text-emerald-400">已复制</span>
         {:else}
-          <Copy class="h-3.5 w-3.5" />
-          <span>{isCopying ? "复制中..." : "复制内容"}</span>
+          <Copy class="h-3 w-3 text-slate-400" />
+          <span>复制</span>
         {/if}
       </button>
 
@@ -95,11 +108,11 @@
         type="button"
         onclick={handleDownloadClick}
         disabled={isDownloading || !content}
-        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 font-semibold text-xs text-white shadow-xs hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-500 font-medium text-white shadow-2xs disabled:opacity-40 transition-colors cursor-pointer"
         title={`下载当前 ${formatLabel} 文件 (${formatExt})`}
       >
-        <Download class="h-3.5 w-3.5" />
-        <span>{isDownloading ? "下载中..." : `下载 ${formatExt}`}</span>
+        <Download class="h-3 w-3" />
+        <span>下载 {formatExt}</span>
       </button>
 
       {#if onDownloadOtherFormat}
@@ -107,110 +120,21 @@
           {tableName}
           disabled={!content}
           onExport={onDownloadOtherFormat}
-          label="导出为其他格式"
+          label="更多格式 ▾"
           size="sm"
         />
       {/if}
     </div>
   </div>
 
-  <div class="output-wrapper">
+  <!-- Code Output View -->
+  <div class="relative rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-950 overflow-hidden shadow-2xs">
     <textarea
-      class="output-pre"
       readonly
       value={content}
+      rows="10"
       aria-label="转换后的表格输出内容"
-      aria-describedby="output-help"
+      class="w-full p-3 font-mono text-xs text-slate-100 bg-slate-950 placeholder:text-slate-600 outline-none resize-y min-h-[200px] select-text {isWrap ? 'whitespace-pre-wrap break-all' : 'whitespace-pre overflow-x-auto'}"
     ></textarea>
   </div>
 </div>
-
-<style>
-  .output-container {
-    display: flex;
-    flex-direction: column;
-    gap: 0.875rem;
-  }
-
-  .toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-  }
-
-  .heading-group {
-    display: flex;
-    min-width: min(100%, 20rem);
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .toolbar-group {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary, #111827);
-    margin: 0;
-  }
-
-  :global(.dark) .title {
-    color: #f9fafb;
-  }
-
-  .description {
-    margin: 0;
-    color: #6b7280;
-    font-size: 0.8125rem;
-    line-height: 1.4;
-  }
-
-  .stats {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-    font-size: 0.8125rem;
-    color: #4b5563;
-    padding-right: 0.25rem;
-  }
-
-  .stats span {
-    color: #6b7280;
-  }
-
-  .output-wrapper {
-    position: relative;
-    border-radius: 0.5rem;
-    overflow: hidden;
-  }
-
-  .output-pre {
-    width: 100%;
-    min-height: 260px;
-    height: 320px;
-    max-height: 560px;
-    padding: 0.875rem 1rem;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.8125rem;
-    line-height: 1.5;
-    background: #0f172a;
-    color: #f8fafc;
-    border: 1px solid #1e293b;
-    border-radius: 0.5rem;
-    resize: vertical;
-    outline: none;
-    tab-size: 2;
-    white-space: pre;
-    overflow-x: auto;
-    overflow-y: auto;
-    flex-shrink: 0;
-  }
-</style>

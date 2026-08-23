@@ -782,7 +782,7 @@
     <title>SQL 查询工作台 - Aone 工具箱</title>
 </svelte:head>
 
-<ToolWorkspace class="max-w-none w-full h-[calc(100vh-3.5rem)] !min-h-0 !p-1" enableResize={false} resizeKey="aone-sql-architect-workspace">
+<ToolWorkspace class="max-w-none w-full h-full !min-h-0 !p-1" enableResize={false} resizeKey="aone-sql-architect-workspace">
     {#snippet header()}
         <div class="flex items-center gap-3 flex-1">
             <div

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Panel, Input, Button } from "$lib/components/ui";
+    import { Panel, Input, Button, CodeBlock } from "$lib/components/ui";
     import { Copy, AlertCircle, CheckCircle, Clock, ShieldCheck, ShieldAlert, Key, Sparkles, User, Calendar, Shield, Info, Check } from "lucide-svelte";
     import { copyToClipboard } from "$lib/utils/clipboard";
     import { toastStore } from "$lib/stores/toastStore.svelte";
@@ -364,10 +364,22 @@
                     {/if}
 
                 {:else if activeInspectorTab === "payload"}
-                    <pre class="leading-relaxed text-slate-700 dark:text-slate-300">{formatJson(payload) || "无 Payload 数据"}</pre>
+                    <CodeBlock
+                        code={formatJson(payload) || "{}"}
+                        language="json"
+                        showHeader={false}
+                        wrapLines={true}
+                        class="!my-0"
+                    />
 
                 {:else if activeInspectorTab === "header"}
-                    <pre class="leading-relaxed text-rose-600 dark:text-rose-400">{formatJson(header) || "无 Header 数据"}</pre>
+                    <CodeBlock
+                        code={formatJson(header) || "{}"}
+                        language="json"
+                        showHeader={false}
+                        wrapLines={true}
+                        class="!my-0"
+                    />
                 {/if}
             </div>
         </div>

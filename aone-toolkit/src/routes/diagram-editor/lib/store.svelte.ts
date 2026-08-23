@@ -120,7 +120,7 @@ export class DiagramStore {
     error = $state<string | null>(null);
     graphvizLoadStatus = $state<GraphvizLoadStatus>('idle');
     graphvizLoadError = $state<string | null>(null);
-    scale = $state(1);
+    scale = $state(0.85);
     pan = $state({ x: 0, y: 0 });
     snippets = $state<Snippet[]>([]);
 
@@ -212,8 +212,8 @@ export class DiagramStore {
     activeDocumentId = $state<string>('');
 
     // Settings
-    fontSize = $state(14);
-    fontFamily = $state("'JetBrains Mono', monospace");
+    fontSize = $state(12);
+    fontFamily = $state("'JetBrains Mono', 'Noto Sans SC', monospace");
     plantumlServerUrl = $state('https://www.plantuml.com/plantuml');
 
     constructor(initialCode = '', initialMode: DiagramMode = 'plantuml') {
@@ -294,14 +294,22 @@ deactivate Gateway
                 const data = JSON.parse(saved);
                 this.documents = data.documents || [];
                 this.activeDocumentId = data.activeDocumentId || '';
-                this.scale = data.scale || 1;
-                this.pan = data.pan || { x: 0, y: 0 };
+                this.scale = 0.85;
+                this.pan = { x: 0, y: 0 };
                 this.isSidebarPinned = data.isSidebarPinned ?? true;
                 this.isMinimapOpen = data.isMinimapOpen ?? true;
                 this.qualityLevel = data.qualityLevel || 'high';
                 if (data.layoutParams) this.layoutParams = data.layoutParams;
-                if (data.fontSize) this.fontSize = data.fontSize;
-                if (data.fontFamily) this.fontFamily = data.fontFamily;
+                if (data.fontSize) {
+                    this.fontSize = (data.fontSize === 14 ? 12 : data.fontSize);
+                } else {
+                    this.fontSize = 12;
+                }
+                if (data.fontFamily && !data.fontFamily.includes('Victor Mono')) {
+                    this.fontFamily = data.fontFamily;
+                } else {
+                    this.fontFamily = "'JetBrains Mono', 'Noto Sans SC', monospace";
+                }
                 if (data.previewTheme) this.previewTheme = data.previewTheme;
                 if (data.customPalettes && Array.isArray(data.customPalettes)) {
                     this.customPalettes = data.customPalettes;
@@ -313,7 +321,7 @@ deactivate Gateway
     }
 
     resetView() {
-        this.scale = 1;
+        this.scale = 0.85;
         this.pan = { x: 0, y: 0 };
         this.saveState();
     }
@@ -333,7 +341,7 @@ deactivate Gateway
 
         const scaleX = availW / bbox.width;
         const scaleY = availH / bbox.height;
-        const targetScale = Math.max(0.15, Math.min(3.0, Math.min(scaleX, scaleY)));
+        const targetScale = Math.max(0.15, Math.min(0.85, Math.min(scaleX, scaleY)));
 
         // Center content
         const cx = bbox.x + bbox.width / 2;

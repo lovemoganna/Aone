@@ -4,6 +4,17 @@
   import type { TableData, TableStats, OutputFormat } from "../lib/types";
   import { getTableStats } from "../lib/converters";
   import ExportDropdown from "./ExportDropdown.svelte";
+  import {
+    Maximize2,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown,
+    Search,
+    Edit3,
+    Hash,
+    ChevronLeft,
+    ChevronRight,
+  } from "lucide-svelte";
 
   interface Props {
     data: TableData;
@@ -17,17 +28,31 @@
 
   const stats = $derived<TableStats>(getTableStats(data));
 
+  let searchQuery = $state("");
   let editingCell = $state<{ row: number; col: number } | null>(null);
   let editValue = $state("");
   let sortColumn = $state<number | null>(null);
   let sortDirection = $state<"asc" | "desc">("asc");
 
-  // Pagination for large dataset performance
-  let pageSize = $state(50);
+  // Pagination
+  let pageSize = $state(25);
   let currentPage = $state(1);
 
-  const totalBodyRows = $derived(Math.max(0, data.length - 1));
-  const totalPages = $derived(Math.max(1, Math.ceil(totalBodyRows / pageSize)));
+  // Filtered body rows
+  const filteredBodyRows = $derived.by(() => {
+    if (data.length <= 1) return [];
+    const query = searchQuery.trim().toLowerCase();
+    const rows = data.slice(1);
+    if (!query) {
+      return rows.map((row, idx) => ({ row, originalIndex: idx + 1 }));
+    }
+    return rows
+      .map((row, idx) => ({ row, originalIndex: idx + 1 }))
+      .filter(({ row }) => row.some((cell) => String(cell ?? "").toLowerCase().includes(query)));
+  });
+
+  const totalFilteredRows = $derived(filteredBodyRows.length);
+  const totalPages = $derived(Math.max(1, Math.ceil(totalFilteredRows / pageSize)));
 
   $effect(() => {
     const pages = totalPages;
@@ -39,27 +64,12 @@
   });
 
   const pagedRows = $derived.by(() => {
-    if (data.length <= 1) return [];
-    const bodyRows = data.slice(1);
     const start = (currentPage - 1) * pageSize;
-    return bodyRows.slice(start, start + pageSize).map((row, idx) => ({
-      row,
-      rowIndex: start + idx + 1
-    }));
+    return filteredBodyRows.slice(start, start + pageSize);
   });
 
   function columnLabel(colIndex: number) {
-    return data[0]?.[colIndex]?.trim() || `Column ${colIndex + 1}`;
-  }
-
-  function sortState(colIndex: number) {
-    if (sortColumn !== colIndex) return "none";
-    return sortDirection === "asc" ? "ascending" : "descending";
-  }
-
-  function sortButtonLabel(colIndex: number) {
-    const nextDirection = sortColumn === colIndex && sortDirection === "asc" ? "descending" : "ascending";
-    return `Sort ${columnLabel(colIndex)} ${nextDirection}`;
+    return data[0]?.[colIndex]?.trim() || `列 ${colIndex + 1}`;
   }
 
   function handleSort(colIndex: number) {
@@ -129,319 +139,196 @@
   }
 </script>
 
-<div class="preview-container">
-  <div class="toolbar">
-    <div class="heading-group">
-      <h3 class="title">Parsed table</h3>
-      <p id="table-preview-help" class="guidance">Use Enter on a focused cell to edit. Scroll horizontally for wide tables.</p>
+<div class="flex flex-col gap-3">
+  <!-- Table Header Toolbar -->
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <div class="flex items-center gap-2 min-w-0">
+      <div class="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium">
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 font-mono text-[11px] text-slate-600 dark:text-slate-400">
+          <Hash class="h-3 w-3 text-slate-400" />
+          <span>{stats.rows} 行 × {stats.cols} 列 ({stats.cells} 格)</span>
+        </span>
+      </div>
+
+      <!-- Quick Row Search Filter -->
+      <div class="relative">
+        <Search class="h-3 w-3 absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          type="text"
+          bind:value={searchQuery}
+          placeholder="搜索表格内容..."
+          class="h-7 w-32 sm:w-44 pl-6 pr-2 text-xs rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:w-48 sm:focus:w-56 focus:outline-none focus:border-indigo-500 transition-all"
+        />
+      </div>
     </div>
-    <div class="toolbar-group">
-      <span class="stats" aria-label={`${stats.rows} rows, ${stats.cols} columns, ${stats.cells} cells`}>
-        <strong>{stats.rows}</strong> 行
-        <strong>{stats.cols}</strong> 列
-        <strong>{stats.cells}</strong> 单元格
-      </span>
-      <span class="hint">双击单元格或回车编辑</span>
+
+    <div class="flex items-center gap-1.5 justify-end">
       {#if onExport}
         <ExportDropdown
           {tableName}
           onExport={onExport}
-          label="导出文件"
+          label="导出数据"
           size="sm"
         />
       {/if}
-      <Button variant="ghost" size="sm" onclick={onFullscreen} title="全屏查看表格">全屏预览</Button>
+      <button
+        type="button"
+        onclick={onFullscreen}
+        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+        title="全屏检视表格"
+      >
+        <Maximize2 class="h-3 w-3 text-slate-400" />
+        <span>全屏</span>
+      </button>
     </div>
   </div>
 
-  <div class="table-container" role="region" aria-label="Editable table preview" aria-describedby="table-preview-help">
-    <table>
-      <thead>
-        <tr>
-          {#each data[0] || [] as cell, colIndex}
-            <th
-              tabindex="0"
-              aria-sort={sortState(colIndex)}
-              ondblclick={() => startEdit(0, colIndex, cell)}
-              onkeydown={(event) => handleCellKeyDown(event, 0, colIndex, cell)}
-            >
-              {#if editingCell?.row === 0 && editingCell?.col === colIndex}
-                <!-- svelte-ignore a11y_autofocus -->
-                <input class="cell-input" bind:value={editValue} onblur={commitEdit} onkeydown={handleEditKeyDown} autofocus />
-              {:else}
-                <div class="th-content">
-                  <span class:empty-cell={!cell}>{cell || "Empty header"}</span>
-                  <button
-                    type="button"
-                    class="sort-btn"
-                    onclick={() => handleSort(colIndex)}
-                    title={sortButtonLabel(colIndex)}
-                    aria-label={sortButtonLabel(colIndex)}
-                  >
-                    {#if sortColumn === colIndex && sortDirection === "asc"}
-                      Up
-                    {:else if sortColumn === colIndex && sortDirection === "desc"}
-                      Down
-                    {:else}
-                      Sort
-                    {/if}
-                  </button>
-                </div>
-              {/if}
-            </th>
-          {/each}
-        </tr>
-      </thead>
-      <tbody>
-        {#each pagedRows as { row, rowIndex }}
+  <!-- Interactive Grid Table -->
+  <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-2xs">
+    <div class="max-h-[380px] overflow-auto select-text">
+      <table class="w-full border-collapse text-left text-xs font-mono">
+        <thead class="sticky top-0 z-10 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur-xs border-b border-slate-200 dark:border-slate-700">
           <tr>
-            {#each row as cell, colIndex}
-              <td
+            <th class="w-10 px-2.5 py-2 text-center text-[10px] font-semibold text-slate-400 dark:text-slate-500 border-r border-slate-200 dark:border-slate-700 select-none bg-slate-100 dark:bg-slate-800">
+              #
+            </th>
+            {#each data[0] || [] as cell, colIndex}
+              <th
                 tabindex="0"
-                aria-label={`Row ${rowIndex}, ${columnLabel(colIndex)}: ${cell || "empty"}. Press Enter to edit.`}
-                ondblclick={() => startEdit(rowIndex, colIndex, cell)}
-                onkeydown={(event) => handleCellKeyDown(event, rowIndex, colIndex, cell)}
+                ondblclick={() => startEdit(0, colIndex, cell)}
+                onkeydown={(event) => handleCellKeyDown(event, 0, colIndex, cell)}
+                class="px-3 py-2 text-slate-800 dark:text-slate-200 font-semibold border-r border-slate-200 dark:border-slate-700 min-w-[120px] max-w-[280px] truncate hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors group cursor-pointer"
               >
-                {#if editingCell?.row === rowIndex && editingCell?.col === colIndex}
+                {#if editingCell?.row === 0 && editingCell?.col === colIndex}
                   <!-- svelte-ignore a11y_autofocus -->
-                  <input class="cell-input" bind:value={editValue} onblur={commitEdit} onkeydown={handleEditKeyDown} autofocus />
+                  <input
+                    class="w-full px-1.5 py-0.5 rounded border border-indigo-500 bg-white dark:bg-slate-900 text-xs font-mono text-slate-900 dark:text-slate-100 outline-none shadow-xs"
+                    bind:value={editValue}
+                    onblur={commitEdit}
+                    onkeydown={handleEditKeyDown}
+                    autofocus
+                  />
                 {:else}
-                  <span class:empty-cell={!cell}>{cell || "Empty"}</span>
+                  <div class="flex items-center justify-between gap-1.5">
+                    <span class="truncate {cell ? '' : 'text-slate-400 italic'}">{cell || "列头未命名"}</span>
+                    <button
+                      type="button"
+                      onclick={(e) => { e.stopPropagation(); handleSort(colIndex); }}
+                      class="flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-slate-300/60 dark:hover:bg-slate-600 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors"
+                      title={`按 ${columnLabel(colIndex)} 排序`}
+                    >
+                      {#if sortColumn === colIndex && sortDirection === "asc"}
+                        <ArrowUp class="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
+                      {:else if sortColumn === colIndex && sortDirection === "desc"}
+                        <ArrowDown class="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
+                      {:else}
+                        <ArrowUpDown class="h-3 w-3 opacity-40 group-hover:opacity-100" />
+                      {/if}
+                    </button>
+                  </div>
                 {/if}
-              </td>
+              </th>
             {/each}
           </tr>
-        {/each}
-      </tbody>
-    </table>
-  </div>
-
-  {#if totalPages > 1}
-    <div class="flex items-center justify-between px-2 py-2 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800">
-      <div class="flex items-center gap-2">
-        <span>显示第 {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalBodyRows)} 行（共 {totalBodyRows} 行）</span>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <button
-          type="button"
-          class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-          onclick={() => { currentPage = Math.max(1, currentPage - 1); }}
-          disabled={currentPage <= 1}
-          aria-label="上一页"
-        >
-          上一页
-        </button>
-        <span class="px-2 py-1 font-mono">{currentPage} / {totalPages}</span>
-        <button
-          type="button"
-          class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-          onclick={() => { currentPage = Math.min(totalPages, currentPage + 1); }}
-          disabled={currentPage >= totalPages}
-          aria-label="下一页"
-        >
-          下一页
-        </button>
-      </div>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+          {#if pagedRows.length === 0}
+            <tr>
+              <td colspan={(data[0]?.length || 1) + 1} class="p-8 text-center text-slate-400 dark:text-slate-500">
+                {#if searchQuery}
+                  未找到匹配 "{searchQuery}" 的行数据
+                {:else}
+                  暂无数据行
+                {/if}
+              </td>
+            </tr>
+          {:else}
+            {#each pagedRows as { row, originalIndex }}
+              <tr class="hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 transition-colors group">
+                <td class="px-2 py-1.5 text-center text-[10px] font-mono text-slate-400 dark:text-slate-500 border-r border-slate-100 dark:border-slate-800 select-none bg-slate-50/50 dark:bg-slate-900/50">
+                  {originalIndex}
+                </td>
+                {#each row as cell, colIndex}
+                  <td
+                    tabindex="0"
+                    ondblclick={() => startEdit(originalIndex, colIndex, cell)}
+                    onkeydown={(event) => handleCellKeyDown(event, originalIndex, colIndex, cell)}
+                    class="px-3 py-1.5 text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-slate-800 min-w-[120px] max-w-[280px] truncate group-hover:text-slate-900 dark:group-hover:text-slate-100 cursor-text"
+                    title="双击或回车在位编辑"
+                  >
+                    {#if editingCell?.row === originalIndex && editingCell?.col === colIndex}
+                      <!-- svelte-ignore a11y_autofocus -->
+                      <input
+                        class="w-full px-1.5 py-0.5 rounded border border-indigo-500 bg-white dark:bg-slate-900 text-xs font-mono text-slate-900 dark:text-slate-100 outline-none shadow-xs"
+                        bind:value={editValue}
+                        onblur={commitEdit}
+                        onkeydown={handleEditKeyDown}
+                        autofocus
+                      />
+                    {:else}
+                      <span class={cell ? "" : "text-slate-300 dark:text-slate-600 italic"}>
+                        {cell || "(空)"}
+                      </span>
+                    {/if}
+                  </td>
+                {/each}
+              </tr>
+            {/each}
+          {/if}
+        </tbody>
+      </table>
     </div>
-  {/if}
+
+    <!-- Table Footer / Pagination Bar -->
+    <div class="flex items-center justify-between px-3 py-2 bg-slate-50/70 dark:bg-slate-900/70 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400">
+      <div class="flex items-center gap-2">
+        <span>
+          显示第 {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalFilteredRows)} 行 / 共 {totalFilteredRows} 行
+          {#if searchQuery}
+            <span class="text-indigo-600 dark:text-indigo-400">(已过滤)</span>
+          {/if}
+        </span>
+        <span class="text-slate-300 dark:text-slate-700">|</span>
+        <div class="flex items-center gap-1">
+          <span>每页</span>
+          <select
+            bind:value={pageSize}
+            class="rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-1.5 py-0.5 text-[11px] text-slate-700 dark:text-slate-300 focus:outline-none"
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+          <span>行</span>
+        </div>
+      </div>
+
+      {#if totalPages > 1}
+        <div class="flex items-center gap-1">
+          <button
+            type="button"
+            onclick={() => (currentPage = Math.max(1, currentPage - 1))}
+            disabled={currentPage <= 1}
+            class="flex h-6 w-6 items-center justify-center rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            title="上一页"
+          >
+            <ChevronLeft class="h-3.5 w-3.5" />
+          </button>
+          <span class="px-1.5 font-mono text-[11px]">
+            {currentPage} / {totalPages}
+          </span>
+          <button
+            type="button"
+            onclick={() => (currentPage = Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage >= totalPages}
+            class="flex h-6 w-6 items-center justify-center rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            title="下一页"
+          >
+            <ChevronRight class="h-3.5 w-3.5" />
+          </button>
+        </div>
+      {/if}
+    </div>
+  </div>
 </div>
-
-<style>
-  .preview-container {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-  }
-
-  .heading-group {
-    display: flex;
-    min-width: min(100%, 22rem);
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-
-  .toolbar-group {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-
-  .title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--text-primary, #111827);
-    margin: 0;
-  }
-
-  :global(.dark) .title {
-    color: #f9fafb;
-  }
-
-  .stats {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    flex-wrap: wrap;
-    font-size: 0.875rem;
-    color: #4b5563;
-  }
-
-  .stats strong {
-    color: var(--text-primary, #111827);
-    font-weight: 650;
-  }
-
-  .guidance {
-    margin: 0;
-    color: #6b7280;
-    font-size: 0.8125rem;
-    line-height: 1.45;
-  }
-
-  .hint {
-    font-size: 0.75rem;
-    color: #6b7280;
-    padding: 0.25rem 0.5rem;
-    background: #f3f4f6;
-    border-radius: 0.25rem;
-  }
-
-  :global(.dark) .stats,
-  :global(.dark) .guidance,
-  :global(.dark) .hint {
-    color: #9ca3af;
-  }
-
-  :global(.dark) .stats strong {
-    color: #f9fafb;
-  }
-
-  .table-container {
-    max-height: 400px;
-    overflow: auto;
-    border: 1px solid var(--border-color, #d1d5db);
-    border-radius: 0.5rem;
-    background: var(--bg-primary, #ffffff);
-  }
-
-  :global(.dark) .table-container {
-    border-color: #4b5563;
-    background: #1f2937;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  th,
-  td {
-    border: 1px solid var(--border-color, #d1d5db);
-    padding: 0.75rem;
-    text-align: left;
-    vertical-align: top;
-    min-width: 8rem;
-    outline: none;
-  }
-
-  :global(.dark) th,
-  :global(.dark) td {
-    border-color: #4b5563;
-  }
-
-  th {
-    background: #f3f4f6;
-    font-weight: 600;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-
-  th:focus-visible,
-  td:focus-visible,
-  .sort-btn:focus-visible {
-    box-shadow: inset 0 0 0 2px #4f46e5;
-  }
-
-  :global(.dark) th:focus-visible,
-  :global(.dark) td:focus-visible,
-  :global(.dark) .sort-btn:focus-visible {
-    box-shadow: inset 0 0 0 2px #818cf8;
-  }
-
-  :global(.dark) th {
-    background: #374151;
-  }
-
-  tr:nth-child(even) td {
-    background: #f9fafb;
-  }
-
-  :global(.dark) tr:nth-child(even) td {
-    background: #1f2937;
-  }
-
-  .th-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-
-  .sort-btn {
-    border: none;
-    border-radius: 0.25rem;
-    background: transparent;
-    color: #6b7280;
-    cursor: pointer;
-    font-size: 0.7rem;
-    padding: 0.2rem 0.3rem;
-  }
-
-  .sort-btn:hover {
-    background: rgba(79, 70, 229, 0.1);
-    color: #4f46e5;
-  }
-
-  .empty-cell {
-    color: #9ca3af;
-    font-style: italic;
-  }
-
-  .cell-input {
-    width: 100%;
-    border: 2px solid #4f46e5;
-    border-radius: 0.25rem;
-    padding: 0.25rem 0.5rem;
-    font: inherit;
-    background: white;
-    outline: none;
-  }
-
-  :global(.dark) .cell-input {
-    background: #1f2937;
-    color: #f9fafb;
-    border-color: #818cf8;
-  }
-
-  @media (max-width: 640px) {
-    .toolbar,
-    .toolbar-group {
-      align-items: stretch;
-      flex-direction: column;
-    }
-
-    .table-container {
-      max-height: 360px;
-    }
-  }
-</style>

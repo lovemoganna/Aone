@@ -32,7 +32,7 @@
   {className}
 ">
   {#if title || header}
-    <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+    <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-700 shrink-0">
       {#if header}
         {@render header()}
       {:else if title}
@@ -41,7 +41,7 @@
     </div>
   {/if}
   
-  <div class={paddingClasses[padding]}>
+  <div class="{paddingClasses[padding]} {className.includes('flex') ? 'flex-1 min-h-0 flex flex-col h-full' : ''}">
     {@render children?.()}
   </div>
 </div>

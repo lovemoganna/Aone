@@ -9,32 +9,24 @@
     import Preview from "./components/Preview.svelte";
     import LayoutControls from "./components/LayoutControls.svelte";
     import Inspector from "./components/Inspector.svelte";
-    import SnippetModal from "./components/modals/SnippetModal.svelte";
+    import TabsBar from "./components/TabsBar.svelte";
     import AIPromptModal from "./components/modals/AIPromptModal.svelte";
     import CollabModal from "./components/modals/CollabModal.svelte";
-    import ThemeModal from "./components/modals/ThemeModal.svelte";
     import ExportModal from "./components/modals/ExportModal.svelte";
-    import TemplatesModal from "./components/modals/TemplatesModal.svelte";
     import SettingsModal from "./components/modals/SettingsModal.svelte";
     import KeyboardShortcutsModal from "./components/modals/KeyboardShortcutsModal.svelte";
-    import FindReplaceModal from "./components/modals/FindReplaceModal.svelte";
     import ShareModal from "./components/modals/ShareModal.svelte";
     import DiffModal from "./components/modals/DiffModal.svelte";
     import IconModal from "./components/modals/IconModal.svelte";
-    import AccessibilityViewModal from "./components/modals/AccessibilityViewModal.svelte";
     import PresentationView from "./components/PresentationView.svelte";
     import StatusBar from "./components/StatusBar.svelte";
     import DiagramSidebar from "./components/DiagramSidebar.svelte";
-    import HistoryModal from "./components/modals/HistoryModal.svelte";
     import CommandPalette from "./components/CommandPalette.svelte";
     import { hotkeyEngine } from "./lib/hotkeys";
     import { dataBridge } from "$lib/stores/dataBridge";
     import { toastStore } from "$lib/stores/toastStore.svelte";
 
     let isSidebarCollapsed = $state(true);
-    let showEffects = $state(false);
-
-    // ... imports ...
 
     const EXAMPLES = {
         plantuml: `@startuml
@@ -81,36 +73,24 @@ deactivate Gateway
 }`,
     };
 
-    let isSnippetModalOpen = $state(false);
-    let isThemeModalOpen = $state(false);
     let isCollabModalOpen = $state(false);
     let isAIPromptOpen = $state(false);
     let isExportModalOpen = $state(false);
-    let isTemplatesModalOpen = $state(false);
     let isSettingsModalOpen = $state(false);
     let isKeyboardModalOpen = $state(false);
-    let isFindReplaceOpen = $state(false);
     let isShareModalOpen = $state(false);
     let isDiffModalOpen = $state(false);
     let isIconModalOpen = $state(false);
-    let isHistoryModalOpen = $state(false);
-    let isAccessibilityViewOpen = $state(false);
     let isPresentationMode = $state(false);
     let isCommandPaletteOpen = $state(false);
     let diffOriginal = $state("");
     let diffModified = $state("");
 
     let sidebarRef = $state<any>(null);
-    let editorRef = $state<any>(null); // Reference for Editor component
+    let editorRef = $state<any>(null);
+    let previewRef = $state<any>(null);
     let cursorLine = $state(1);
     let cursorCol = $state(1);
-
-    let mousePos = $state({ x: 0, y: 0 });
-
-    function handleMouseMove(e: MouseEvent) {
-        if (!showEffects) return;
-        mousePos = { x: e.clientX, y: e.clientY };
-    }
 
     // Command Actions
     function handleCommandAction(id: string) {
@@ -128,13 +108,25 @@ deactivate Gateway
                 isShareModalOpen = true;
                 break;
             case "history":
-                isHistoryModalOpen = true;
+                sidebarRef?.openTab("history");
+                break;
+            case "templates":
+                sidebarRef?.openTab("templates");
+                break;
+            case "snippets":
+                sidebarRef?.openTab("snippets");
+                break;
+            case "outline":
+                sidebarRef?.openTab("outline");
+                break;
+            case "find-replace":
+                editorRef?.openFind();
                 break;
             case "ai-gen":
                 isAIPromptOpen = true;
                 break;
             case "toggle-sidebar":
-                diagramStore.toggleSidebar();
+                isSidebarCollapsed = !isSidebarCollapsed;
                 break;
             case "reset-view":
                 diagramStore.resetView();
@@ -153,14 +145,8 @@ deactivate Gateway
                 diagramStore.mode = "graphviz";
                 diagramStore.render();
                 break;
-            case "toggle-minimap":
-                diagramStore.isMinimapOpen = !diagramStore.isMinimapOpen;
-                break;
             case "settings":
                 isSettingsModalOpen = true;
-                break;
-            case "theme":
-                isThemeModalOpen = true;
                 break;
             case "collab":
                 isCollabModalOpen = true;
@@ -174,7 +160,7 @@ deactivate Gateway
     // Keyboard Shortcuts Handler
     function handleKeydown(e: KeyboardEvent) {
         const target = e.target as HTMLElement;
-        const isInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
+        const isInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
 
         if (!isInput) {
             const handled = hotkeyEngine.handleKeyDown(e, (actionId) => {
@@ -189,7 +175,7 @@ deactivate Gateway
                         isCommandPaletteOpen = !isCommandPaletteOpen;
                         break;
                     case "find-replace":
-                        isFindReplaceOpen = true;
+                        editorRef?.openFind();
                         break;
                     case "new-doc":
                         diagramStore.createDocument();
@@ -198,7 +184,7 @@ deactivate Gateway
                         isExportModalOpen = true;
                         break;
                     case "history":
-                        isHistoryModalOpen = true;
+                        sidebarRef?.openTab("history");
                         break;
                     case "shortcuts":
                         isKeyboardModalOpen = true;
@@ -220,20 +206,14 @@ deactivate Gateway
                 diagramStore.focusMode = false;
                 return;
             }
-            // Close all modals
-            isSnippetModalOpen =
-                isExportModalOpen =
-                isTemplatesModalOpen =
+            // Close all open modals
+            isExportModalOpen =
                 isSettingsModalOpen =
                 isKeyboardModalOpen =
-                isFindReplaceOpen =
                 isShareModalOpen =
                 isDiffModalOpen =
-                isHistoryModalOpen =
-                isThemeModalOpen =
                 isAIPromptOpen =
                 isCollabModalOpen =
-                isAccessibilityViewOpen =
                     false;
         }
     }
@@ -250,7 +230,6 @@ deactivate Gateway
                 if (decoded) {
                     diagramStore.code = decoded;
                     diagramStore.render();
-                    // Optional: clear hash
                     window.history.replaceState(
                         {},
                         "",
@@ -274,7 +253,6 @@ deactivate Gateway
         // Check for shared URL state
         const urlParams = new URLSearchParams(window.location.search);
 
-        // 1. New lz-string format
         const codeParam = urlParams.get("code");
         const modeParam = urlParams.get("mode");
         const isEmbed = urlParams.get("embed") === "true";
@@ -291,7 +269,6 @@ deactivate Gateway
                     diagramStore.code = decompressed;
                     diagramStore.mode = (modeParam as any) || "plantuml";
                     diagramStore.render();
-                    // Clean URL
                     window.history.replaceState(
                         {},
                         "",
@@ -301,29 +278,6 @@ deactivate Gateway
                 }
             } catch (e) {
                 console.error("Failed to decompress code", e);
-            }
-        }
-
-        // 2. Legacy base64 format
-        const sharedState = urlParams.get("s");
-
-        if (sharedState) {
-            try {
-                const decoded = JSON.parse(
-                    decodeURIComponent(escape(atob(sharedState))),
-                );
-                if (decoded.code) {
-                    diagramStore.code = decoded.code;
-                    diagramStore.mode = decoded.mode || "plantuml";
-                    diagramStore.engine = decoded.engine || "dot";
-                    diagramStore.render();
-
-                    // Clear the query param to keep URL clean but it's optional
-                    // window.history.replaceState({}, '', window.location.pathname);
-                    return;
-                }
-            } catch (e) {
-                console.error("Failed to decode shared state", e);
             }
         }
 
@@ -401,6 +355,7 @@ deactivate Gateway
         diffModified = diagramStore.code;
         isDiffModalOpen = true;
     }
+
     let isDraggingFile = $state(false);
 
     function handleDragEnter(e: DragEvent) {
@@ -410,7 +365,6 @@ deactivate Gateway
 
     function handleDragLeave(e: DragEvent) {
         e.preventDefault();
-        // Only if leaving the window
         if (!e.relatedTarget) {
             isDraggingFile = false;
         }
@@ -431,14 +385,11 @@ deactivate Gateway
 </script>
 
 <svelte:head>
-    <title>Diagram Editor</title>
+    <title>Diagram Editor - AONE</title>
 </svelte:head>
 
 <svelte:window
-    onmousemove={(e) => {
-        handleMouseMove(e);
-        handleMouseMoveGlobal(e);
-    }}
+    onmousemove={handleMouseMoveGlobal}
     onmouseup={handleMouseUp}
     onkeydown={handleKeydown}
     ondragenter={handleDragEnter}
@@ -447,38 +398,26 @@ deactivate Gateway
     ondrop={handleGlobalDrop}
 />
 
-
-
 <div
-    class="h-[calc(100vh-3rem)] w-full flex flex-col bg-white dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 overflow-hidden font-sans border border-slate-200 dark:border-slate-800
+    class="h-full w-full flex flex-col bg-white dark:bg-[#090d14] text-slate-900 dark:text-slate-100 overflow-hidden font-sans border border-slate-200 dark:border-slate-800
         {diagramStore.focusMode
         ? 'fixed inset-0 z-50 h-screen rounded-none border-none'
         : ''}"
 >
-    <div
-        class="{diagramStore.focusMode
-            ? 'hidden'
-            : ''}"
-    >
+    {#if !diagramStore.focusMode}
         <Header
+            isSidebarOpen={!isSidebarCollapsed}
+            onToggleSidebar={() => (isSidebarCollapsed = !isSidebarCollapsed)}
             onRender={handleRender}
             onExport={handleExport}
             onSettings={() => (isSettingsModalOpen = true)}
-            onHelp={() => {}}
-            onSnippets={() => (isSnippetModalOpen = true)}
-            onTemplates={() => (isTemplatesModalOpen = true)}
             onShare={() => (isShareModalOpen = true)}
             onShortcuts={() => (isKeyboardModalOpen = true)}
-            onFindReplace={() => (isFindReplaceOpen = true)}
             onIcons={() => (isIconModalOpen = true)}
-            onPresent={() => (isPresentationMode = true)}
-            onHistory={() => (isHistoryModalOpen = true)}
-            onAccessibility={() => (isAccessibilityViewOpen = true)}
-            onTheme={() => (isThemeModalOpen = true)}
             onAIGen={() => (isAIPromptOpen = true)}
             onCollab={() => (isCollabModalOpen = true)}
         />
-    </div>
+    {/if}
 
     <!-- Main Content -->
     <div class="flex-1 flex min-h-0 relative {isResizing ? 'select-none' : ''}">
@@ -492,22 +431,26 @@ deactivate Gateway
 
         <!-- Split Workspace Area (Editor + Resizer + Preview) -->
         <div class="flex-1 flex min-w-0 h-full relative" bind:this={splitAreaRef}>
-            <!-- Left Panel: Editor -->
+            <!-- Left Panel: Document Tabs + Editor -->
             <div
                 style="width: {diagramStore.focusMode ? 50 : splitPercent}%"
-                class="h-full flex flex-col min-w-0 {isResizing ? 'pointer-events-none' : 'transition-[width] duration-150'}"
+                class="h-full flex flex-col min-w-0 overflow-hidden relative {isResizing ? 'pointer-events-none' : 'transition-[width] duration-150'}"
             >
-                <div class="relative h-full flex flex-col">
-                    <!-- Floating Exit Zen Button -->
-                    {#if diagramStore.focusMode}
-                        <button
-                            class="absolute top-4 right-6 z-50 bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-full text-sm font-medium hover:shadow-xl transition-all"
-                            onclick={() => (diagramStore.focusMode = false)}
-                        >
-                            Exit Zen Mode (Esc)
-                        </button>
-                    {/if}
+                <!-- Floating Exit Zen Button -->
+                {#if diagramStore.focusMode}
+                    <button
+                        class="absolute top-4 right-6 z-50 bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-full text-sm font-medium hover:shadow-xl transition-all"
+                        onclick={() => (diagramStore.focusMode = false)}
+                    >
+                        Exit Zen Mode (Esc)
+                    </button>
+                {/if}
 
+                {#if !diagramStore.focusMode}
+                    <TabsBar />
+                {/if}
+
+                <div class="flex-1 w-full min-h-0 overflow-hidden relative">
                     <Editor
                         bind:this={editorRef}
                         bind:code={diagramStore.code}
@@ -531,16 +474,25 @@ deactivate Gateway
                 <div class="w-1 h-8 rounded-full {isResizing ? 'bg-slate-700 dark:bg-slate-300' : 'bg-slate-300 dark:bg-slate-600 group-hover:bg-slate-500'} transition-all"></div>
             </div>
 
-            <!-- Right Panel: Preview -->
-            <div class="flex-1 h-full min-w-0 relative {isResizing ? 'pointer-events-none' : ''}">
-                <LayoutControls />
-                <Preview
-                    svg={diagramStore.svg}
-                    isRendering={diagramStore.isRendering}
-                    onExport={(f) => handleExport()}
-                    onFileDrop={handleFileDrop}
-                    onNavigate={handleNavigate}
-                />
+            <!-- Right Panel: Canvas Toolbar + Preview -->
+            <div class="flex-1 h-full min-w-0 flex flex-col relative {isResizing ? 'pointer-events-none' : ''}">
+                {#if !diagramStore.focusMode}
+                    <LayoutControls
+                        onFit={() => previewRef?.fitToScreen()}
+                        onCopySvg={() => previewRef?.copyToClipboard()}
+                        onCopyPng={() => previewRef?.copyImageToClipboard()}
+                    />
+                {/if}
+                <div class="flex-1 min-h-0 relative">
+                    <Preview
+                        bind:this={previewRef}
+                        svg={diagramStore.svg}
+                        isRendering={diagramStore.isRendering}
+                        onExport={(f) => handleExport()}
+                        onFileDrop={handleFileDrop}
+                        onNavigate={handleNavigate}
+                    />
+                </div>
             </div>
         </div>
 
@@ -550,17 +502,13 @@ deactivate Gateway
         {/if}
     </div>
 
-    <div
-        class="transition-all duration-300 {diagramStore.focusMode
-            ? 'hidden'
-            : ''}"
-    >
+    {#if !diagramStore.focusMode}
         <StatusBar
             line={cursorLine}
             col={cursorCol}
             chars={diagramStore.code.length}
         />
-    </div>
+    {/if}
 
     <!-- Drag Overlay -->
     {#if isDraggingFile}
@@ -584,20 +532,11 @@ deactivate Gateway
         </div>
     {/if}
 
-    <!-- Modals -->
-    <SnippetModal
-        bind:isOpen={isSnippetModalOpen}
-        onClose={() => (isSnippetModalOpen = false)}
-    />
+    <!-- Essential Modals -->
     <AIPromptModal
         bind:isOpen={isAIPromptOpen}
         onClose={() => (isAIPromptOpen = false)}
     />
-    <ThemeModal
-        bind:isOpen={isThemeModalOpen}
-        onClose={() => (isThemeModalOpen = false)}
-    />
-
     <CollabModal
         bind:isOpen={isCollabModalOpen}
         onClose={() => (isCollabModalOpen = false)}
@@ -606,7 +545,6 @@ deactivate Gateway
         bind:isOpen={isExportModalOpen}
         onClose={() => (isExportModalOpen = false)}
     />
-    <TemplatesModal bind:isOpen={isTemplatesModalOpen} />
     <SettingsModal
         bind:isOpen={isSettingsModalOpen}
         onClose={() => (isSettingsModalOpen = false)}
@@ -614,12 +552,6 @@ deactivate Gateway
     <KeyboardShortcutsModal
         isOpen={isKeyboardModalOpen}
         onClose={() => (isKeyboardModalOpen = false)}
-    />
-    <FindReplaceModal
-        isOpen={isFindReplaceOpen}
-        onClose={() => (isFindReplaceOpen = false)}
-        code={diagramStore.code}
-        onReplace={(newCode) => (diagramStore.code = newCode)}
     />
     <ShareModal
         isOpen={isShareModalOpen}
@@ -638,18 +570,6 @@ deactivate Gateway
             diagramStore.code += insertion;
             diagramStore.render();
         }}
-    />
-    <HistoryModal
-        isOpen={isHistoryModalOpen}
-        onClose={() => (isHistoryModalOpen = false)}
-        onDiff={(code) => {
-            handleDiff(code); // Trigger diff modal
-            isHistoryModalOpen = false; // Close history, open diff
-        }}
-    />
-    <AccessibilityViewModal
-        isOpen={isAccessibilityViewOpen}
-        onClose={() => (isAccessibilityViewOpen = false)}
     />
 
     <CommandPalette

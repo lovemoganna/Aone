@@ -117,26 +117,69 @@ export async function executeJavaScript(code: string, timeoutMs: number = 8000):
     let returnValue: any = undefined;
 
     try {
-        // Wrap with AsyncFunction execution
-        // Transform code to support top-level return if not already wrapped
+        // Prepare executable code with auto-return for terminal expressions if not explicitly returning
         let executableCode = code.trim();
+        const hasExplicitReturn = /^\s*return\b/m.test(executableCode);
         
-        // If code doesn't contain explicit return and has an expression at end, try returning it
+        let transformedCode = executableCode;
+        if (!hasExplicitReturn) {
+            const lines = executableCode.split('\n');
+            let lastNonEmptyIdx = lines.length - 1;
+            while (lastNonEmptyIdx >= 0 && !lines[lastNonEmptyIdx].trim()) {
+                lastNonEmptyIdx--;
+            }
+            if (lastNonEmptyIdx >= 0) {
+                let lastLine = lines[lastNonEmptyIdx].trim();
+                if (lastLine.endsWith(';')) {
+                    lastLine = lastLine.slice(0, -1).trim();
+                }
+                const isDeclarationOrStatement = /^(const|let|var|function|class|import|export|if|else|for|while|do|switch|case|default|try|catch|finally|throw|break|continue|return|\/\/|\/\*|\*)/.test(lastLine);
+                if (!isDeclarationOrStatement && lastLine.length > 0 && !lastLine.endsWith('{') && !lastLine.endsWith('}')) {
+                    lines[lastNonEmptyIdx] = `return (${lastLine});`;
+                    transformedCode = lines.join('\n');
+                }
+            }
+        }
+
         const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
         
         const runPromise = new Promise(async (resolve, reject) => {
             try {
-                // Pass sandbox console and standard utilities
-                const fn = new AsyncFunction('console', 'print', 'table', `
-                    "use strict";
-                    const print = console.log;
-                    const table = console.table;
-                    ${executableCode}
+                // Pass sandboxed context without parameter shadowing collision
+                const fn = new AsyncFunction('__ctx__', `
+                    const console = __ctx__.console;
+                    const print = __ctx__.print;
+                    const table = __ctx__.table;
+                    return (async () => {
+                        ${transformedCode}
+                    })();
                 `);
-                const res = await fn(customConsole, customConsole.log, customConsole.table);
+                const res = await fn({
+                    console: customConsole,
+                    print: customConsole.log,
+                    table: customConsole.table
+                });
                 resolve(res);
             } catch (err) {
-                reject(err);
+                // Fallback attempt: execute raw code if transformation caused syntax issue
+                try {
+                    const fallbackFn = new AsyncFunction('__ctx__', `
+                        const console = __ctx__.console;
+                        const print = __ctx__.print;
+                        const table = __ctx__.table;
+                        return (async () => {
+                            ${executableCode}
+                        })();
+                    `);
+                    const res = await fallbackFn({
+                        console: customConsole,
+                        print: customConsole.log,
+                        table: customConsole.table
+                    });
+                    resolve(res);
+                } catch (fallbackErr) {
+                    reject(fallbackErr);
+                }
             }
         });
 

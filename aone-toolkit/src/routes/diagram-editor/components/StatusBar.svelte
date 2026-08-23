@@ -21,7 +21,7 @@
 </script>
 
 <div
-    class="flex items-center justify-between px-3 h-6 bg-slate-50/80 dark:bg-[#070a0f] border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 font-mono select-none z-20 shrink-0"
+    class="flex items-center justify-between px-3 h-6 bg-slate-50/80 dark:bg-[#090d14] border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 font-mono select-none z-20 shrink-0"
 >
     <div class="flex items-center gap-3">
         <span class="font-bold text-slate-700 dark:text-slate-300">{diagramStore.mode.toUpperCase()}</span>

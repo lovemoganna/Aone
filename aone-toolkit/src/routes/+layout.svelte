@@ -17,9 +17,20 @@
 		const handleStorageOpenEvent = () => {
 			isStorageManagerOpen = true;
 		};
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+				const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+				if (tag !== "input" && tag !== "textarea" && !(e.target as HTMLElement)?.isContentEditable) {
+					e.preventDefault();
+					sidebarCollapsed.toggle();
+				}
+			}
+		};
 		window.addEventListener("open-storage-manager", handleStorageOpenEvent);
+		window.addEventListener("keydown", handleKeyDown);
 		return () => {
 			window.removeEventListener("open-storage-manager", handleStorageOpenEvent);
+			window.removeEventListener("keydown", handleKeyDown);
 		};
 	});
 </script>
@@ -32,7 +43,7 @@
 		crossorigin="anonymous"
 	/>
 	<link
-		href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+		href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
 		rel="stylesheet"
 	/>
 </svelte:head>

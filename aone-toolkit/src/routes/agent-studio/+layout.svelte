@@ -82,7 +82,7 @@
     let activeItem = $derived(navItems.find((item) => item.id === activeTab) || navItems[0]);
 </script>
 
-<div class="min-h-screen bg-slate-50 dark:bg-slate-950">
+<div class="h-full flex-1 flex flex-col overflow-y-auto bg-slate-50 dark:bg-slate-950">
     <header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/90">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="flex min-h-14 items-center justify-between gap-4 py-2.5">
@@ -143,7 +143,7 @@
         </div>
     </header>
 
-    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <main class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 flex-1">
         {@render children()}
     </main>
 </div>

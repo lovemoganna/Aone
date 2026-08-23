@@ -61,7 +61,7 @@
                 <span class="font-bold text-sky-400 tracking-wider">${langBadge}</span>
                 <button type="button" class="text-slate-400 hover:text-white transition-colors text-[11px] copy-trigger cursor-pointer" data-code="${encodeURIComponent(rawCode)}">复制</button>
             </div>
-            <pre class="!p-3 !m-0 !bg-transparent overflow-x-auto"><code class="hljs ${targetLang ? `language-${targetLang}` : ''} !p-0 !bg-transparent text-[11.5px] font-mono leading-5 block whitespace-pre-wrap break-words">${highlighted}</code></pre>
+            <pre class="!p-3 !m-0 !bg-transparent overflow-x-auto"><code class="hljs ${targetLang ? `language-${targetLang}` : ''} !p-0 !bg-transparent text-[12px] font-mono leading-5 block whitespace-pre-wrap break-words">${highlighted}</code></pre>
         </div>`;
     };
 

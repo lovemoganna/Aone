@@ -13,6 +13,7 @@
         Check
     } from "lucide-svelte";
     import { toastStore } from "$lib/stores/toastStore.svelte";
+    import { CodeBlock } from "$lib/components/ui";
 
     let activeTab = $state<"css-editor" | "layout" | "effects" | "components">("css-editor");
 
@@ -301,7 +302,12 @@
                             <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">CSS Code</span>
                             <button onclick={() => copyText(effectType === 'shadow' ? shadowCss : effectType === 'gradient' ? gradientCss : borderRadiusCss, 'CSS 代码')} class="text-xs px-2 py-1 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 rounded">复制</button>
                         </div>
-                        <pre class="p-3 bg-slate-50 dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-all">{effectType === 'shadow' ? shadowCss : effectType === 'gradient' ? gradientCss : borderRadiusCss}</pre>
+                        <CodeBlock
+                            code={effectType === 'shadow' ? shadowCss : effectType === 'gradient' ? gradientCss : borderRadiusCss}
+                            language="css"
+                            showHeader={false}
+                            wrapLines={true}
+                        />
                     </div>
                 </div>
                 <div class="flex flex-col border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-xs p-4 flex items-center justify-center bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZjBmMGIyIj48L3JlY3Q+CjxyZWN0IHg9IjQiIHk9IjQiIHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmMGYwYjIiPjwvcmVjdD4KPC9zdmc+')] dark:bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjMjIyIj48L3JlY3Q+CjxyZWN0IHg9IjQiIHk9IjQiIHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiMyMjIiPjwvcmVjdD4KPC9zdmc+')]">

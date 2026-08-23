@@ -33,6 +33,7 @@
     import {
         searchKeymap,
         highlightSelectionMatches,
+        openSearchPanel,
     } from "@codemirror/search";
     import {
         closeBrackets,
@@ -57,7 +58,6 @@
         type ArrowMatch,
         type Direction,
     } from "../lib/arrows";
-    import EditorToolbar from "./EditorToolbar.svelte";
     import { diagramStore } from "../lib/store.svelte";
 
     let {
@@ -80,6 +80,7 @@
 
     let activeArrows = $state<ArrowMatch[]>([]);
     let activeDirection = $state<Direction | null>(null);
+    let ghostDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     // Ghost Suggestion CM logic
     const setGhostSuggestion = StateEffect.define<string | null>();
@@ -272,10 +273,17 @@
                     EditorView.theme({
                         "&": {
                             height: "100%",
+                            maxHeight: "100%",
                             fontSize: `${diagramStore.fontSize}px`,
                             fontFamily: diagramStore.fontFamily,
                         },
-                        ".cm-scroller": { overflow: "auto" },
+                        ".cm-scroller": {
+                            overflow: "auto",
+                            height: "100%",
+                            maxHeight: "100%",
+                            paddingTop: "8px",
+                            paddingBottom: "32px",
+                        },
                     }),
                 ),
                 syntaxTheme,
@@ -377,21 +385,31 @@
                                 ? activeArrows[0].direction
                                 : null;
 
-                        intelligenceService
-                            .getGhostSuggestion(
-                                state.doc.toString(),
-                                line.number,
-                                range.head - line.from + 1,
-                            )
-                            .then((suggestion) => {
-                                if (editorView) {
-                                    editorView.dispatch({
-                                        effects: setGhostSuggestion.of(
-                                            suggestion?.text || null,
-                                        ),
-                                    });
-                                }
+                        if (update.docChanged) {
+                            // Clear immediately on active typing to avoid cursor jitter
+                            editorView.dispatch({
+                                effects: setGhostSuggestion.of(null),
                             });
+                        }
+
+                        if (ghostDebounceTimer) clearTimeout(ghostDebounceTimer);
+                        ghostDebounceTimer = setTimeout(() => {
+                            intelligenceService
+                                .getGhostSuggestion(
+                                    state.doc.toString(),
+                                    line.number,
+                                    range.head - line.from + 1,
+                                )
+                                .then((suggestion) => {
+                                    if (editorView) {
+                                        editorView.dispatch({
+                                            effects: setGhostSuggestion.of(
+                                                suggestion?.text || null,
+                                            ),
+                                        });
+                                    }
+                                });
+                        }, 600);
                     }
                 }),
                 ghostField,
@@ -405,6 +423,7 @@
     });
 
     onDestroy(() => {
+        if (ghostDebounceTimer) clearTimeout(ghostDebounceTimer);
         if (editorView) editorView.destroy();
     });
 
@@ -444,10 +463,24 @@
                     EditorView.theme({
                         "&": {
                             height: "100%",
+                            maxHeight: "100%",
                             fontSize: `${diagramStore.fontSize}px`,
                             fontFamily: diagramStore.fontFamily,
                         },
-                        ".cm-scroller": { overflow: "auto" },
+                        ".cm-scroller": {
+                            overflow: "auto",
+                            height: "100%",
+                            maxHeight: "100%",
+                            paddingTop: "8px",
+                            paddingBottom: "32px",
+                            fontFamily: diagramStore.fontFamily,
+                        },
+                        ".cm-content": {
+                            fontFamily: diagramStore.fontFamily,
+                        },
+                        ".cm-line": {
+                            fontFamily: diagramStore.fontFamily,
+                        },
                     }),
                 ),
             });
@@ -494,6 +527,16 @@
         onRender();
     }
 
+    export function openFind() {
+        if (!editorView) return;
+        openSearchPanel(editorView);
+    }
+
+    export function formatCode() {
+        diagramStore.code = formatDiagramCode(diagramStore.code, diagramStore.mode);
+        diagramStore.render();
+    }
+
     export function scrollToLine(line: number) {
         if (!editorView) return;
 
@@ -515,17 +558,11 @@
 </script>
 
 <div
-    class="h-full flex flex-col overflow-hidden bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800"
+    class="h-full w-full overflow-hidden bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800"
+    style="--editor-font: {diagramStore.fontFamily}; --editor-font-size: {diagramStore.fontSize}px;"
 >
-    <EditorToolbar
-        mode={diagramStore.mode}
-        {activeDirection}
-        onDirectionChange={handleDirectionChange}
-        hasArrows={activeArrows.length > 0}
-    />
-
     <div
-        class="flex-1 w-full overflow-hidden outline-none"
+        class="h-full w-full overflow-hidden outline-none"
         bind:this={editorContainer}
         ondrop={handleDrop}
         ondragover={handleDragOver}
@@ -535,6 +572,14 @@
 </div>
 
 <style>
+    :global(.cm-editor),
+    :global(.cm-scroller),
+    :global(.cm-content),
+    :global(.cm-line),
+    :global(.cm-gutters) {
+        font-family: var(--editor-font, 'JetBrains Mono', 'Noto Sans SC', monospace) !important;
+        font-size: var(--editor-font-size, 12px) !important;
+    }
     :global(:root) {
         --cm-keyword: #0969da;
         --cm-directive: #8250df;

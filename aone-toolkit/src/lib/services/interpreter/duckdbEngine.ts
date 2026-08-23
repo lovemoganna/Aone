@@ -56,7 +56,32 @@ export async function initDuckDB(): Promise<{ db: duckdb.AsyncDuckDB; conn: duck
     }
 }
 
-export async function mountFileToDuckDB(file: File): Promise<string> {
+export async function getDuckDBTableSchema(tableName: string): Promise<TableColumn[]> {
+    const { conn } = await initDuckDB();
+    try {
+        const res = await conn.query(`DESCRIBE "${tableName}"`);
+        const rows = res.toArray();
+        return rows.map((r: any) => ({
+            name: r.column_name || r.name || String(r[0]),
+            type: r.column_type || r.type || String(r[1])
+        }));
+    } catch (e) {
+        return [];
+    }
+}
+
+export async function getDuckDBTableCount(tableName: string): Promise<number> {
+    const { conn } = await initDuckDB();
+    try {
+        const res = await conn.query(`SELECT count(*)::BIGINT as total FROM "${tableName}"`);
+        const row = res.toArray()[0];
+        return Number(row.total ?? 0);
+    } catch (e) {
+        return 0;
+    }
+}
+
+export async function mountFileToDuckDB(file: File): Promise<{ tableName: string; rowCount: number; columns: TableColumn[] }> {
     const { db, conn } = await initDuckDB();
     const arrayBuffer = await file.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
@@ -80,7 +105,10 @@ export async function mountFileToDuckDB(file: File): Promise<string> {
         console.warn(`File mounted but auto-table creation skipped for ${file.name}:`, e);
     }
 
-    return baseName;
+    const columns = await getDuckDBTableSchema(baseName);
+    const rowCount = await getDuckDBTableCount(baseName);
+
+    return { tableName: baseName, rowCount, columns };
 }
 
 export async function executeDuckDBSQL(sqlQuery: string): Promise<ExecutionResult> {

@@ -9,10 +9,11 @@
     }>();
 
     const FONTS = [
-        { name: "JetBrains Mono", value: "'JetBrains Mono', monospace" },
-        { name: "Fira Code", value: "'Fira Code', monospace" },
-        { name: "Source Code Pro", value: "'Source Code Pro', monospace" },
-        { name: "Consolas", value: "Consolas, monospace" },
+        { name: "JetBrains Mono", value: "'JetBrains Mono', 'Noto Sans SC', monospace" },
+        { name: "Victor Mono", value: "'Victor Mono', 'Noto Sans SC', 'NotoSansSC', monospace" },
+        { name: "Fira Code", value: "'Fira Code', 'Noto Sans SC', monospace" },
+        { name: "Source Code Pro", value: "'Source Code Pro', 'Noto Sans SC', monospace" },
+        { name: "Consolas", value: "Consolas, 'Noto Sans SC', monospace" },
     ];
 
     let isTestingServer = $state(false);

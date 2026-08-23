@@ -5,6 +5,10 @@ const DEFAULT_SERVERS = [
     'https://kroki.io/plantuml'
 ];
 
+export function encodePlantUML(code: string): string {
+    return plantumlEncoder.encode(code);
+}
+
 /**
  * Generates a clean, SVG fallback diagram when all remote servers are unreachable.
  */

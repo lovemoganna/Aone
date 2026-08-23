@@ -7,13 +7,15 @@
         HardDrive,
         UploadCloud,
         FileSpreadsheet,
-        FileCode2,
         Copy,
         Check,
         Trash2,
-        Plus,
         Database,
-        Sparkles
+        ChevronRight,
+        ChevronDown,
+        Code2,
+        Columns,
+        BarChart3
     } from "lucide-svelte";
 
     interface Props {
@@ -28,6 +30,11 @@
     let isDragging = $state(false);
     let isUploading = $state(false);
     let copiedTableName = $state<string | null>(null);
+    let expandedFiles = $state<Record<string, boolean>>({});
+
+    function toggleExpand(fileId: string) {
+        expandedFiles[fileId] = !expandedFiles[fileId];
+    }
 
     function formatFileSize(bytes: number): string {
         if (bytes < 1024) return `${bytes} B`;
@@ -42,7 +49,7 @@
         for (let i = 0; i < fileList.length; i++) {
             const file = fileList[i];
             try {
-                const tableName = await mountFileToDuckDB(file);
+                const { tableName, rowCount, columns } = await mountFileToDuckDB(file);
                 const ext = file.name.split(".").pop()?.toLowerCase() || "file";
 
                 const mountedItem: MountedFile = {
@@ -51,12 +58,15 @@
                     size: file.size,
                     type: ext,
                     tableName,
+                    rowCount,
+                    columns,
                     fileObject: file,
                     uploadedAt: Date.now()
                 };
 
                 onFileMounted?.(mountedItem);
-                toastStore.success(`文件 ${file.name} 已成功挂载为虚拟表「${tableName}」`);
+                expandedFiles[mountedItem.id] = true;
+                toastStore.success(`文件 ${file.name} 已挂载为「${tableName}」`);
             } catch (err: any) {
                 toastStore.error(`挂载文件 ${file.name} 失败: ${err?.message || String(err)}`);
             }
@@ -72,22 +82,27 @@
             setTimeout(() => (copiedTableName = null), 2000);
         }
     }
+
+    function insertColumn(colName: string) {
+        onInsertQuery?.(`"${colName}"`);
+        toastStore.success(`已填入字段: ${colName}`);
+    }
 </script>
 
-<div class="h-full flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 text-xs">
+<div class="h-full flex flex-col bg-white dark:bg-slate-900 text-xs">
     <!-- Header -->
-    <div class="p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 flex items-center justify-between">
+    <div class="px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-950/30 flex items-center justify-between shrink-0">
         <div class="flex items-center gap-2">
-            <HardDrive size={14} class="text-slate-500" />
-            <span class="font-semibold text-slate-800 dark:text-slate-200 text-xs">本地数据集挂载</span>
+            <HardDrive size={13} class="text-slate-400" />
+            <span class="font-medium text-slate-800 dark:text-slate-200 text-xs">本地数据集</span>
         </div>
-        <span class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-[10px]">
-            {files.length} 个文件
+        <span class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 font-mono text-[10px]">
+            {files.length} 个表
         </span>
     </div>
 
     <!-- Drag & Drop Zone -->
-    <div class="p-3">
+    <div class="p-2.5 shrink-0">
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <label
             ondragover={(e) => { e.preventDefault(); isDragging = true; }}
@@ -97,7 +112,7 @@
                 isDragging = false;
                 handleFileUpload(e.dataTransfer?.files || null);
             }}
-            class="flex flex-col items-center justify-center p-3.5 border-2 border-dashed rounded-lg cursor-pointer transition-colors {isDragging ? 'border-slate-500 bg-slate-100/50 dark:bg-slate-800/50' : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 bg-slate-50/40 dark:bg-slate-950/20'}"
+            class="flex flex-col items-center justify-center p-3.5 border border-dashed rounded-lg cursor-pointer transition-colors {isDragging ? 'border-slate-400 bg-slate-100/70 dark:bg-slate-800/60' : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/30 dark:bg-slate-950/20'}"
         >
             <input
                 type="file"
@@ -106,73 +121,136 @@
                 class="hidden"
                 onchange={(e) => handleFileUpload((e.target as HTMLInputElement).files)}
             />
-            <UploadCloud size={20} class="text-slate-400 dark:text-slate-500 mb-1" />
+            <UploadCloud size={18} class="text-slate-400 mb-1" />
             <p class="text-xs font-medium text-slate-700 dark:text-slate-300 text-center">
-                点击或拖拽文件到此处挂载
+                {#if isUploading}
+                    挂载解析中...
+                {:else}
+                    点击或拖拽挂载数据集
+                {/if}
             </p>
             <p class="text-[10px] text-slate-400 mt-0.5 text-center font-mono">
-                CSV, TSV, JSON, Parquet
+                CSV · TSV · JSON · Parquet
             </p>
         </label>
     </div>
 
     <!-- Mounted Files List -->
-    <div class="flex-1 overflow-y-auto px-3 pb-3 space-y-2">
+    <div class="flex-1 overflow-y-auto px-2.5 pb-3 space-y-2 scrollbar-thin">
         {#if files.length === 0}
-            <div class="py-8 text-center text-slate-400 dark:text-slate-500">
-                <Database size={20} class="mx-auto mb-1.5 opacity-40" />
+            <div class="py-10 text-center text-slate-400 dark:text-slate-500">
+                <Database size={18} class="mx-auto mb-1.5 opacity-40" />
                 <p class="text-xs">暂无挂载文件</p>
-                <p class="text-[10px] text-slate-400 mt-0.5">挂载后可直接在 DuckDB SQL 中使用表名秒级查询</p>
+                <p class="text-[10px] text-slate-400 mt-1 max-w-[180px] mx-auto leading-relaxed">
+                    挂载后自动解析 Schema 并注册为 DuckDB WASM 虚拟表
+                </p>
             </div>
         {:else}
             {#each files as f (f.id)}
-                <div class="p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5 group hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-2xs">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-1.5 truncate">
-                            <FileSpreadsheet size={13} class="text-emerald-500 shrink-0" />
-                            <span class="font-medium text-slate-800 dark:text-slate-200 truncate text-xs" title={f.name}>
-                                {f.name}
-                            </span>
-                        </div>
+                <div class="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-2xs">
+                    <!-- Table Header Row -->
+                    <div class="p-2.5 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between gap-1.5">
                         <button
-                            onclick={() => onFileRemoved?.(f.id)}
-                            class="p-1 rounded text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                            title="移除挂载"
+                            type="button"
+                            onclick={() => toggleExpand(f.id)}
+                            class="flex items-center gap-1.5 text-left min-w-0 flex-1 cursor-pointer"
                         >
-                            <Trash2 size={12} />
-                        </button>
-                    </div>
-
-                    <div class="flex items-center justify-between text-[11px] text-slate-500">
-                        <span class="font-mono text-slate-700 dark:text-slate-300 font-semibold truncate max-w-[140px]" title={f.tableName}>
-                            表: {f.tableName}
-                        </span>
-                        <span class="font-mono text-[10px]">{formatFileSize(f.size)}</span>
-                    </div>
-
-                    <div class="flex items-center gap-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-                        <button
-                            onclick={() => handleCopyTable(f.tableName)}
-                            class="flex-1 py-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-[10px] cursor-pointer shadow-2xs"
-                        >
-                            {#if copiedTableName === f.tableName}
-                                <Check size={10} class="text-emerald-500" />
-                                <span>已复制</span>
+                            {#if expandedFiles[f.id]}
+                                <ChevronDown size={13} class="text-slate-400 shrink-0" />
                             {:else}
-                                <Copy size={10} />
-                                <span>复制表名</span>
+                                <ChevronRight size={13} class="text-slate-400 shrink-0" />
                             {/if}
+                            <FileSpreadsheet size={13} class="text-emerald-500 shrink-0" />
+                            <div class="min-w-0 truncate">
+                                <div class="font-semibold text-xs text-slate-800 dark:text-slate-200 truncate font-mono" title={f.tableName}>
+                                    {f.tableName}
+                                </div>
+                                <div class="text-[10px] text-slate-400 truncate">
+                                    {f.name} · {formatFileSize(f.size)}
+                                    {#if f.rowCount !== undefined}
+                                        · {f.rowCount} 行
+                                    {/if}
+                                </div>
+                            </div>
                         </button>
 
-                        <button
-                            onclick={() => onInsertQuery?.(`SELECT * FROM "${f.tableName}" LIMIT 20;`)}
-                            class="flex-1 py-1 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-[10px] cursor-pointer shadow-2xs"
-                            title="插入快速查询 SQL"
-                        >
-                            <Sparkles size={10} />
-                            <span>生成查询</span>
-                        </button>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button
+                                type="button"
+                                onclick={() => handleCopyTable(f.tableName)}
+                                class="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700 cursor-pointer"
+                                title="复制表名"
+                            >
+                                {#if copiedTableName === f.tableName}
+                                    <Check size={12} class="text-emerald-500" />
+                                {:else}
+                                    <Copy size={12} />
+                                {/if}
+                            </button>
+                            <button
+                                type="button"
+                                onclick={() => onFileRemoved?.(f.id)}
+                                class="p-1 rounded text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                                title="移除挂载"
+                            >
+                                <Trash2 size={12} />
+                            </button>
+                        </div>
                     </div>
+
+                    <!-- Schema & Actions Body -->
+                    {#if expandedFiles[f.id]}
+                        <div class="p-2 space-y-2 border-t border-slate-100 dark:border-slate-800/80">
+                            <!-- Column list tree -->
+                            {#if f.columns && f.columns.length > 0}
+                                <div class="space-y-1">
+                                    <div class="flex items-center justify-between text-[10px] text-slate-400 font-medium px-1">
+                                        <span class="flex items-center gap-1">
+                                            <Columns size={10} /> 字段 Schema ({f.columns.length})
+                                        </span>
+                                    </div>
+                                    <div class="max-h-36 overflow-y-auto space-y-0.5 scrollbar-thin bg-slate-50/60 dark:bg-slate-950/40 p-1 rounded-md border border-slate-100 dark:border-slate-800/60">
+                                        {#each f.columns as col}
+                                            <!-- svelte-ignore a11y_click_events_have_key_events -->
+                                            <!-- svelte-ignore a11y_no_static_element_interactions -->
+                                            <div
+                                                onclick={() => insertColumn(col.name)}
+                                                class="flex items-center justify-between px-1.5 py-0.5 rounded hover:bg-slate-200/60 dark:hover:bg-slate-800 cursor-pointer group text-[11px]"
+                                                title="点击插入字段名"
+                                            >
+                                                <span class="font-mono text-slate-700 dark:text-slate-300 truncate font-medium group-hover:text-slate-900 dark:group-hover:text-white">
+                                                    {col.name}
+                                                </span>
+                                                <span class="font-mono text-[9px] px-1 py-0.2 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0 uppercase">
+                                                    {col.type || 'TEXT'}
+                                                </span>
+                                            </div>
+                                        {/each}
+                                    </div>
+                                </div>
+                            {/if}
+
+                            <!-- Quick SQL actions -->
+                            <div class="grid grid-cols-2 gap-1 pt-1">
+                                <button
+                                    type="button"
+                                    onclick={() => onInsertQuery?.(`SELECT * FROM "${f.tableName}" LIMIT 20;`)}
+                                    class="py-1 px-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-[10px] font-medium flex items-center justify-center gap-1 cursor-pointer"
+                                >
+                                    <Code2 size={10} />
+                                    <span>查询前 20 行</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onclick={() => onInsertQuery?.(`SUMMARIZE "${f.tableName}";`)}
+                                    class="py-1 px-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-[10px] font-medium flex items-center justify-center gap-1 cursor-pointer"
+                                >
+                                    <BarChart3 size={10} />
+                                    <span>统计概览</span>
+                                </button>
+                            </div>
+                        </div>
+                    {/if}
                 </div>
             {/each}
         {/if}
