@@ -4,6 +4,7 @@
         type FormatterOptions,
     } from "$lib/services/formatter/CodeFormatterService";
     import { DiffStats } from "$lib/services/formatter/ux/DiffStats";
+    import { CodeBlock } from "$lib/components/ui";
 
     // 交互式参数调优台 (Feature 17)
     // 这里是一个基础的 Svelte DEMO，展示所见即所得的参数映射
@@ -38,6 +39,7 @@
             }
         }, 200); // Feature 17: 200ms 防抖
     });
+
 
     function toggleCase() {
         options.keywordCase =
@@ -86,9 +88,16 @@
         </div>
     </div>
 
-    <div class="preview">
-        <h4>Preview</h4>
-        <pre><code>{formattedSql}</code></pre>
+    <div class="preview mt-3">
+        <h4 class="text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Preview</h4>
+        <CodeBlock
+            code={formattedSql}
+            language="sql"
+            showHeader={false}
+            showLineNumbers={true}
+            wrapLines={true}
+            class="!my-0"
+        />
     </div>
 </div>
 
@@ -101,11 +110,5 @@
     .controls label {
         display: block;
         margin-bottom: 0.5rem;
-    }
-    .preview pre {
-        background: #f4f4f4;
-        padding: 1rem;
-        border-radius: 4px;
-        overflow-x: auto;
     }
 </style>

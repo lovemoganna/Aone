@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui";
+  import { Button, CodeBlock } from "$lib/components/ui";
   import { Copy, Download, Check, WrapText, FileCode } from "lucide-svelte";
   import type { OutputFormat } from "../lib/types";
   import { FORMAT_CONFIG } from "../lib/types";
@@ -128,13 +128,21 @@
   </div>
 
   <!-- Code Output View -->
-  <div class="relative rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-950 overflow-hidden shadow-2xs">
-    <textarea
-      readonly
-      value={content}
-      rows="10"
-      aria-label="转换后的表格输出内容"
-      class="w-full p-3 font-mono text-xs text-slate-100 bg-slate-950 placeholder:text-slate-600 outline-none resize-y min-h-[200px] select-text {isWrap ? 'whitespace-pre-wrap break-all' : 'whitespace-pre overflow-x-auto'}"
-    ></textarea>
+  <div class="relative rounded-lg overflow-hidden shadow-2xs">
+    {#if content}
+      <CodeBlock
+        code={content}
+        language={format === 'json' ? 'json' : (format?.startsWith('sql') ? 'sql' : (format === 'html' ? 'html' : (format === 'markdown' ? 'markdown' : 'plaintext')))}
+        showLineNumbers={true}
+        showHeader={false}
+        wrapLines={isWrap}
+        maxHeight="480px"
+        class="!my-0"
+      />
+    {:else}
+      <div class="p-8 text-center text-xs text-slate-400 dark:text-slate-600 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-800">
+        无转换输出数据
+      </div>
+    {/if}
   </div>
 </div>

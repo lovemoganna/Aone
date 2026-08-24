@@ -23,6 +23,7 @@
         Braces
     } from "lucide-svelte";
     import { fade, scale } from "svelte/transition";
+    import { CodeBlock } from "$lib/components/ui";
     import { marked } from "marked";
     import type { Prompt, TestCase, VariableDef } from "../../lib/types";
     import { promptStore } from "../../lib/store.svelte";
@@ -568,7 +569,13 @@
                                 {@html renderedPromptHtml}
                             </div>
                         {:else if viewMode === "raw"}
-                            <pre class="font-mono text-xs whitespace-pre-wrap text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-lg border border-slate-200 dark:border-slate-700">{compiledPrompt}</pre>
+                            <CodeBlock
+                                code={compiledPrompt}
+                                language="markdown"
+                                showHeader={false}
+                                wrapLines={true}
+                                class="!my-0"
+                            />
                         {:else if viewMode === "test_cases" && prompt.testCases}
                             <div class="space-y-2.5">
                                 {#each prompt.testCases as tc (tc.id)}

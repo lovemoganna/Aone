@@ -50,18 +50,24 @@
         Scale,
         Search,
         Send,
+        Shield,
         ShieldAlert,
         ShieldCheck,
         Sparkles,
         Square,
         Swords,
         Terminal,
+        Trash2,
         TrendingDown,
         TrendingUp,
+        UserCheck,
+        Users,
+        Workflow,
         Wrench,
         X,
         Zap
     } from "lucide-svelte";
+    import { CodeBlock } from "$lib/components/ui";
     import { fade, fly, slide } from "svelte/transition";
     import { auditEventBus } from "$lib/stores/auditEventBus.svelte";
 
@@ -935,32 +941,28 @@
                                         {#if isExpanded}
                                             <!-- Expanded Full Raw/JSON View -->
                                             <div class="space-y-2 pt-1">
-                                                <div class="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-xs space-y-1">
-                                                    <div class="flex items-center justify-between text-[10px] text-slate-400 border-b border-slate-800 pb-1">
-                                                        <span>INPUT PAYLOAD</span>
-                                                        <button
-                                                            type="button"
-                                                            onclick={() => copyPayloadText(tool.inputSummary)}
-                                                            class="hover:text-white flex items-center gap-1 cursor-pointer"
-                                                        >
-                                                            <Copy class="w-3 h-3" /> 复制
-                                                        </button>
-                                                    </div>
-                                                    <pre class="whitespace-pre-wrap break-all text-[11px] max-h-48 overflow-y-auto">{formatPayload(tool.inputSummary)}</pre>
+                                                <div class="space-y-1">
+                                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">INPUT PAYLOAD</span>
+                                                    <CodeBlock
+                                                        code={formatPayload(tool.inputSummary)}
+                                                        language="json"
+                                                        showHeader={false}
+                                                        wrapLines={true}
+                                                        maxHeight="200px"
+                                                        class="!my-0"
+                                                    />
                                                 </div>
 
-                                                <div class="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-xs space-y-1">
-                                                    <div class="flex items-center justify-between text-[10px] text-emerald-400 border-b border-slate-800 pb-1">
-                                                        <span>OUTPUT RESULT</span>
-                                                        <button
-                                                            type="button"
-                                                            onclick={() => copyPayloadText(tool.outputSummary)}
-                                                            class="hover:text-white flex items-center gap-1 cursor-pointer"
-                                                        >
-                                                            <Copy class="w-3 h-3" /> 复制
-                                                        </button>
-                                                    </div>
-                                                    <pre class="whitespace-pre-wrap break-all text-[11px] max-h-60 overflow-y-auto text-emerald-300">{formatPayload(tool.outputSummary)}</pre>
+                                                <div class="space-y-1">
+                                                    <span class="text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider">OUTPUT RESULT</span>
+                                                    <CodeBlock
+                                                        code={formatPayload(tool.outputSummary)}
+                                                        language="json"
+                                                        showHeader={false}
+                                                        wrapLines={true}
+                                                        maxHeight="240px"
+                                                        class="!my-0"
+                                                    />
                                                 </div>
                                             </div>
                                         {:else}

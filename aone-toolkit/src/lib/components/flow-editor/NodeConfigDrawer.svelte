@@ -13,6 +13,7 @@
         CheckCircle,
         Clock,
     } from "lucide-svelte";
+    import { CodeBlock } from "$lib/components/ui";
     import type { FlowNode } from "./types";
     import { slide } from "svelte/transition";
 
@@ -948,7 +949,14 @@
                             <span class="text-[10px] opacity-75">{testResult.duration}ms</span>
                         </div>
                         {#if testResult.output}
-                            <pre class="text-[10px] overflow-x-auto max-h-28 p-1 bg-black/5 dark:bg-black/20 rounded mt-1">{JSON.stringify(testResult.output, null, 2)}</pre>
+                            <CodeBlock
+                                code={JSON.stringify(testResult.output, null, 2)}
+                                language="json"
+                                showHeader={false}
+                                wrapLines={true}
+                                maxHeight="120px"
+                                class="!my-1"
+                            />
                         {:else if testResult.error}
                             <div class="text-[10px] text-red-600 dark:text-red-400">{testResult.error}</div>
                         {/if}

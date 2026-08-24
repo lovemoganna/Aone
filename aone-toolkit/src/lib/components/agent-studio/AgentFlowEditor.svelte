@@ -19,6 +19,7 @@
     } from "lucide-svelte";
     import FlowEditor from "$lib/components/flow-editor/FlowEditor.svelte";
     import FlowCommandPalette from "$lib/components/flow-editor/FlowCommandPalette.svelte";
+    import { CodeBlock } from "$lib/components/ui";
     import type {
         FlowNode,
         FlowEdge,
@@ -1001,7 +1002,14 @@
                                 <span class="font-medium text-slate-300">{log.content?.nodeName || "节点"}</span>
                                 <span>[{log.type}] {new Date(log.content?.startTime || Date.now()).toLocaleTimeString()}</span>
                             </div>
-                            <pre class="text-slate-300 mt-1 text-[11px] whitespace-pre-wrap break-all font-mono leading-relaxed max-h-36 overflow-y-auto bg-black/20 p-1.5 rounded">{typeof log.content?.output === "object" ? JSON.stringify(log.content?.output, null, 2) : String(log.content?.output || "")}</pre>
+                            <CodeBlock
+                                code={typeof log.content?.output === "object" ? JSON.stringify(log.content?.output, null, 2) : String(log.content?.output || "")}
+                                language={typeof log.content?.output === "object" ? "json" : "plaintext"}
+                                showHeader={false}
+                                wrapLines={true}
+                                maxHeight="140px"
+                                class="!my-1"
+                            />
                         </div>
                     {/each}
                     {#if executionLogs.length === 0}

@@ -18,6 +18,7 @@
         Code2,
         Sparkles
     } from "lucide-svelte";
+    import { CodeBlock } from "$lib/components/ui";
     import { dataBridge } from "$lib/stores/dataBridge";
     import { toastStore } from "$lib/stores/toastStore.svelte";
 
@@ -291,7 +292,13 @@
                             <Copy size={10} /> 复制结果
                         </button>
                     </div>
-                    <pre class="flex-1 p-2.5 font-mono text-xs text-slate-700 dark:text-slate-300 overflow-auto bg-slate-50/30 dark:bg-slate-950/40">{replacedText}</pre>
+                    <CodeBlock
+                        code={replacedText}
+                        language="plaintext"
+                        showHeader={false}
+                        wrapLines={true}
+                        class="!my-0 flex-1 border-0"
+                    />
                 </div>
             {/if}
         </div>

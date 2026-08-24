@@ -3,6 +3,7 @@
     import type { Prompt, VariableDef, TestCase, PromptVersion } from "../../lib/types";
     import { TASK_TYPES, TARGET_MODELS } from "../../lib/types";
     import { onMount, untrack } from "svelte";
+    import { CodeBlock } from "$lib/components/ui";
     import { marked } from "marked";
     import { diffLines, type Change } from "diff";
     import {
@@ -1119,7 +1120,13 @@
                             </div>
                         </div>
                         <div class="flex-1 p-4 overflow-y-auto">
-                            <pre class="p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono text-xs whitespace-pre-wrap leading-relaxed text-slate-800 dark:text-slate-200">{compiledPrompt || "（未输入内容）"}</pre>
+                            <CodeBlock
+                                code={compiledPrompt || "（未输入内容）"}
+                                language="markdown"
+                                showHeader={false}
+                                wrapLines={true}
+                                class="!my-0"
+                            />
                         </div>
                     </div>
 

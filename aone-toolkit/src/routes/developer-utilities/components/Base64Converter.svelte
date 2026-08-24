@@ -2,6 +2,7 @@
     import { copyToClipboard } from "$lib/utils/clipboard";
     import { toastStore } from "$lib/stores/toastStore.svelte";
     import { Copy, Trash2, ArrowRightLeft, Check, AlertCircle } from "lucide-svelte";
+    import { CodeBlock } from "$lib/components/ui";
 
     let input = $state("Hello 世界！Aone Toolkit 2026");
     let mode = $state<"encode" | "decode">("encode");
@@ -145,7 +146,13 @@
                         <span>{result.error}</span>
                     </div>
                 {:else if result.text}
-                    <pre class="whitespace-pre-wrap break-all leading-relaxed select-all">{result.text}</pre>
+                    <CodeBlock
+                        code={result.text}
+                        language="plaintext"
+                        showHeader={false}
+                        wrapLines={true}
+                        class="!my-0 flex-1 border-0"
+                    />
                 {:else}
                     <div class="h-full flex items-center justify-center text-slate-400 text-xs italic">
                         在左侧输入以生成结果

@@ -23,6 +23,7 @@
     import { fade, scale } from "svelte/transition";
     import { marked } from "marked";
     import RichMessageContent from "../../../multi-agent/components/RichMessageContent.svelte";
+    import { CodeBlock } from "$lib/components/ui";
 
     let {
         isOpen = false,
@@ -379,9 +380,21 @@
                                 <RichMessageContent content={compiledPrompt} />
                             </div>
                         {:else if previewTab === "compiled"}
-                            <pre class="font-mono text-xs sm:text-sm whitespace-pre-wrap text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-lg border border-slate-200 dark:border-slate-700">{compiledPrompt}</pre>
+                            <CodeBlock
+                                code={compiledPrompt}
+                                language="markdown"
+                                showHeader={false}
+                                wrapLines={true}
+                                class="!my-0"
+                            />
                         {:else}
-                            <pre class="font-mono text-xs sm:text-sm whitespace-pre-wrap text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-lg border border-slate-200 dark:border-slate-700">{prompt.content}</pre>
+                            <CodeBlock
+                                code={prompt.content}
+                                language="markdown"
+                                showHeader={false}
+                                wrapLines={true}
+                                class="!my-0"
+                            />
                         {/if}
                     </div>
                 </div>

@@ -9,6 +9,7 @@
     } from "lucide-svelte";
     import { dataBridge } from "$lib/stores/dataBridge";
     import HandoffDropdown from "$lib/components/ui/HandoffDropdown.svelte";
+    import { CodeBlock } from "$lib/components/ui";
 
     let rawInput = $state("");
     let parsedData = $state<any>(null);
@@ -600,9 +601,15 @@
                                     </span>
                                 {/if}
                             </div>
-                            <div class="flex-1 overflow-auto p-2.5 bg-slate-50/30 dark:bg-slate-950/40 font-mono text-xs text-slate-800 dark:text-slate-200">
+                            <div class="flex-1 overflow-auto p-2.5 bg-slate-50/30 dark:bg-slate-950/40">
                                 {#if queryResult !== null && queryResult !== undefined}
-                                    <pre class="leading-relaxed">{JSON.stringify(queryResult, null, 2)}</pre>
+                                    <CodeBlock
+                                        code={JSON.stringify(queryResult, null, 2)}
+                                        language="json"
+                                        showHeader={false}
+                                        wrapLines={true}
+                                        class="!my-0"
+                                    />
                                 {:else}
                                     <div class="h-full flex items-center justify-center text-slate-400 text-xs italic">
                                         输入表达式以提取子字段
@@ -687,9 +694,16 @@
                             </button>
                         </div>
 
-                        <div class="flex-1 border border-slate-200 dark:border-slate-800 rounded overflow-auto p-2.5 bg-slate-50/30 dark:bg-slate-950/40 font-mono text-xs text-slate-800 dark:text-slate-200">
+                        <div class="flex-1 border border-slate-200 dark:border-slate-800 rounded overflow-auto p-2 bg-slate-50/30 dark:bg-slate-950/40">
                             {#if generatedTypes}
-                                <pre class="leading-relaxed">{generatedTypes}</pre>
+                                <CodeBlock
+                                    code={generatedTypes}
+                                    language={typeFormat === "ts" ? "typescript" : "javascript"}
+                                    showHeader={false}
+                                    showLineNumbers={true}
+                                    wrapLines={true}
+                                    class="!my-0"
+                                />
                             {:else}
                                 <div class="h-full flex items-center justify-center text-slate-400 text-xs italic">
                                     输入有效 JSON 数据以生成代码

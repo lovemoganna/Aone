@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Button } from "$lib/components/ui";
+    import { Button, CodeBlock } from "$lib/components/ui";
 
     interface Props {
         isOpen: boolean;
@@ -143,10 +143,16 @@
                 </div>
 
                 <div
-                    class="flex-1 border rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-950 p-4 overflow-y-auto"
+                    class="flex-1 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-950 p-2 overflow-y-auto"
                 >
-                    <pre
-                        class="font-mono text-xs text-slate-800 dark:text-slate-200">{tsOutput}</pre>
+                    <CodeBlock
+                        code={tsOutput}
+                        language="typescript"
+                        showLineNumbers={true}
+                        showHeader={false}
+                        wrapLines={true}
+                        class="!my-0"
+                    />
                 </div>
             </div>
 

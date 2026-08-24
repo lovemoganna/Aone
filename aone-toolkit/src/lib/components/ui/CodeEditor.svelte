@@ -26,7 +26,7 @@
         lineWrapping = true,
         placeholder = "",
         errorLine = null,
-        fontSize = "12px",
+        fontSize = "12.5px",
         onChange
     }: Props = $props();
 

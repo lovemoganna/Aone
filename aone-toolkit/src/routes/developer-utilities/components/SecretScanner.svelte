@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { Panel, Button, EmptyState, CodeEditor } from "$lib/components/ui";
+    import { Panel, Button, EmptyState, CodeEditor, CodeBlock } from "$lib/components/ui";
     import ToolWorkspace from "$lib/components/layout/ToolWorkspace.svelte";
     import { copyToClipboard } from "$lib/utils/clipboard";
     import { toastStore } from "$lib/stores/toastStore.svelte";
@@ -1446,37 +1446,29 @@ services:
                             <h3 class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1">
                                 <Terminal size={12} /> Git pre-commit 钩子配置
                             </h3>
-                            <p class="text-[10px] text-slate-550 dark:text-slate-450 leading-relaxed">
+                            <p class="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
                                 通过在项目根目录创建 <code>.pre-commit-config.yaml</code>，在本地 commit 前自动进行凭据扫描：
                             </p>
-                            <div class="p-3 bg-[#0A0A0C] border border-slate-800 text-[10px] text-slate-400 font-mono leading-relaxed rounded-sm select-text relative group">
-                                <button 
-                                    class="absolute right-2 top-2 text-[9px] text-slate-500 hover:text-white bg-slate-900 border border-slate-800 px-1 py-0.5 rounded-sm"
-                                    onclick={() => copyToClipboard(`- repo: https://github.com/gitleaks/gitleaks
+                            <CodeBlock
+                                code={`- repo: https://github.com/gitleaks/gitleaks
   rev: v8.18.0
   hooks:
-    - id: gitleaks`, "Pre-commit template")}
-                                >
-                                    复制
-                                </button>
-                                <pre class="overflow-x-auto"><code>- repo: https://github.com/gitleaks/gitleaks
-  rev: v8.18.0
-  hooks:
-    - id: gitleaks</code></pre>
-                            </div>
+    - id: gitleaks`}
+                                language="yaml"
+                                filename=".pre-commit-config.yaml"
+                                class="!my-1"
+                            />
                         </div>
 
                         <div class="space-y-2 border-t border-slate-200 dark:border-slate-800 pt-3">
                             <h3 class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1">
                                 <Terminal size={12} /> GitHub Actions 工作流
                             </h3>
-                            <p class="text-[10px] text-slate-550 dark:text-slate-455 leading-relaxed">
+                            <p class="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
                                 创建 <code>.github/workflows/gitleaks.yml</code> 提交代码时自动触发扫描：
                             </p>
-                            <div class="p-3 bg-[#0A0A0C] border border-slate-800 text-[10px] text-slate-400 font-mono leading-relaxed rounded-sm select-text relative group">
-                                <button 
-                                    class="absolute right-2 top-2 text-[9px] text-slate-500 hover:text-white bg-slate-900 border border-slate-800 px-1 py-0.5 rounded-sm"
-                                    onclick={() => copyToClipboard(`name: Gitleaks Scan
+                            <CodeBlock
+                                code={`name: Gitleaks Scan
 on: [push, pull_request]
 jobs:
   scan:
@@ -1487,23 +1479,11 @@ jobs:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
         env:
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}`, "GitHub Action template")}
-                                >
-                                    复制
-                                </button>
-                                <pre class="overflow-x-auto"><code>name: Gitleaks Scan
-on: [push, pull_request]
-jobs:
-  scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: $&#123;&#123; secrets.GITHUB_TOKEN &#125;&#125;</code></pre>
-                            </div>
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}`}
+                                language="yaml"
+                                filename=".github/workflows/gitleaks.yml"
+                                class="!my-1"
+                            />
                         </div>
                     </div>
                 {/if}

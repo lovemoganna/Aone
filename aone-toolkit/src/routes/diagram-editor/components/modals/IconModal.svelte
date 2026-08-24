@@ -143,7 +143,7 @@
                                     <div class="text-xs font-semibold text-slate-800 dark:text-slate-200">
                                         {item.name}
                                     </div>
-                                    <pre class="text-[10px] font-mono text-slate-400 mt-0.5 truncate bg-white dark:bg-slate-950 p-1 rounded border border-slate-200/60 dark:border-slate-800">{item.snippet}</pre>
+                                    <code class="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 block truncate bg-white dark:bg-slate-950 p-1 rounded border border-slate-200/60 dark:border-slate-800">{item.snippet}</code>
                                 </div>
                             </button>
                         {/each}

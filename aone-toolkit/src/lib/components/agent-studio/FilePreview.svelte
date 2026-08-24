@@ -12,6 +12,7 @@
         Loader2,
         AlertCircle
     } from 'lucide-svelte';
+    import CodeBlock from "$lib/components/ui/CodeBlock.svelte";
     
     // 文件类型
     type FileCategory = 'config' | 'data' | 'text' | 'image' | 'unknown';
@@ -72,6 +73,42 @@
         }
     });
     let FileTypeIcon = $derived(iconConfig.icon);
+    
+    // 格式化大小
+    function formatSize(bytes: number): string {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+    
+    // 预览内容
+    let previewContent = $derived.by(() => {
+        if (!file.content) return null;
+        
+        if (category === 'config') {
+            try {
+                const data = JSON.parse(file.content);
+                return JSON.stringify(data, null, 2).slice(0, 500);
+            } catch {
+                return file.content.slice(0, 500);
+            }
+        }
+        
+        if (category === 'text') {
+            return file.content.slice(0, 500);
+        }
+        
+        return null;
+    });
+    
+    // 解析状态图标
+    function getStatusIcon() {
+        switch (parseStatus) {
+            case 'parsing': return Loader2;
+            case 'success': return CheckCircle;
+            case 'error': return AlertCircle;
+            default: return File;
+        }
     
     // 格式化大小
     function formatSize(bytes: number): string {
@@ -187,8 +224,14 @@
     <!-- 预览内容 -->
     {#if previewContent}
         <div class="mb-3">
-            <div class="text-xs text-slate-500 mb-1">预览:</div>
-            <pre class="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg text-xs text-slate-600 dark:text-slate-400 overflow-x-auto max-h-32">{previewContent}</pre>
+            <CodeBlock
+                code={previewContent}
+                language={category === 'config' ? 'yaml' : 'plaintext'}
+                showHeader={false}
+                wrapLines={true}
+                maxHeight="160px"
+                class="!my-0"
+            />
             {#if (file.content?.length ?? 0) > 500}
                 <p class="text-xs text-slate-400 mt-1">...共 {file.content?.length ?? 0} 字符</p>
             {/if}

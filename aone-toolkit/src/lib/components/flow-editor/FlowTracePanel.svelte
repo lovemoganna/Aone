@@ -1,6 +1,7 @@
 <script lang="ts">
     import { fly, fade } from "svelte/transition";
     import { X, Code, Braces } from "lucide-svelte";
+    import { CodeBlock } from "$lib/components/ui";
     import type { FlowNode } from "./types";
 
     // P0 #3: Migrated to Svelte 5 $props() syntax
@@ -144,16 +145,14 @@
                         Input Payload
                     </h4>
                 </div>
-                <div
-                    class="bg-slate-900 rounded-lg overflow-hidden border border-slate-800 shadow-inner"
-                >
-                    <pre
-                        class="p-4 text-xs font-mono text-emerald-400 overflow-x-auto whitespace-pre-wrap">{JSON.stringify(
-                            inputPayload,
-                            null,
-                            2,
-                        )}</pre>
-                </div>
+                <CodeBlock
+                    code={JSON.stringify(inputPayload, null, 2)}
+                    language="json"
+                    showHeader={false}
+                    wrapLines={true}
+                    maxHeight="220px"
+                    class="!my-0"
+                />
             </section>
 
             <!-- Output Payload Section -->
@@ -166,16 +165,14 @@
                         Output / Result
                     </h4>
                 </div>
-                <div
-                    class="bg-slate-900 rounded-lg overflow-hidden border border-slate-800 shadow-inner"
-                >
-                    <pre
-                        class="p-4 text-xs font-mono text-blue-400 overflow-x-auto whitespace-pre-wrap">{JSON.stringify(
-                            outputPayload,
-                            null,
-                            2,
-                        )}</pre>
-                </div>
+                <CodeBlock
+                    code={JSON.stringify(outputPayload, null, 2)}
+                    language="json"
+                    showHeader={false}
+                    wrapLines={true}
+                    maxHeight="260px"
+                    class="!my-0"
+                />
             </section>
         </div>
     </div>
