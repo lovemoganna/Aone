@@ -101,7 +101,8 @@ export class MultiFormatExporter {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${this.escapeHtml(title)}</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+        body { font-family: 'Noto Sans SC', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+        code, pre { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }
         h1 { color: #1a1a1a; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
         .meta { color: #6b7280; font-size: 0.9em; margin-bottom: 30px; }
         .message { margin-bottom: 24px; padding: 16px; border-radius: 8px; }
@@ -109,7 +110,7 @@ export class MultiFormatExporter {
         .message.assistant { background: #eef2ff; border-left: 4px solid #6366f1; }
         .role { font-weight: 600; margin-bottom: 8px; color: #374151; }
         .timestamp { font-size: 0.8em; color: #9ca3af; }
-        .content { white-space: pre-wrap; }
+        .content { white-space: pre-wrap; font-family: inherit; }
     </style>
 </head>
 <body>

@@ -68,7 +68,7 @@ export function generateOfflineFallbackSvg(code: string, errorReason: string): s
             if (rel.label) {
                 const mx = (x1 + x2) / 2;
                 const my = (y1 + y2) / 2 - 6;
-                edgesSvg += `<text x="${mx}" y="${my}" fill="#94a3b8" font-size="11" text-anchor="middle" font-family="sans-serif">${rel.label}</text>`;
+                edgesSvg += `<text x="${mx}" y="${my}" fill="#94a3b8" font-size="11" text-anchor="middle" font-family="'Noto Sans SC', system-ui, sans-serif">${rel.label}</text>`;
             }
         }
     });
@@ -80,13 +80,13 @@ export function generateOfflineFallbackSvg(code: string, errorReason: string): s
             nodesSvg += `
                 <g class="node" id="node-${node}" transform="translate(${pos.x}, ${pos.y})">
                     <rect width="${nodeWidth}" height="${nodeHeight}" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5" />
-                    <text x="${nodeWidth / 2}" y="${nodeHeight / 2 + 5}" fill="#f8fafc" font-size="13" font-weight="600" text-anchor="middle" font-family="monospace">${node}</text>
+                    <text x="${nodeWidth / 2}" y="${nodeHeight / 2 + 5}" fill="#f8fafc" font-size="13" font-weight="600" text-anchor="middle" font-family="'JetBrains Mono', monospace">${node}</text>
                 </g>
             `;
         }
     });
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%" style="background:#0f172a; border-radius: 8px; font-family: ui-sans-serif, system-ui, sans-serif;">
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%" style="background:#0f172a; border-radius: 8px; font-family: 'Noto Sans SC', system-ui, sans-serif;">
         <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b" />

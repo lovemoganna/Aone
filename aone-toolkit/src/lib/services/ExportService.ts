@@ -45,7 +45,9 @@ export class ExportService {
   <meta charset="UTF-8">
   <title>MetaFlow Report</title>
   <style>
-    body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 40px auto; padding: 20px; }
+    body { font-family: 'Noto Sans SC', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 40px auto; padding: 20px; }
+    code, pre { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }
+    pre { background: #f1f5f9; padding: 12px; border-radius: 6px; overflow-x: auto; }
     h1 { color: #4f46e5; border-bottom: 2px solid #eef2ff; padding-bottom: 10px; }
     .meta { color: #666; font-size: 0.9em; margin-bottom: 30px; }
     .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: #f9fafb; }

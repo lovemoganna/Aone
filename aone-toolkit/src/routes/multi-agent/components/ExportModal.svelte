@@ -13,6 +13,7 @@
         Eye,
         Settings2,
     } from "lucide-svelte";
+    import { CodeBlock } from "$lib/components/ui";
 
     let { open = $bindable(false) } = $props();
     let selectedFormat = $state<ExportFormat>("markdown");
@@ -190,12 +191,15 @@
                         class="flex items-center gap-1.5 mb-2 text-xs text-slate-500"
                     >
                         <Eye size={12} />
-                        <span class="font-bold uppercase tracking-wider"
-                            >内容预览</span
-                        >
+                        <span class="font-bold uppercase tracking-wider">内容预览</span>
                     </div>
-                    <pre
-                        class="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-400 max-h-48 overflow-y-auto whitespace-pre-wrap break-words font-mono">{get内容预览()}</pre>
+                    <CodeBlock
+                        code={get内容预览()}
+                        language={selectedFormat === "html" ? "html" : selectedFormat === "markdown" ? "markdown" : "plaintext"}
+                        showHeader={false}
+                        wrapLines={true}
+                        maxHeight="190px"
+                    />
                 </div>
             </div>
 

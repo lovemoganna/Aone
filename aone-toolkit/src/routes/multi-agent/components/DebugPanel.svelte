@@ -13,6 +13,7 @@
         XCircle,
         Zap,
     } from "lucide-svelte";
+    import { CodeBlock } from "$lib/components/ui";
 
     let expandedId = $state<number | null>(null);
     let logs = $derived(agentStore.debugLogs);
@@ -185,13 +186,14 @@
                                             <Copy size={12} />
                                         </button>
                                     </div>
-                                    <pre
-                                        class="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-mono text-slate-700 dark:text-slate-300 max-h-36 overflow-y-auto whitespace-pre-wrap break-words">{log.input.substring(
-                                            0,
-                                            1500,
-                                        )}{log.input.length > 1500
-                                            ? "..."
-                                            : ""}</pre>
+                                    <CodeBlock
+                                        code={log.input.substring(0, 1500) + (log.input.length > 1500 ? "..." : "")}
+                                        language="plaintext"
+                                        showHeader={false}
+                                        wrapLines={true}
+                                        maxHeight="150px"
+                                        class="!my-1"
+                                    />
                                 </div>
 
                                 <!-- Output -->
@@ -212,13 +214,14 @@
                                             <Copy size={12} />
                                         </button>
                                     </div>
-                                    <pre
-                                        class="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-mono text-slate-700 dark:text-slate-300 max-h-36 overflow-y-auto whitespace-pre-wrap break-words">{log.output.substring(
-                                            0,
-                                            1500,
-                                        )}{log.output.length > 1500
-                                            ? "..."
-                                            : ""}</pre>
+                                    <CodeBlock
+                                        code={log.output.substring(0, 1500) + (log.output.length > 1500 ? "..." : "")}
+                                        language={log.output.trim().startsWith('{') || log.output.trim().startsWith('[') ? 'json' : 'markdown'}
+                                        showHeader={false}
+                                        wrapLines={true}
+                                        maxHeight="150px"
+                                        class="!my-1"
+                                    />
                                 </div>
 
                                 <!-- Timing -->

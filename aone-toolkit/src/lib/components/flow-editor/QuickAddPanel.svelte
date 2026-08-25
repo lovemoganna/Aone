@@ -431,6 +431,6 @@
     border-radius: 4px;
     padding: 2px 6px;
     font-size: 11px;
-    font-family: monospace;
+    font-family: 'JetBrains Mono', monospace;
   }
 </style>

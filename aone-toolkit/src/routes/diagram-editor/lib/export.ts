@@ -161,7 +161,7 @@ export function exportStandaloneHtml(svgContent: string, title: string = "Archit
     <title>${title}</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #0f172a; color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        body { background: #0f172a; color: #f8fafc; font-family: 'Noto Sans SC', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         header { padding: 12px 20px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
         h1 { font-size: 16px; font-weight: 600; color: #38bdf8; }
         .hint { font-size: 12px; color: #94a3b8; }

@@ -1234,7 +1234,7 @@
   <meta charset="UTF-8">
   <title>${chartTitle || "数据图表"} - Aone Data Insights</title>
   <style>
-    body { margin: 0; padding: 40px; background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; }
+    body { margin: 0; padding: 40px; background: #0f172a; color: #f8fafc; font-family: 'Noto Sans SC', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; }
     .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; max-width: 900px; width: 100%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
     h1 { margin: 0 0 4px 0; font-size: 20px; font-weight: 700; color: #fff; }
     .sub { font-size: 12px; color: #94a3b8; margin-bottom: 20px; }

@@ -61,7 +61,7 @@
                 <span class="font-bold text-sky-400 tracking-wider">${langBadge}</span>
                 <button type="button" class="text-slate-400 hover:text-white transition-colors text-[11px] copy-trigger cursor-pointer" data-code="${encodeURIComponent(rawCode)}">复制</button>
             </div>
-            <pre class="!p-3 !m-0 !bg-transparent overflow-x-auto"><code class="hljs ${targetLang ? `language-${targetLang}` : ''} !p-0 !bg-transparent text-[12px] font-mono leading-5 block whitespace-pre-wrap break-words">${highlighted}</code></pre>
+            <pre class="!p-3.5 !m-0 !bg-transparent overflow-x-auto"><code class="hljs ${targetLang ? `language-${targetLang}` : ''} !p-0 !bg-transparent text-[12.5px] font-mono leading-[1.6em] block whitespace-pre-wrap break-words">${highlighted}</code></pre>
         </div>`;
     };
 
@@ -243,8 +243,8 @@
         color: #4f46e5;
         padding: 0.15rem 0.35rem;
         border-radius: 0.25rem;
-        font-size: 0.85em;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.875em;
+        font-family: 'JetBrains Mono', monospace;
     }
     :global(.dark .rich-markdown code:not(.hljs)) {
         background-color: rgba(99, 102, 241, 0.2);

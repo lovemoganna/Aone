@@ -69,7 +69,7 @@
     }
 </script>
 
-<div class="h-full flex flex-col bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-mono text-xs overflow-hidden select-text" style="font-family: 'Victor Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;">
+<div class="h-full flex flex-col bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-mono text-[12.5px] overflow-hidden select-text" style="font-family: 'JetBrains Mono', monospace;">
     <!-- Toolbar -->
     <div class="flex items-center justify-between px-3.5 py-1.5 bg-slate-50/80 dark:bg-slate-950/60 border-b border-slate-200/80 dark:border-slate-800 text-slate-500 dark:text-slate-400 shrink-0 gap-2 flex-wrap">
         <div class="flex items-center gap-2 min-w-0">

@@ -201,8 +201,8 @@ export function exportFlowAsSVG(nodes: FlowNode[], edges: FlowEdge[], filename =
         const label = (n.data?.label || n.id).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         return `<g transform="translate(${x},${y})">
             <rect width="${nw}" height="${nh}" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
-            <text x="16" y="32" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="#1e293b">${label}</text>
-            <text x="16" y="52" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">${n.type}</text>
+            <text x="16" y="32" font-family="'Noto Sans SC', system-ui, sans-serif" font-size="13" font-weight="bold" fill="#1e293b">${label}</text>
+            <text x="16" y="52" font-family="'Noto Sans SC', system-ui, sans-serif" font-size="10" fill="#64748b">${n.type}</text>
         </g>`;
     }).join('\n');
 

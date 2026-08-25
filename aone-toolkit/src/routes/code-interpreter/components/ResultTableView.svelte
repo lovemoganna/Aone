@@ -312,7 +312,7 @@
     }
 </script>
 
-<div class="h-full flex flex-col bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 text-xs overflow-hidden" style="font-family: 'Victor Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;">
+<div class="h-full flex flex-col bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 text-xs overflow-hidden" style="font-family: 'JetBrains Mono', monospace;">
     {#if !table || table.columns.length === 0}
         <div class="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 py-16 font-sans">
             <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 mb-2.5 shadow-2xs border border-slate-200/60 dark:border-slate-700/50">

@@ -238,10 +238,12 @@
                             <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">CSS Code</span>
                             <button onclick={() => copyText(layoutType === 'flex' ? `display: flex;\nflex-direction: ${flexDirection};\njustify-content: ${justifyContent};\nalign-items: ${alignItems};\ngap: ${flexGap}px;` : `display: grid;\ngrid-template-columns: ${gridCols};\ngap: ${gridGap}px;`, 'CSS 代码')} class="text-xs px-2 py-1 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 rounded">复制</button>
                         </div>
-                        <pre class="p-3 bg-slate-50 dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-800 dark:text-slate-200">
-{layoutType === 'flex' 
-? `display: flex;\nflex-direction: ${flexDirection};\njustify-content: ${justifyContent};\nalign-items: ${alignItems};\ngap: ${flexGap}px;`
-: `display: grid;\ngrid-template-columns: ${gridCols};\ngap: ${gridGap}px;`}</pre>
+                        <CodeBlock
+                            code={layoutType === 'flex' ? `display: flex;\nflex-direction: ${flexDirection};\njustify-content: ${justifyContent};\nalign-items: ${alignItems};\ngap: ${flexGap}px;` : `display: grid;\ngrid-template-columns: ${gridCols};\ngap: ${gridGap}px;`}
+                            language="css"
+                            showHeader={false}
+                            wrapLines={true}
+                        />
                     </div>
                 </div>
                 <div class="flex flex-col border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-xs p-4">

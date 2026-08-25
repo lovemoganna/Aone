@@ -250,7 +250,6 @@
     </div>
   {/if}
 </div>
-
 <style>
   .style-settings-panel {
     width: 320px;
@@ -421,7 +420,7 @@
     border-radius: 4px;
     color: var(--text-primary, #f3f4f6);
     font-size: 12px;
-    font-family: monospace;
+    font-family: 'JetBrains Mono', monospace;
   }
   
   input[type="range"] {
