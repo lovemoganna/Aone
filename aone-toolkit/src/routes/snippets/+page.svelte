@@ -561,7 +561,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<ToolWorkspace sidebarPosition="left" class="max-w-none w-full !px-2 !py-1">
+<ToolWorkspace sidebarPosition="left" class="w-full h-full">
     {#snippet sidebar()}
         <!-- Sidebar Title Header -->
         <div class="flex items-center justify-between px-3.5 py-2.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70">

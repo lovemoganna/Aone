@@ -398,12 +398,13 @@ deactivate Gateway
     ondrop={handleGlobalDrop}
 />
 
-<div
-    class="h-full w-full flex flex-col bg-white dark:bg-[#090d14] text-slate-900 dark:text-slate-100 overflow-hidden font-sans border border-slate-200 dark:border-slate-800
-        {diagramStore.focusMode
-        ? 'fixed inset-0 z-50 h-screen rounded-none border-none'
-        : ''}"
->
+<div class="h-full w-full flex flex-col {diagramStore.focusMode ? 'p-0' : 'p-2.5 sm:p-3.5'} overflow-hidden bg-slate-50 dark:bg-slate-950">
+    <div
+        class="h-full w-full flex-1 flex flex-col bg-white dark:bg-[#090d14] text-slate-900 dark:text-slate-100 overflow-hidden font-sans
+            {diagramStore.focusMode
+            ? 'fixed inset-0 z-50 h-screen rounded-none border-none'
+            : 'rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs min-h-0'}"
+    >
     {#if !diagramStore.focusMode}
         <Header
             isSidebarOpen={!isSidebarCollapsed}
@@ -581,4 +582,5 @@ deactivate Gateway
     {#if isPresentationMode}
         <PresentationView onClose={() => (isPresentationMode = false)} />
     {/if}
+    </div>
 </div>

@@ -757,7 +757,7 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <ToolWorkspace
-    class="max-w-none w-full !px-2 !py-1 h-full"
+    class="w-full h-full"
     bind:sidebarOpen={sidebarOpen}
 >
     {#snippet header()}

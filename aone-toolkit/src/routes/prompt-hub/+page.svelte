@@ -500,28 +500,29 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div
-    class="flex h-screen w-full bg-white dark:bg-slate-900 overflow-hidden text-slate-900 dark:text-slate-100 font-sans"
->
-    <!-- 侧边栏 (支持折叠) -->
-    <Sidebar
-        isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={toggleSidebar}
-        onEditTag={async (tag) => {
-            if (await ensureTagModal()) {
-                editingTag = tag;
-                isTagModalOpen = true;
-            }
-        }}
-        onDeleteTag={handleDeleteTag}
-        onDeleteCollection={handleDeleteCollection}
-    />
+<div class="h-full w-full flex flex-col p-2.5 sm:p-3.5 overflow-hidden bg-slate-50 dark:bg-slate-950">
+    <div
+        class="flex-1 flex flex-row min-h-0 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs overflow-hidden text-slate-900 dark:text-slate-100 font-sans"
+    >
+        <!-- 侧边栏 (支持折叠) -->
+        <Sidebar
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={toggleSidebar}
+            onEditTag={async (tag) => {
+                if (await ensureTagModal()) {
+                    editingTag = tag;
+                    isTagModalOpen = true;
+                }
+            }}
+            onDeleteTag={handleDeleteTag}
+            onDeleteCollection={handleDeleteCollection}
+        />
 
-    <main class="flex-1 flex flex-col min-w-0 bg-slate-50/50 dark:bg-slate-950/40 overflow-hidden">
-        <!-- 顶部工具栏 (去塑料感，克制利落) -->
-        <div
-            class="px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-xs sticky top-0 z-10 shrink-0"
-        >
+        <main class="flex-1 flex flex-col min-w-0 bg-slate-50/50 dark:bg-slate-950/40 overflow-hidden">
+            <!-- 顶部工具栏 (去塑料感，克制利落) -->
+            <div
+                class="h-12 min-h-12 px-4 py-2 border-b border-slate-200/80 dark:border-slate-800/80 flex justify-between items-center bg-slate-50/70 dark:bg-slate-900/80 shrink-0"
+            >
             <div class="flex items-center gap-2">
                 <!-- 侧边栏折叠/展开切换按钮 -->
                 <button
@@ -863,4 +864,5 @@
 
     <!-- AI Settings Configuration Modal -->
     <SettingsModal bind:open={isSettingsOpen} />
+    </div>
 </div>

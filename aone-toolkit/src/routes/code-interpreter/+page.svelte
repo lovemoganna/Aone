@@ -403,7 +403,7 @@
 <ToolWorkspace
     sidebarPosition="left"
     bind:sidebarOpen
-    class="max-w-none w-full h-full !min-h-0 !p-1.5 !space-y-0"
+    class="w-full h-full"
 >
     <!-- Header (Clean, Zero Clutter) -->
     {#snippet header()}

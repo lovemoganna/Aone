@@ -291,18 +291,18 @@
     <title>多 Agent 协作工作台 - Aone Toolkit</title>
 </svelte:head>
 
-<div class="h-full flex flex-col bg-slate-100 dark:bg-slate-950 p-2 sm:p-3">
-    <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+<div class="h-full w-full flex flex-col bg-slate-50 dark:bg-slate-950 p-2.5 sm:p-3.5 overflow-hidden">
+    <div class="flex flex-1 h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs">
         <!-- Top Clean Engineering Navigation Header -->
-        <header class="border-b border-slate-200 dark:border-slate-800 px-4 py-2.5 bg-slate-50/70 dark:bg-slate-900/90 shrink-0">
-            <div class="flex items-center justify-between gap-3">
+        <header class="border-b border-slate-200/80 dark:border-slate-800/80 px-4 py-2 bg-slate-50/70 dark:bg-slate-900/80 shrink-0">
+            <div class="flex items-center justify-between gap-3 min-h-8">
                 <div class="flex items-center gap-2.5 min-w-0">
-                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900">
+                    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs">
                         <Bot class="h-4 w-4" />
                     </div>
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
-                            <h1 class="truncate text-sm font-bold tracking-tight text-slate-900 dark:text-white">
+                            <h1 class="truncate text-xs sm:text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
                                 多 Agent 协作工作台
                             </h1>
                             <span class="text-xs text-slate-400 font-mono">/ {agentStore.mode === 'joint_warfare' ? '攻坚对抗' : '单小队'}</span>

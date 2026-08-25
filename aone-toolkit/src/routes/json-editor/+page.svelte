@@ -218,13 +218,13 @@
     <title>JSON 编辑器 - Aone 工作台</title>
 </svelte:head>
 
-<div class="h-full flex flex-col p-3 sm:p-4 gap-3 overflow-hidden bg-slate-50 dark:bg-slate-950">
+<div class="h-full w-full flex flex-col p-2.5 sm:p-3.5 overflow-hidden bg-slate-50 dark:bg-slate-950">
     <div
-        class="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xs overflow-hidden"
+        class="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs overflow-hidden min-h-0"
     >
         <!-- Top Toolbar: Clean, unified engineering toolbar -->
         <header
-            class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-4 shrink-0 bg-white dark:bg-slate-900"
+            class="h-12 min-h-12 px-4 py-2 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between gap-3 shrink-0 bg-slate-50/70 dark:bg-slate-900/80"
         >
             <div class="flex items-center gap-3 min-w-0">
                 <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">

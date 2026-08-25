@@ -89,38 +89,38 @@
 <svelte:window onkeydown={(e) => { if (e.key === "Escape") isMoreMenuOpen = false; }} />
 
 <header
-    class="h-10 px-3 bg-white dark:bg-[#090d14] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 z-30 select-none text-slate-800 dark:text-slate-200"
+    class="h-12 min-h-12 px-4 bg-slate-50/70 dark:bg-slate-900/80 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between shrink-0 z-30 select-none text-slate-800 dark:text-slate-200"
 >
     <!-- Left: Sidebar Toggle + Brand + Mode Switcher -->
     <div class="flex items-center gap-2.5 min-w-0">
         {#if onToggleSidebar}
             <button
                 type="button"
-                class="p-1 rounded text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                class="p-1 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 onclick={onToggleSidebar}
                 title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
                 aria-label="切换侧边栏"
             >
                 {#if isSidebarOpen}
-                    <PanelLeftClose size={15} />
+                    <PanelLeftClose size={16} />
                 {:else}
-                    <PanelLeft size={15} />
+                    <PanelLeft size={16} />
                 {/if}
             </button>
         {/if}
 
         <!-- Logo -->
-        <div class="flex items-center gap-1.5 pr-2.5 border-r border-slate-200 dark:border-slate-800 shrink-0">
-            <div class="w-5 h-5 rounded bg-slate-900 dark:bg-slate-100 flex items-center justify-center text-white dark:text-slate-900 shadow-2xs">
-                <Code size={12} strokeWidth={2.5} />
+        <div class="flex items-center gap-2 pr-2.5 border-r border-slate-200 dark:border-slate-800 shrink-0">
+            <div class="w-7 h-7 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/60 flex items-center justify-center text-slate-800 dark:text-slate-100 shadow-2xs">
+                <Code size={14} strokeWidth={2.2} />
             </div>
-            <span class="font-bold text-xs tracking-tight text-slate-900 dark:text-slate-100">
-                AONE <span class="text-slate-400 font-normal">Diagram</span>
+            <span class="font-semibold text-xs sm:text-sm tracking-tight text-slate-900 dark:text-slate-100">
+                架构图编辑器
             </span>
         </div>
 
         <!-- Mode Switcher -->
-        <div class="flex bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded border border-slate-200 dark:border-slate-700/60 text-xs shrink-0 font-medium">
+        <div class="flex bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700/60 text-xs shrink-0 font-medium">
             <button
                 type="button"
                 class="px-2 py-0.5 rounded transition-colors {diagramStore.mode === 'plantuml'

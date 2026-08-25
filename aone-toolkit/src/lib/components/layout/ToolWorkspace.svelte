@@ -94,12 +94,12 @@
 
 <div
     id={resizeKey || "tool-workspace-container"}
-    class="{className.includes('h-') ? '' : (customHeight ? '' : 'h-full')} p-1.5 sm:p-2.5 flex flex-col space-y-2 mx-auto {className.includes('max-w-') ? '' : 'max-w-none w-full'} {className}"
+    class="{className.includes('h-') ? '' : (customHeight ? '' : 'h-full')} p-2.5 sm:p-3.5 flex flex-col min-h-0 overflow-hidden mx-auto bg-slate-50 dark:bg-slate-950 {className.includes('max-w-') ? '' : 'max-w-none w-full'} {className}"
     style={customHeight ? `height: ${customHeight}px;` : ""}
 >
-    <Panel class="flex-1 flex flex-col min-h-0 overflow-hidden bg-white/60 dark:bg-slate-900/60 backdrop-blur-md shadow-xl border-slate-200/60 dark:border-slate-800/60 h-full" padding="none">
+    <div class="flex-1 flex flex-col min-h-0 overflow-hidden bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs h-full">
         {#if header}
-            <div class="px-3 sm:px-4 py-2 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center gap-2.5 bg-slate-50/30 dark:bg-slate-900/30 min-w-0">
+            <div class="h-12 min-h-12 px-4 py-2 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center gap-3 bg-slate-50/70 dark:bg-slate-900/80 min-w-0 shrink-0">
                 <!-- Sidebar toggle for mobile and desktop -->
                 {#if sidebar}
                     <button
@@ -199,7 +199,7 @@
                 {/if}
             {/if}
         </div>
-    </Panel>
+    </div>
 
     {#if enableResize}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
