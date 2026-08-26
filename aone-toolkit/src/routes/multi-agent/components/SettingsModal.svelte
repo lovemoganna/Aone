@@ -117,6 +117,21 @@
                             </button>
                         {/each}
                     </div>
+
+                    <!-- Ollama Status & CORS Guidance -->
+                    {#if settingsStore.provider === 'ollama'}
+                        <div class="mt-3 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/60 text-xs space-y-1.5 text-amber-900 dark:text-amber-200">
+                            <div class="font-semibold flex items-center gap-1.5 text-amber-950 dark:text-amber-100">
+                                <AlertCircle class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                                <span>Ollama 本地服务与跨域 (CORS) 提示</span>
+                            </div>
+                            <ul class="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300 space-y-1 list-disc list-inside">
+                                <li><strong>HTTPS 线上跨域限制</strong>：若在 GitHub Pages 上连接本地 Ollama，需在 Windows 终端执行 <code>setx OLLAMA_ORIGINS "*"</code> 并退出托盘图标彻底重启 Ollama。</li>
+                                <li><strong>llama-server 报错修复</strong>：若 Ollama 报 <code>llama-server binary not found</code>，说明本地安装被中断，重新运行 Ollama 安装程序即可一键修复。</li>
+                                <li><strong>免配置推荐</strong>：亦可直接切换至顶部的 <strong>Groq / Gemini / DeepSeek / OpenRouter</strong> 云端大模型，无需本地算力。</li>
+                            </ul>
+                        </div>
+                    {/if}
                 </section>
 
                 <!-- API Key -->

@@ -64,24 +64,30 @@ export const PROVIDERS: Record<string, Provider> = {
         baseUrl: 'http://localhost:11434',
         needsApiKey: false,
         needsCustomUrl: false,
-        defaultModels: [],
+        defaultModels: [
+            { id: 'qwen2.5:7b', name: 'Qwen 2.5 7B' },
+            { id: 'granite4.1:8b', name: 'Granite 4.1 8B' },
+            { id: 'qwen3-vl:8b', name: 'Qwen 3 VL 8B' },
+            { id: 'deepseek-r1:7b', name: 'DeepSeek R1 7B' },
+            { id: 'llama3.2:3b', name: 'Llama 3.2 3B' },
+        ],
         getModelsEndpoint: (baseUrl) => `${baseUrl}/api/tags`,
         parseModels: (data) => (data.models || []).map((m: any) => ({ id: m.name, name: m.name })),
-        chatEndpoint: (baseUrl) => `${baseUrl}/api/generate`,
+        chatEndpoint: (baseUrl) => `${baseUrl}/api/chat`,
         formatRequest: (prompt, model, config) => ({
             model,
-            prompt,
+            messages: [{ role: 'user', content: prompt }],
             stream: config.stream,
             options: {
                 temperature: config.temperature,
                 num_predict: config.maxTokens
             }
         }),
-        parseResponse: (data) => data.response,
+        parseResponse: (data) => data.message?.content || data.response || '',
         parseStreamChunk: (line) => {
             try {
                 const json = JSON.parse(line);
-                return json.response || '';
+                return json.message?.content || json.response || '';
             } catch { return ''; }
         }
     },

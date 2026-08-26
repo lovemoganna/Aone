@@ -49,16 +49,36 @@ export class AIBridge {
             headers['X-Title'] = 'Aone MetaFlow';
         }
 
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body),
-            signal: options.signal
-        });
+        let response: Response;
+        try {
+            response = await fetch(endpoint, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body),
+                signal: options.signal
+            });
+        } catch (fetchErr: any) {
+            if (fetchErr.name === 'AbortError') throw fetchErr;
+            const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+            const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || options.providerKey === 'ollama';
+            if (isHttps && isLocal) {
+                throw new Error(`无法连接本地 Ollama (CORS/网络跨域受限): 当前处于 HTTPS 线上环境。请在终端执行 'setx OLLAMA_ORIGINS "*"' 并重启 Ollama，或使用云端 API (Groq/Gemini/DeepSeek)。`);
+            }
+            throw new Error(`网络请求失败: ${fetchErr.message || '无法连接到模型服务'}`);
+        }
 
         if (!response.ok) {
             const errText = await response.text().catch(() => '');
-            throw new Error(`API error ${response.status}: ${errText.slice(0, 200)}`);
+            let parsedErr = '';
+            try {
+                const errJson = JSON.parse(errText);
+                parsedErr = errJson.error || errJson.message || '';
+            } catch {}
+
+            if (parsedErr.includes('llama-server binary not found')) {
+                throw new Error(`Ollama 推理服务异常 (llama-server not found): Ollama 本地安装文件不完整。请重新安装/修复 Ollama 或在终端运行 'ollama pull ${options.model}'。`);
+            }
+            throw new Error(`API error ${response.status}: ${parsedErr || errText.slice(0, 200)}`);
         }
 
         // Streaming mode
@@ -149,8 +169,14 @@ export class AIBridge {
             const data = await resp.json();
             const fetched = provider.parseModels(data);
             return fetched.length > 0 ? fetched : provider.defaultModels;
-        } catch (e) {
-            console.warn('Model fetch failed, using defaults:', e);
+        } catch (e: any) {
+            const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+            const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || providerKey === 'ollama';
+            if (isHttps && isLocal) {
+                console.info('HTTPS to localhost Ollama CORS restricted. Falling back to default models.');
+            } else {
+                console.warn('Model fetch failed, using defaults:', e);
+            }
             return provider.defaultModels;
         }
     }
@@ -163,18 +189,48 @@ export class AIBridge {
         apiKey?: string,
         customBaseUrl?: string
     ): Promise<{ success: boolean; message: string; models?: ModelInfo[] }> {
+        const provider = PROVIDERS[providerKey];
+        if (!provider) return { success: false, message: `未知提供商: ${providerKey}` };
+
+        const baseUrl = customBaseUrl || provider.baseUrl;
+        const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+        const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || providerKey === 'ollama';
+
         try {
-            const models = await this.fetchModels(providerKey, apiKey, customBaseUrl);
-            if (models.length > 0) {
+            const endpoint = provider.getModelsEndpoint(baseUrl, apiKey);
+            if (endpoint) {
+                const headers: Record<string, string> = {};
+                if (apiKey && providerKey !== 'gemini') {
+                    headers['Authorization'] = `Bearer ${apiKey}`;
+                }
+                const resp = await fetch(endpoint, { headers });
+                if (!resp.ok) {
+                    return { success: false, message: `服务响应错误: HTTP ${resp.status}` };
+                }
+                const data = await resp.json();
+                const models = provider.parseModels(data);
+                if (models.length > 0) {
+                    return {
+                        success: true,
+                        message: `连接成功！已获取 ${models.length} 个可用模型。`,
+                        models
+                    };
+                }
+            }
+
+            return {
+                success: true,
+                message: `已连接到 ${provider.name} 默认节点。`,
+                models: provider.defaultModels
+            };
+        } catch (e: any) {
+            if (isHttps && isLocal) {
                 return {
-                    success: true,
-                    message: `Connected! ${models.length} model(s) available.`,
-                    models
+                    success: false,
+                    message: '无法连接本地 Ollama (CORS 跨域限制)。请为 Ollama 设置环境变量 OLLAMA_ORIGINS="*" 并重启，或使用云端 API。'
                 };
             }
-            return { success: false, message: 'No models found.' };
-        } catch (e: any) {
-            return { success: false, message: e.message || 'Connection failed' };
+            return { success: false, message: e.message || '连接失败，请检查网络或配置' };
         }
     }
 
@@ -210,6 +266,16 @@ export class AIBridge {
                     maxOutputTokens: config.maxTokens
                 }
             };
+        } else if (options.providerKey === 'ollama') {
+            body = {
+                model: options.model,
+                messages,
+                stream: config.stream,
+                options: {
+                    temperature: config.temperature,
+                    num_predict: config.maxTokens
+                }
+            };
         } else {
             body = {
                 model: options.model,
@@ -229,16 +295,36 @@ export class AIBridge {
             headers['X-Title'] = 'Aone MetaFlow';
         }
 
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body),
-            signal: options.signal
-        });
+        let response: Response;
+        try {
+            response = await fetch(endpoint, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body),
+                signal: options.signal
+            });
+        } catch (fetchErr: any) {
+            if (fetchErr.name === 'AbortError') throw fetchErr;
+            const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+            const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || options.providerKey === 'ollama';
+            if (isHttps && isLocal) {
+                throw new Error(`无法连接本地 Ollama (CORS/网络跨域受限): 当前处于 HTTPS 线上环境。请在终端执行 'setx OLLAMA_ORIGINS "*"' 并重启 Ollama，或使用云端 API (Groq/Gemini/DeepSeek)。`);
+            }
+            throw new Error(`网络请求失败: ${fetchErr.message || '无法连接到模型服务'}`);
+        }
 
         if (!response.ok) {
             const errText = await response.text().catch(() => '');
-            throw new Error(`API error ${response.status}: ${errText.slice(0, 200)}`);
+            let parsedErr = '';
+            try {
+                const errJson = JSON.parse(errText);
+                parsedErr = errJson.error || errJson.message || '';
+            } catch {}
+
+            if (parsedErr.includes('llama-server binary not found')) {
+                throw new Error(`Ollama 推理服务异常 (llama-server not found): Ollama 本地安装文件不完整。请重新安装/修复 Ollama 或在终端运行 'ollama pull ${options.model}'。`);
+            }
+            throw new Error(`API error ${response.status}: ${parsedErr || errText.slice(0, 200)}`);
         }
 
         if (config.stream && options.onChunk && response.body) {
