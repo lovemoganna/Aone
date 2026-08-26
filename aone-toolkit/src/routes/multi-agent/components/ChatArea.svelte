@@ -377,6 +377,31 @@
                 </div>
             {/if}
 
+            {#if warfareEngine.state.awaitingUserInput}
+                <div class="max-w-3xl mx-auto p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-900 dark:text-amber-200">
+                    <div class="flex items-center gap-2">
+                        <AlertTriangle class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                        <span><strong>推演检查点</strong>：红蓝交叉质检已就绪，等待用户指令推进。</span>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button
+                            type="button"
+                            onclick={() => warfareEngine.continueToNextStage()}
+                            class="px-2.5 py-1 rounded-md bg-amber-600 text-white font-medium hover:bg-amber-500 transition cursor-pointer"
+                        >
+                            推进至分歧仲裁 ➔
+                        </button>
+                        <button
+                            type="button"
+                            onclick={() => warfareEngine.requestOvertime()}
+                            class="px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 font-medium hover:bg-amber-100 transition cursor-pointer"
+                        >
+                            申请加时赛
+                        </button>
+                    </div>
+                </div>
+            {/if}
+
             <ResumePanel />
         {/if}
     </div>

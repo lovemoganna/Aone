@@ -1410,10 +1410,14 @@ class AgentStore {
     updateMessage(
         id: string, 
         content?: string, 
-        agentId?: string, 
+        agentId?: string | boolean, 
         isStreaming?: boolean, 
         meta?: Partial<Message>
     ) {
+        if (typeof agentId === 'boolean') {
+            isStreaming = agentId;
+            agentId = undefined;
+        }
         const msg = this.currentSession.messages.find(m => m.id === id);
         if (msg) {
             if (content !== undefined) msg.content = content;
@@ -1501,27 +1505,25 @@ class AgentStore {
             for (const agent of agentsToRespond) {
                 if (controller.signal.aborted) break;
 
-                if (settingsStore.isConfigured) {
-                    // Real AI call with streaming
-                    const msgId = this.addMessage("assistant", "", agent.id);
-                    this.setMessageStreaming(msgId, true);
-                    let accumulated = '';
+                const msgId = this.addMessage("assistant", "", agent.id);
+                this.setMessageStreaming(msgId, true);
+                let accumulated = '';
 
-                    // Build context-rich prompt with conversation history and persona
-                    const recentMessages = this.currentSession.messages
-                        .filter(m => m.id !== msgId && m.role !== 'thought')
-                        .slice(-8)
-                        .map(m => `${m.role === 'user' ? 'User' : (getAgentDisplayName(m.agentId || '', m.agentId || 'Assistant'))}: ${m.content}`)
-                        .join('\n\n');
+                // Build context-rich prompt with conversation history and persona
+                const recentMessages = this.currentSession.messages
+                    .filter(m => m.id !== msgId && m.role !== 'thought')
+                    .slice(-8)
+                    .map(m => `${m.role === 'user' ? 'User' : (getAgentDisplayName(m.agentId || '', m.agentId || 'Assistant'))}: ${m.content}`)
+                    .join('\n\n');
 
-                    // Include agent persona, beliefs, dialogue style, and equipped skills
-                    const skillsList = (agent.skillIds || []).map(sid => {
-                        const sk = skillRegistry.getById(sid);
-                        return sk ? `- ${sk.name}: ${sk.description}` : `- ${sid}`;
-                    }).join('\n');
+                // Include agent persona, beliefs, dialogue style, and equipped skills
+                const skillsList = (agent.skillIds || []).map(sid => {
+                    const sk = skillRegistry.getById(sid);
+                    return sk ? `- ${sk.name}: ${sk.description}` : `- ${sid}`;
+                }).join('\n');
 
-                    const restraintRule = settingsStore.activeRestraintRule;
-                    const prompt = `${restraintRule ? `${restraintRule}\n\n==================================================\n` : ''}你是【${agent.name}】（${agent.role}）。
+                const restraintRule = settingsStore.activeRestraintRule;
+                const prompt = `${restraintRule ? `${restraintRule}\n\n==================================================\n` : ''}你是【${agent.name}】（${agent.role}）。
 ${agent.systemPrompt}
 ${agent.coreBelief ? `核心信念：${agent.coreBelief}` : ''}
 ${agent.dialogueStyle ? `对话风格：${agent.dialogueStyle}` : ''}
@@ -1533,6 +1535,10 @@ ${recentMessages}
 
 请以【${agent.name}】的独特人设和专业视角，直接回应用户的主张与诉求。`;
 
+                const startTime = Date.now();
+                let result = '';
+
+                if (settingsStore.isConfigured) {
                     const options = settingsStore.getCallOptions({
                         stream: settingsStore.stream,
                         onChunk: (chunk: string) => {
@@ -1542,14 +1548,12 @@ ${recentMessages}
                         signal: controller.signal
                     });
 
-                    const startTime = Date.now();
-                    let result = '';
                     try {
                         result = await AIBridge.callAI(prompt, options);
                     } catch (netErr: any) {
                         if (netErr.name === 'AbortError') throw netErr;
                         console.warn('Real AI chat failed, falling back to sandbox simulator:', netErr.message);
-                        toastStore.warning(`⚠️ 模型连接失败 (${netErr.message?.slice(0, 40) || '网络异常'})，已转由沙盒专家引擎响应。`);
+                        toastStore.warning(`⚠️ 模型连接失败 (${netErr.message?.slice(0, 40) || '网络异常'})，已转由沙盒专家引擎响应。可在右上角配置云端 API Key。`);
                         accumulated = '';
                         await MetaFlowService.simulateSandboxStream(prompt, (chunk) => {
                             accumulated += chunk;
@@ -1557,27 +1561,32 @@ ${recentMessages}
                         }, () => {}, controller.signal);
                         result = accumulated;
                     }
-
-                    if (!settingsStore.stream) {
-                        this.updateMessage(msgId, result);
-                    }
-                    this.setMessageStreaming(msgId, false);
-
-                    // Emit audit event so Decision Audit Console logs agent activity
-                    auditEventBus.emit('agent_spoke', {
-                        kind: 'agent_spoke',
-                        agentId: agent.id,
-                        agentName: agent.name,
-                        role: agent.role,
-                        phase: 'direct_chat',
-                        contentSummary: (result || accumulated).slice(0, 160).replace(/\n/g, ' '),
-                        contentFull: result || accumulated,
-                        durationMs: Date.now() - startTime,
-                        tokenEstimate: estimateTokenCount(result || accumulated)
-                    }, this.currentSession.id);
                 } else {
-                    this.addMessage("system", "⚠️ AI 服务未配置。请点击右上角「模型配置 (⚙️)」配置 API Key 后重试。");
+                    toastStore.info('💡 当前未配置云端 API Key，已自动启动沙盒专家引擎响应。可在右上角「⚙️ 模型配置」中配置真实大模型。');
+                    await MetaFlowService.simulateSandboxStream(prompt, (chunk) => {
+                        accumulated += chunk;
+                        this.updateMessage(msgId, accumulated);
+                    }, () => {}, controller.signal);
+                    result = accumulated;
                 }
+
+                if (!settingsStore.stream || !settingsStore.isConfigured) {
+                    this.updateMessage(msgId, result || accumulated);
+                }
+                this.setMessageStreaming(msgId, false);
+
+                // Emit audit event so Decision Audit Console logs agent activity
+                auditEventBus.emit('agent_spoke', {
+                    kind: 'agent_spoke',
+                    agentId: agent.id,
+                    agentName: agent.name,
+                    role: agent.role,
+                    phase: 'direct_chat',
+                    contentSummary: (result || accumulated).slice(0, 160).replace(/\n/g, ' '),
+                    contentFull: result || accumulated,
+                    durationMs: Date.now() - startTime,
+                    tokenEstimate: estimateTokenCount(result || accumulated)
+                }, this.currentSession.id);
             }
         } catch (e: any) {
             if (e.name !== 'AbortError') {
@@ -2050,8 +2059,7 @@ ${freshHistory}
         if (!goal.trim()) return;
 
         if (!settingsStore.isConfigured) {
-            this.addMessage('system', '⚠️ AI 服务未配置。请先在右上角「模型配置」中填写 API Key 后重试。');
-            return;
+            toastStore.info('💡 当前未配置云端 API Key，已自动启动全功能沙盒认知推演引擎进行协同演示。可在右上角「⚙️ 模型配置」中配置真实大模型。');
         }
 
         const activeIds = this.currentSession.activeAgentIds.length > 0
@@ -2085,7 +2093,7 @@ ${freshHistory}
                 activeIds,
                 (role: any, content: string, agentId?: string, options?: any) => this.addMessage(role, content, agentId, options),
                 (id: string) => this.getAgent(id),
-                (id: string, content: string) => this.updateMessage(id, content),
+                (id: string, content: string, isStreaming?: boolean) => this.updateMessage(id, content, undefined, isStreaming),
                 (phaseId: string, status: 'running' | 'completed' | 'failed', messageId?: string, durationMs?: number) => {
                     const step = this.pipelineState.collaborationSteps?.find(s => s.skillId === phaseId);
                     if (step) {

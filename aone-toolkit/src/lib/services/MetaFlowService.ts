@@ -2,6 +2,9 @@ import { AIBridge } from './AIBridge';
 import { settingsStore } from '../stores/settingsStore.svelte';
 import { toastStore } from '../stores/toastStore.svelte';
 
+// Toast deduplicate flag: only warn once per app session that Ollama can't run on HTTPS.
+let _httpsOllamaWarnedThisSession = false;
+
 export type PipelineStage = 'idle' | 'intent' | 'scene' | 'strategy' | 'decompose' | 'prompt' | 'execute' | 'aggregate';
 
 export interface PipelineStatus {
@@ -219,7 +222,7 @@ export class MetaFlowService {
 
     /**
      * Call AI using the configured provider via AIBridge.
-     * Falls back to mock if provider is not configured.
+     * Falls back to mock if provider is not configured or network is unreachable.
      */
     static async callAI(prompt: string, onChunk?: (chunk: string) => void, signal?: AbortSignal, timeoutMs?: number): Promise<string> {
         let fullResponse = "";
@@ -227,6 +230,33 @@ export class MetaFlowService {
 
         // When unconfigured, use sandbox simulator for realistic streaming demo
         if (!settingsStore.isConfigured) {
+            await this.simulateSandboxStream(
+                prompt,
+                (chunk) => {
+                    fullResponse += chunk;
+                    if (onChunk) onChunk(chunk);
+                },
+                () => { },
+                signal
+            );
+            return fullResponse;
+        }
+
+        // Fast-fail for local providers (Ollama/localhost) on HTTPS:
+        // Mixed-content / CORS will block the request anyway — skip the 60s wait and
+        // go straight to the sandbox simulator so the user sees an immediate response.
+        const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+        const currentProvider = settingsStore.provider;
+        const baseUrl = settingsStore.customBaseUrl || '';
+        const isLocalProvider = currentProvider === 'ollama' ||
+            baseUrl.includes('localhost') ||
+            baseUrl.includes('127.0.0.1') ||
+            baseUrl.includes('::1');
+        if (isHttps && isLocalProvider) {
+            if (!_httpsOllamaWarnedThisSession) {
+                _httpsOllamaWarnedThisSession = true;
+                toastStore.warning('🔒 检测到本地 Ollama 配置，但当前处于 HTTPS 环境 — 浏览器安全策略阻止 HTTP 混合请求，已自动切换至沙盒推演引擎。如需真实大模型，请在右上角「⚙️」中配置云端 API Key（Groq / Gemini / DeepSeek 等）。');
+            }
             await this.simulateSandboxStream(
                 prompt,
                 (chunk) => {
@@ -326,19 +356,19 @@ export class MetaFlowService {
             onComplete();
         } catch (e: any) {
             if (watchdogTimer) clearTimeout(watchdogTimer);
-            console.error('AI stream failed:', e);
             if (e.name === 'AbortError') {
                 throw e;
             }
-            if (e.message?.includes('超时') || e.message?.includes('Timeout')) {
-                const timeoutReason = e.message;
-                throw new Error(`${timeoutReason}。建议在右上角「设置」中调大超时时间，或选用较小模型/云端大模型。`);
+            // Timeout or any network failure → fall back to sandbox so the pipeline never freezes.
+            // On GitHub Pages, Ollama always times out due to HTTPS/CORS restrictions.
+            const isTimeout = e.message?.includes('超时') || e.message?.includes('Timeout') || e.message?.includes('timeout');
+            if (isTimeout) {
+                console.warn('AI request timed out, falling back to sandbox simulator:', e.message);
+                toastStore.warning(`⏱️ 模型响应超时 — 检测到 Ollama 无法在 HTTPS 环境中访问。已无缝切换至沙盒推演引擎，演示仍可正常进行。如需真实大模型，请在右上角「⚙️」配置云端 API Key。`);
+            } else {
+                console.warn('Real AI call failed, gracefully falling back to sandbox simulator:', e.message);
+                toastStore.warning(`⚠️ 模型连接失败 (${e.message?.slice(0, 45) || 'Failed to fetch'})，已无缝切换至沙盒推演引擎继续推演。可在右上角配置云端 API Key。`);
             }
-
-            // For network errors (Failed to fetch, CORS, offline, or invalid endpoint),
-            // gracefully notify and seamlessly fall back to sandbox simulator so the collaboration never breaks.
-            console.warn('Real AI call failed, gracefully falling back to sandbox simulator:', e.message);
-            toastStore.warning(`⚠️ 模型连接失败 (${e.message?.slice(0, 45) || 'Failed to fetch'})，已无缝切换至沙盒推演引擎继续推演。可在右上角配置云端 API Key。`);
             await this.simulateSandboxStream(prompt, onChunk, onComplete, signal);
         }
     }
@@ -392,7 +422,7 @@ export class MetaFlowService {
                 skillId: "decompose",
                 instruction: "继续深入拆解当前问题结构"
             });
-        } else if (prompt.includes("1. 拆解建模") || prompt.includes("decompose")) {
+        } else if (prompt.includes("1. 拆解建模") || prompt.includes("decompose") || prompt.includes("拆局者")) {
             mockResponse = `### 🔍 议题本质与核心瓶颈
 核心症结在于复杂目标在落地过程中缺乏清晰的解耦架构与优先级分层，导致执行资源分散。
 
@@ -407,7 +437,7 @@ export class MetaFlowService {
 ### ⚖️ 关键决策分水岭
 - **路线 A (激进突破)**：一步到位重构全链路，预期收益高但初期工期长；
 - **路线 B (稳健演进)**：聚焦主轴增量迭代，步步为营且具备即时可用性。`;
-        } else if (prompt.includes("2. 量化分析") || prompt.includes("decision_matrix")) {
+        } else if (prompt.includes("2. 量化分析") || prompt.includes("decision_matrix") || prompt.includes("calculator") || prompt.includes("算账的")) {
             mockResponse = `### 📊 候选方案量化评估矩阵
 | 方案路线 | 核心逻辑 | 预期 ROI 提效 | 实施周期与代价 | 风险系数 (1-10) | 推荐指数 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -420,7 +450,7 @@ export class MetaFlowService {
 
 ### 🎯 投入产出比最优解建议
 建议采纳【路线 B: 稳健演进】：以最小试错成本实现高确定性交付，快速验证商业与工程闭环。`;
-        } else if (prompt.includes("3. 极限证伪") || prompt.includes("stress_test")) {
+        } else if (prompt.includes("3. 极限证伪") || prompt.includes("stress_test") || prompt.includes("challenger") || prompt.includes("辩驳官") || prompt.includes("泼冷水的")) {
             mockResponse = `### ⚠️ 致命前提假设证伪清单
 1. **脆弱假设 1**：假设外部网络与第三方服务始终 100% 保持稳定可用。
    - *证伪依据*：弱网、CORS 限制或服务端限流会导致未受保护的请求直接中断。
@@ -434,7 +464,7 @@ export class MetaFlowService {
 ### 🛡️ 刚性止损线与防御熔断阈值
 - **熔断指标**：单次 AI 请求若超过时限或发生网络中断，立刻触发自动熔断降级。
 - **兜底后备底牌**：无缝激活沙盒仿真引擎，确保全流程推演在任何环境下 100% 顺畅完备。`;
-        } else if (prompt.includes("4. 收敛仲裁") || prompt.includes("consensus_synthesis")) {
+        } else if (prompt.includes("4. 收敛仲裁") || prompt.includes("consensus_synthesis") || prompt.includes("synthesizer") || prompt.includes("裁判官")) {
             mockResponse = `### ⚖️ 终审裁决与路线选定
 - **终审采纳路线**：【稳健增量演进 + 自动弹性降级保底】路线
 - **置信度**：96%
@@ -446,7 +476,7 @@ export class MetaFlowService {
 ### 🧭 核心执行原则
 1. 结论优先，拒绝空泛概念堆叠；
 2. 架构具备自愈能力，遇到网络异常自动保底推进。`;
-        } else if (prompt.includes("5. 落地交付") || prompt.includes("action_list")) {
+        } else if (prompt.includes("5. 落地交付") || prompt.includes("action_list") || prompt.includes("closer") || prompt.includes("收网的")) {
             mockResponse = `### 📋 落地交付行动清单 (Action List & WBS)
 1. **阶段 1：核心主链路校验与环境就绪 (Day 1)**
    - [x] 梳理关键输入参数与契约规范
@@ -460,6 +490,46 @@ export class MetaFlowService {
 ### ✅ 验收标准 (Definition of Done)
 - **指标 1**：端到端协同零异常挂起，任何网络扰动均能平滑自愈；
 - **指标 2**：全流程交付清单颗粒度清晰，具备直接可执行性。`;
+        } else if (prompt.includes("pathfinder") || prompt.includes("探路者") || prompt.includes("破局力")) {
+            mockResponse = `### 🚀 探路者 · 创新破局方案路线
+1. **核心破局杠杆点**：通过声明式自愈架构，将异常处理收敛到单点中枢。
+2. **ROI 收益预估**：开发与调试摩擦降低 70%，系统端到端韧性提升至 99.9%。
+3. **MVP 实施节奏**：Day 1 完成核心拦截器重构，Day 2 全面集成回归测试。`;
+        } else if (prompt.includes("evidence_scout") || prompt.includes("求证者") || prompt.includes("Conflicts") || prompt.includes("conflicts")) {
+            mockResponse = JSON.stringify([
+                {
+                    id: "c1",
+                    topic: "激进大拆大建 vs 渐进稳健演进",
+                    sideAView: "主张一次性重构全链路，最大化远期工程上限",
+                    sideBView: "指出重构期间缺乏测试与过渡保护，极易引发生产事故",
+                    tradeOff: "远期架构纯粹度与近期交付确定性的权衡",
+                    severity: "high"
+                },
+                {
+                    id: "c2",
+                    topic: "强依赖外部大模型 vs 内置沙盒保底",
+                    sideAView: "全面调用高阶云端模型以追求最强推演上限",
+                    sideBView: "强调在断网、弱网与跨域限制下必须有即时可用沙盒保底",
+                    tradeOff: "模型能力上限与系统高可用韧性的权衡",
+                    severity: "critical"
+                }
+            ], null, 2);
+        } else if (prompt.includes("unified_arbitration") || prompt.includes("最高裁决") || prompt.includes("Arbitration")) {
+            mockResponse = JSON.stringify({
+                summary: "裁定采纳【稳健渐进演进 + 双模沙盒弹性降级】复合方案",
+                confidenceScore: 95,
+                chosenPath: "主干渐进式自愈重构路线",
+                tradeOffAnalysis: "主动放弃一次性颠覆式推倒重来，换取 100% 确定性零挂起的稳健交付体验",
+                rejectedHypotheses: [
+                    "假设外部网络和 API Key 始终可用且无延迟",
+                    "假设全量重构不会引入二次逻辑断裂"
+                ],
+                actionSteps: [
+                    "第一步：修复状态更新与 isStreaming 标记清除协议",
+                    "第二步：强化沙盒仿真引擎的全流程无缝接管能力",
+                    "第三步：验证断点恢复与多专家协同推演闭环"
+                ]
+            }, null, 2);
         } else {
             mockResponse = `【专家视角协同分析】\n\n针对当前议题，经过认知推演评估：\n1. **核心认知**：把模糊的诉求转化为可量化、可验证的明确目标；\n2. **关键动作**：优先打通最小闭环验证，避免过早过度设计；\n3. **推进策略**：以渐进式演进为主轴，并在关键节点建立安全防御边界。`;
         }

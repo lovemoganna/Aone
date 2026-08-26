@@ -438,7 +438,7 @@ ${contextSection}【阶段任务：5. 交付落地工单 (Deliver) · 认知技�
                 (chunk) => {
                     accumulatedStreamContent += chunk;
                     if (updateMessage && streamMsgId) {
-                        updateMessage(streamMsgId, accumulatedStreamContent);
+                        updateMessage(streamMsgId, accumulatedStreamContent, true);
                     }
                 },
                 abortController?.signal
@@ -565,10 +565,6 @@ ${contextSection}【阶段任务：5. 交付落地工单 (Deliver) · 认知技�
         updateMessageFn?: Function,
         syncStepsFn?: Function
     ) {
-        if (!settingsStore.isConfigured) {
-            throw new Error('AI 服务未配置。请在设置中配置 API Key 后重试。');
-        }
-
         addMessage = addMessageFn;
         updateMessage = updateMessageFn || null;
         getAgent = getAgentFn;

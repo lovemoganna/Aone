@@ -34,11 +34,11 @@ export interface SettingsState {
 }
 
 const DEFAULT_SETTINGS: SettingsState = {
-    provider: 'demo',
+    provider: 'ollama',
     apiKey: '',
     customBaseUrl: '',
-    selectedModel: 'aone-sandbox-v2',
-    availableModels: PROVIDERS.demo?.defaultModels || [],
+    selectedModel: 'qwen2.5:7b',
+    availableModels: PROVIDERS.ollama?.defaultModels || [],
     temperature: 0.7,
     maxTokens: 4096,
     stream: true,
@@ -57,7 +57,15 @@ function loadFromStorage(): Partial<SettingsState> {
         const parsed = JSON.parse(raw);
         // Ensure valid provider
         if (parsed.provider && !PROVIDERS[parsed.provider]) {
-            parsed.provider = 'demo';
+            parsed.provider = 'ollama';
+        }
+        if (parsed.provider === 'ollama') {
+            if (!parsed.selectedModel) {
+                parsed.selectedModel = 'qwen2.5:7b';
+            }
+            if (!parsed.availableModels || parsed.availableModels.length === 0) {
+                parsed.availableModels = PROVIDERS.ollama?.defaultModels || [];
+            }
         }
         return parsed;
     } catch {
@@ -94,6 +102,26 @@ class SettingsStore {
     connectionStatus = $state<'idle' | 'testing' | 'connected' | 'error'>('idle');
     connectionMessage = $state('');
     isRefreshingModels = $state(false);
+
+    constructor() {
+        // If provider is ollama and availableModels is empty or selectedModel is empty, ensure defaults
+        if (this._state.provider === 'ollama') {
+            if (!this._state.availableModels || this._state.availableModels.length === 0) {
+                this._state.availableModels = PROVIDERS.ollama?.defaultModels || [];
+            }
+            if (!this._state.selectedModel) {
+                this._state.selectedModel = this._state.availableModels[0]?.id || 'qwen2.5:7b';
+            }
+        }
+        // Auto-detect local Ollama models in the background
+        if (typeof window !== 'undefined') {
+            setTimeout(() => {
+                if (this._state.provider === 'ollama') {
+                    void this.autoDetectOllamaModels();
+                }
+            }, 300);
+        }
+    }
 
     // --- Getters ---
     get provider() { return this._state.provider; }
@@ -151,17 +179,22 @@ class SettingsStore {
     // --- Setters ---
     setProvider(key: ProviderKey) {
         this._state.provider = key;
-        this._state.selectedModel = '';
         this._state.availableModels = PROVIDERS[key]?.defaultModels || [];
 
         // Auto-select first default model
         if (this._state.availableModels.length > 0) {
             this._state.selectedModel = this._state.availableModels[0].id;
+        } else {
+            this._state.selectedModel = '';
         }
 
         this.connectionStatus = 'idle';
         this.connectionMessage = '';
         this.persist();
+
+        if (key === 'ollama' && typeof window !== 'undefined') {
+            void this.autoDetectOllamaModels();
+        }
     }
 
     setApiKey(key: string) {
@@ -227,6 +260,21 @@ class SettingsStore {
     }
 
     // --- Actions ---
+    async autoDetectOllamaModels() {
+        try {
+            const models = await AIBridge.fetchModels('ollama', undefined, this._state.customBaseUrl);
+            if (models && models.length > 0) {
+                this._state.availableModels = models;
+                if (!models.some(m => m.id === this._state.selectedModel)) {
+                    this._state.selectedModel = models[0].id;
+                }
+                this.persist();
+            }
+        } catch {
+            // Keep default Ollama models
+        }
+    }
+
     async refreshModels() {
         this.isRefreshingModels = true;
         try {

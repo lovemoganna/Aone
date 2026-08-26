@@ -39,10 +39,6 @@
     }
 
     async function runInWorkbench() {
-        if (!settingsStore.isConfigured) {
-            errorMessage = "请先配置大模型 API Key（右上角齿轮设置）后再启动推演。";
-            return;
-        }
         errorMessage = null;
 
         const goal = task.trim();

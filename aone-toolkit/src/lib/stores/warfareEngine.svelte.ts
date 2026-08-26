@@ -138,12 +138,8 @@ function createWarfareEngine() {
     }
 
     async function callAI(prompt: string, signal?: AbortSignal): Promise<string> {
-        if (!settingsStore.isConfigured) {
-            throw new Error('AI 服务未配置。请在设置中配置 API Key 后重试。');
-        }
         try {
-            const options = settingsStore.getCallOptions({ signal });
-            return await AIBridge.callAI(prompt, options);
+            return await MetaFlowService.callAI(prompt, undefined, signal);
         } catch (err: any) {
             if (err.name === 'AbortError') throw err;
             throw new Error(`AI 调用失败: ${err?.message || '请检查 API 配置或网络连接'}`);
@@ -151,9 +147,6 @@ function createWarfareEngine() {
     }
 
     async function callAIStreaming(prompt: string, onChunk: (accumulated: string) => void, signal?: AbortSignal): Promise<string> {
-        if (!settingsStore.isConfigured) {
-            throw new Error('AI 服务未配置。请在设置中配置 API Key 后重试。');
-        }
         try {
             let accumulated = '';
             const result = await MetaFlowService.callAI(

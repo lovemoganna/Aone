@@ -84,10 +84,13 @@ export const PROVIDERS: Record<string, Provider> = {
         needsCustomUrl: false,
         defaultModels: [
             { id: 'qwen2.5:7b', name: 'Qwen 2.5 7B' },
-            { id: 'granite4.1:8b', name: 'Granite 4.1 8B' },
-            { id: 'qwen3-vl:8b', name: 'Qwen 3 VL 8B' },
             { id: 'deepseek-r1:7b', name: 'DeepSeek R1 7B' },
             { id: 'llama3.2:3b', name: 'Llama 3.2 3B' },
+            { id: 'granite4.1:8b', name: 'Granite 4.1 8B' },
+            { id: 'qwen3-vl:8b', name: 'Qwen 3 VL 8B' },
+            { id: 'qwen2.5:14b', name: 'Qwen 2.5 14B' },
+            { id: 'llama3.1:8b', name: 'Llama 3.1 8B' },
+            { id: 'mistral:7b', name: 'Mistral 7B' }
         ],
         getModelsEndpoint: (baseUrl) => `${baseUrl}/api/tags`,
         parseModels: (data) => (data.models || []).map((m: any) => ({ id: m.name, name: m.name })),
