@@ -1,23 +1,44 @@
-node_modules
+# ==========================================
+# Dependencies & Package Managers
+# ==========================================
+node_modules/
 
-# Output
-.output
-.vercel
-.netlify
-.wrangler
-/.svelte-kit
-/build
+# ==========================================
+# SvelteKit & Vite Build Outputs
+# ==========================================
+.svelte-kit/
+build/
+dist/
+.output/
+.vercel/
+.netlify/
+.wrangler/
 
-# OS
-.DS_Store
-Thumbs.db
+# ==========================================
+# Logs & Diagnostic Files
+# ==========================================
+*.log
+*.log.*
+check_output.txt
+test-results/
+coverage/
 
-# Env
+# ==========================================
+# Environment Variables
+# ==========================================
 .env
 .env.*
 !.env.example
 !.env.test
 
-# Vite
+# ==========================================
+# OS & Editor
+# ==========================================
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# Vite Timestamps & Temporary Cache
+# ==========================================
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*

@@ -495,7 +495,7 @@
     let activeTab = $state<TabId>(getInitialTab());
     let searchQuery = $state("");
     let selectedCategoryFilter = $state<string>("all");
-    let sidebarOpen = $state(true);
+    let sidebarOpen = $state(false);
     let searchInputEl: HTMLInputElement | undefined = $state();
 
     // --- Recently Used (localStorage-backed, max 6) ---
