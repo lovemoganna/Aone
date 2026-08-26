@@ -1,301 +1,294 @@
 <script lang="ts">
-    import { Button } from "$lib/components/ui";
+    import { copyToClipboard } from "$lib/utils/clipboard";
+    import { toastStore } from "$lib/stores/toastStore.svelte";
     import {
-        Copy,
         Clock,
+        Copy,
         Play,
         Pause,
         Calendar,
         Globe,
-        History,
+        Sparkles,
+        Check
     } from "lucide-svelte";
 
-    let now = $state(Math.floor(Date.now() / 1000));
     let isPaused = $state(false);
-    let input = $state("");
-    let parsedDate = $state<Date | null>(null);
+    let unitMode = $state<"sec" | "ms">("sec");
+    let nowSec = $state(Math.floor(Date.now() / 1000));
+    let nowMs = $state(Date.now());
+    let input = $state(Math.floor(Date.now() / 1000).toString());
+    let copiedKey = $state<string | null>(null);
 
-    // Clock ticker
+    // Live clock ticker
     $effect(() => {
         const interval = setInterval(() => {
             if (!isPaused) {
-                now = Math.floor(Date.now() / 1000);
+                const cur = Date.now();
+                nowMs = cur;
+                nowSec = Math.floor(cur / 1000);
             }
-        }, 1000);
+        }, 500);
         return () => clearInterval(interval);
     });
 
-    // Auto-convert logic
-    function convert() {
-        if (!input.trim()) {
-            parsedDate = null;
-            return;
-        }
+    let currentTimestamp = $derived(unitMode === "sec" ? nowSec : nowMs);
 
-        let date: Date | null = null;
+    let parsedResult = $derived.by(() => {
+        if (!input.trim()) return null;
         const val = input.trim();
+        let d: Date | null = null;
 
-        // 1. Try numeric timestamp
         if (/^\d+$/.test(val)) {
-            const num = parseInt(val);
-            // Guess ms vs seconds (year 2286 is 10 digits, so >11 digits is likely ms)
+            const num = parseInt(val, 10);
             if (val.length > 11) {
-                date = new Date(num);
+                d = new Date(num);
             } else {
-                date = new Date(num * 1000);
+                d = new Date(num * 1000);
             }
-        }
-        // 2. Try ISO or regular date string
-        else {
-            const d = new Date(val);
-            if (!isNaN(d.getTime())) {
-                date = d;
+        } else {
+            const parsed = new Date(val);
+            if (!isNaN(parsed.getTime())) {
+                d = parsed;
             }
         }
 
-        parsedDate = date;
-    }
+        if (!d || isNaN(d.getTime())) return null;
 
-    $effect(() => {
-        convert();
+        const timeMs = d.getTime();
+        const timeSec = Math.floor(timeMs / 1000);
+        const diffMs = timeMs - Date.now();
+        const absDiffSec = Math.floor(Math.abs(diffMs) / 1000);
+
+        let relTime = "刚刚";
+        if (absDiffSec >= 86400) {
+            const days = Math.floor(absDiffSec / 86400);
+            relTime = diffMs > 0 ? `${days} 天后` : `${days} 天前`;
+        } else if (absDiffSec >= 3600) {
+            const hrs = Math.floor(absDiffSec / 3600);
+            relTime = diffMs > 0 ? `${hrs} 小时后` : `${hrs} 小时前`;
+        } else if (absDiffSec >= 60) {
+            const mins = Math.floor(absDiffSec / 60);
+            relTime = diffMs > 0 ? `${mins} 分钟后` : `${mins} 分钟前`;
+        } else if (absDiffSec > 0) {
+            relTime = diffMs > 0 ? `${absDiffSec} 秒后` : `${absDiffSec} 秒前`;
+        }
+
+        const formatZone = (tz: string) => {
+            try {
+                return d!.toLocaleString("zh-CN", {
+                    timeZone: tz,
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    hour12: false
+                });
+            } catch {
+                return "时区解析错误";
+            }
+        };
+
+        return {
+            sec: timeSec.toString(),
+            ms: timeMs.toString(),
+            local: d.toLocaleString("zh-CN", { hour12: false }),
+            utc: d.toUTCString(),
+            iso: d.toISOString(),
+            relative: relTime,
+            beijing: formatZone("Asia/Shanghai"),
+            tokyo: formatZone("Asia/Tokyo"),
+            london: formatZone("Europe/London"),
+            newYork: formatZone("America/New_York"),
+            losAngeles: formatZone("America/Los_Angeles"),
+        };
     });
 
-    function getRelativeTime(d: Date) {
-        const diff = d.getTime() - Date.now();
-        const absDiff = Math.abs(diff);
-        const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+    const PRESETS = [
+        { label: "当前时间 (NOW)", val: () => (unitMode === "sec" ? nowSec : nowMs).toString() },
+        { label: "今日零点", val: () => { const d = new Date(); d.setHours(0,0,0,0); return (unitMode === "sec" ? Math.floor(d.getTime()/1000) : d.getTime()).toString(); } },
+        { label: "昨天此时", val: () => ((unitMode === "sec" ? nowSec : nowMs) - (unitMode === "sec" ? 86400 : 86400000)).toString() },
+        { label: "明天此时", val: () => ((unitMode === "sec" ? nowSec : nowMs) + (unitMode === "sec" ? 86400 : 86400000)).toString() },
+        { label: "今年元旦", val: () => { const d = new Date(new Date().getFullYear(), 0, 1, 0, 0, 0); return (unitMode === "sec" ? Math.floor(d.getTime()/1000) : d.getTime()).toString(); } },
+    ];
 
-        const seconds = Math.floor(diff / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const hours = Math.floor(minutes / 60);
-        const days = Math.floor(hours / 24);
-
-        if (absDiff < 1000) return "just now";
-        if (Math.abs(seconds) < 60) return rtf.format(seconds, "seconds");
-        if (Math.abs(minutes) < 60) return rtf.format(minutes, "minutes");
-        if (Math.abs(hours) < 24) return rtf.format(hours, "hours");
-        return rtf.format(days, "days");
-    }
-
-    function formatZone(d: Date, zone: string) {
-        try {
-            return d.toLocaleString("en-US", {
-                timeZone: zone,
-                dateStyle: "medium",
-                timeStyle: "medium",
-                hour12: false,
-            });
-        } catch (e) {
-            return "Invalid Zone";
-        }
+    function copyVal(v: string, key: string) {
+        copyToClipboard(v, key);
+        copiedKey = key;
+        toastStore.success(`已复制 ${key}: ${v}`);
+        setTimeout(() => {
+            if (copiedKey === key) copiedKey = null;
+        }, 1500);
     }
 </script>
 
-<div class="space-y-8 w-full">
-    <!-- Hero Clock -->
-    <div
-        class="bg-slate-900 text-white p-8 rounded-2xl shadow-xl flex flex-col items-center justify-center gap-6 relative overflow-hidden group"
-    >
-        <!-- Background Decor -->
-        <div
-            class="hidden"
-        ></div>
-
-        <div
-            class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2 z-10"
-        >
-            <Clock size={16} /> Current Unix Time
+<div class="h-full flex flex-col gap-2.5 min-h-0">
+    <!-- Top Command Toolbar -->
+    <div class="h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-2xs">
+        <div class="flex items-center gap-2 flex-wrap min-w-0">
+            <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 shrink-0">
+                <Clock size={13} class="text-sky-500" />
+                Unix 时间戳与时区转换器
+            </span>
+            <span class="text-slate-300 dark:text-slate-700">|</span>
+            <div class="flex p-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[11px]">
+                <button
+                    type="button"
+                    class="px-2.5 py-0.5 rounded font-medium transition cursor-pointer {unitMode === 'sec' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                    onclick={() => { unitMode = "sec"; }}
+                >
+                    秒 (s · 10位)
+                </button>
+                <button
+                    type="button"
+                    class="px-2.5 py-0.5 rounded font-medium transition cursor-pointer {unitMode === 'ms' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                    onclick={() => { unitMode = "ms"; }}
+                >
+                    毫秒 (ms · 13位)
+                </button>
+            </div>
+            <span class="text-slate-300 dark:text-slate-700">|</span>
+            <span class="text-slate-400 text-[11px] font-medium shrink-0 flex items-center gap-1">
+                <Sparkles size={11} class="text-amber-500" /> 预设:
+            </span>
+            {#each PRESETS as p}
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition cursor-pointer"
+                    onclick={() => (input = p.val())}
+                >
+                    {p.label}
+                </button>
+            {/each}
         </div>
 
-        <div class="flex flex-col items-center z-10">
-            <div
-                class="text-6xl md:text-8xl font-mono font-bold tracking-tighter tabular-nums bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-400 transition-all duration-300"
-            >
-                {now}
-            </div>
-            <div class="text-slate-400 font-mono text-sm mt-2 opacity-60">
-                seconds since epoch
-            </div>
-        </div>
-
-        <div
-            class="flex gap-3 z-10 transition-opacity duration-300 opacity-80 group-hover:opacity-100"
-        >
+        <div class="flex items-center gap-1.5 shrink-0">
             <button
-                class="btn btn-secondary text-sm shadow-sm"
+                type="button"
+                class="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer"
                 onclick={() => (isPaused = !isPaused)}
+                title={isPaused ? "继续时间跳动" : "暂停时间跳动"}
             >
                 {#if isPaused}
-                    <Play size={14} class="fill-current" /> Resume
+                    <Play size={13} class="text-emerald-500 fill-emerald-500" />
                 {:else}
-                    <Pause size={14} class="fill-current" /> Pause
+                    <Pause size={13} class="text-amber-500 fill-amber-500" />
                 {/if}
-            </button>
-            <button
-                class="btn btn-primary text-sm shadow-sm hover:shadow-md"
-                onclick={() => navigator.clipboard.writeText(now.toString())}
-            >
-                <Copy size={14} /> Copy
             </button>
         </div>
     </div>
 
-    <!-- Converter Section -->
-    <div class="grid lg:grid-cols-2 gap-8">
-        <!-- Input -->
-        <div class="space-y-4 clean-panel p-6 justify-start">
-            <h3
-                class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
-            >
-                <Calendar size={20} class="text-slate-500" />
-                Time Converter
-            </h3>
-
-            <div class="space-y-4 pt-4">
-                <div class="space-y-2">
-                    <label
-                        for="ts-input"
-                        class="label-section"
+    <!-- Dual Workspace Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 min-h-0">
+        <!-- Left: Live Clock HUD & Input Bar (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-2.5 min-h-0">
+            <!-- Big Real-time Epoch Clock Card -->
+            <div class="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-2xs flex flex-col items-center justify-center space-y-2 shrink-0">
+                <div class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <span class="w-2 h-2 rounded-full {isPaused ? 'bg-amber-400' : 'bg-emerald-500 animate-pulse'}"></span>
+                    当前 UNIX 时间戳 ({unitMode.toUpperCase()})
+                </div>
+                <div class="font-mono text-2xl md:text-3xl font-bold tracking-wider text-slate-900 dark:text-white tabular-nums select-all">
+                    {currentTimestamp}
+                </div>
+                <div class="flex items-center gap-2 pt-1">
+                    <button
+                        type="button"
+                        onclick={() => copyVal(currentTimestamp.toString(), "当前时间戳")}
+                        class="px-2.5 py-1 text-xs rounded-md bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 transition flex items-center gap-1 shadow-2xs font-semibold cursor-pointer"
                     >
-                        Input (Timestamp, ISO, Date)
+                        <Copy size={11} /> 复制当前值
+                    </button>
+                    <button
+                        type="button"
+                        onclick={() => (input = currentTimestamp.toString())}
+                        class="px-2.5 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer"
+                    >
+                        填入下方转换
+                    </button>
+                </div>
+            </div>
+
+            <!-- Input Box -->
+            <div class="p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg space-y-2.5 shadow-2xs flex-1 min-h-0 flex flex-col justify-between">
+                <div class="space-y-2">
+                    <label for="ts-main-input" class="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                        <Calendar size={12} class="text-sky-500" />
+                        待转换时间戳或标准日期字串
                     </label>
                     <div class="flex gap-2">
                         <input
-                            id="ts-input"
+                            id="ts-main-input"
                             type="text"
                             bind:value={input}
-                            class="input text-sm flex-1"
-                            placeholder="e.g. 1672531200 or 2023-01-01"
+                            class="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-md font-mono text-sm text-slate-900 dark:text-white outline-none focus:border-sky-500"
+                            placeholder="如 1718000000 或 2026-08-26 15:30:00"
                         />
-                        <button
-                            class="btn btn-secondary text-sm shadow-sm"
-                            onclick={() => (input = now.toString())}
-                        >
-                            NOW
-                        </button>
                     </div>
                 </div>
 
-                <div class="space-y-2 pt-2">
-                    <span class="label-section block">Presets</span>
-                    <div class="flex flex-wrap gap-2">
-                        {#each [{ l: "Start of Year", v: new Date(new Date().getFullYear(), 0, 1).getTime() / 1000 }, { l: "Yesterday", v: Math.floor(Date.now() / 1000) - 86400 }, { l: "+1 Hour", v: Math.floor(Date.now() / 1000) + 3600 }] as preset}
-                            <button
-                                class="px-3 py-1.5 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 rounded-md text-xs hover:border-slate-400 transition-colors"
-                                onclick={() => (input = preset.v.toString())}
-                            >
-                                {preset.l}
-                            </button>
-                        {/each}
+                {#if parsedResult}
+                    <div class="p-3 rounded-lg bg-sky-50/60 dark:bg-sky-950/40 border border-sky-200/60 dark:border-sky-800/60 space-y-1">
+                        <span class="text-[10px] font-bold text-sky-600 dark:text-sky-400 block uppercase">相对时间</span>
+                        <div class="font-bold text-sm text-slate-900 dark:text-white">{parsedResult.relative}</div>
                     </div>
-                </div>
+                {/if}
             </div>
         </div>
 
-        <!-- Result -->
-        <div class="space-y-4 clean-panel p-6 justify-start">
-            <h3
-                class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
-            >
-                <Globe size={20} class="text-emerald-500" />
-                Result Details
-            </h3>
+        <!-- Right: Multi-Format & Global Timezone Grid (7 cols) -->
+        <div class="lg:col-span-7 flex flex-col border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-2xs min-h-0">
+            <div class="h-9 px-3 bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 text-xs font-bold text-slate-700 dark:text-slate-300">
+                <span class="flex items-center gap-1.5">
+                    <Globe size={13} class="text-sky-500" />
+                    多时区与标准化时间对照表
+                </span>
+                <span class="text-[10px] text-slate-400 font-mono">点击复制</span>
+            </div>
 
-            {#if parsedDate}
-                <div
-                    class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm mt-4"
-                >
-                    <!-- Main Result -->
-                    <div
-                        class="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
-                    >
-                        <div
-                            class="flex items-center gap-2 text-slate-500 text-sm mb-1"
-                        >
-                            <History size={16} /> Relative Time
-                        </div>
-                        <div
-                            class="text-2xl font-bold text-slate-900 dark:text-white"
-                        >
-                            {getRelativeTime(parsedDate)}
-                        </div>
-                    </div>
+            {#if parsedResult}
+                <div class="flex-1 overflow-auto p-3.5 space-y-2 bg-slate-50/40 dark:bg-slate-950/40 min-h-0 custom-scrollbar divide-y divide-slate-100/60 dark:divide-slate-800/40">
+                    {#each [
+                        { label: "本地时区 (Local)", val: parsedResult.local },
+                        { label: "北京时间 (CST · UTC+8)", val: parsedResult.beijing },
+                        { label: "东京时间 (JST · UTC+9)", val: parsedResult.tokyo },
+                        { label: "伦敦时间 (GMT/BST · UTC+0)", val: parsedResult.london },
+                        { label: "纽约时间 (EST/EDT · UTC-5)", val: parsedResult.newYork },
+                        { label: "洛杉矶时间 (PST/PDT · UTC-8)", val: parsedResult.losAngeles },
+                        { label: "ISO 8601 标准串", val: parsedResult.iso },
+                        { label: "UTC 规范串", val: parsedResult.utc },
+                        { label: "时间戳 (秒 · 10位)", val: parsedResult.sec },
+                        { label: "时间戳 (毫秒 · 13位)", val: parsedResult.ms },
+                    ] as item}
+                        <div class="pt-2 first:pt-0 flex items-center justify-between gap-3 group">
+                            <div class="space-y-0.5 min-w-0 flex-1">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{item.label}</span>
+                                <div class="font-mono text-xs text-slate-800 dark:text-slate-200 break-all select-all font-medium">
+                                    {item.val}
+                                </div>
+                            </div>
 
-                    <!-- Details Grid -->
-                    <div
-                        class="divide-y divide-slate-100 dark:divide-slate-700"
-                    >
-                        <div
-                            class="grid grid-cols-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
-                        >
-                            <div class="text-sm font-medium text-slate-500">
-                                Local
-                            </div>
-                            <div
-                                class="col-span-2 font-mono text-sm text-right select-all"
+                            <button
+                                type="button"
+                                onclick={() => copyVal(item.val, item.label)}
+                                class="px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1 shrink-0 cursor-pointer shadow-2xs font-sans"
                             >
-                                {parsedDate.toLocaleString()}
-                            </div>
+                                {#if copiedKey === item.label}
+                                    <Check size={11} class="text-emerald-500" />
+                                    <span class="text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">已复制</span>
+                                {:else}
+                                    <Copy size={11} class="text-slate-400" />
+                                    <span class="text-[11px]">复制</span>
+                                {/if}
+                            </button>
                         </div>
-                        <div
-                            class="grid grid-cols-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
-                        >
-                            <div class="text-sm font-medium text-slate-500">
-                                UTC
-                            </div>
-                            <div
-                                class="col-span-2 font-mono text-sm text-right select-all"
-                            >
-                                {parsedDate.toUTCString()}
-                            </div>
-                        </div>
-                        <div
-                            class="grid grid-cols-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
-                        >
-                            <div class="text-sm font-medium text-slate-500">
-                                ISO 8601
-                            </div>
-                            <div
-                                class="col-span-2 font-mono text-sm text-right select-all truncate"
-                                title={parsedDate.toISOString()}
-                            >
-                                {parsedDate.toISOString()}
-                            </div>
-                        </div>
-                        <div
-                            class="grid grid-cols-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
-                        >
-                            <div class="text-sm font-medium text-slate-500">
-                                New York
-                            </div>
-                            <div
-                                class="col-span-2 font-mono text-sm text-right select-all"
-                            >
-                                {formatZone(parsedDate, "America/New_York")}
-                            </div>
-                        </div>
-                        <div
-                            class="grid grid-cols-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
-                        >
-                            <div class="text-sm font-medium text-slate-500">
-                                Tokyo
-                            </div>
-                            <div
-                                class="col-span-2 font-mono text-sm text-right select-all"
-                            >
-                                {formatZone(parsedDate, "Asia/Tokyo")}
-                            </div>
-                        </div>
-                    </div>
+                    {/each}
                 </div>
             {:else}
-                <div
-                    class="flex-1 mt-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl flex flex-col items-center justify-center text-slate-400 gap-4 p-8 min-h-[300px]"
-                >
-                    <Clock size={48} class="opacity-20" />
-                    <p class="text-sm font-medium">
-                        Enter a timestamp to see details
-                    </p>
+                <div class="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-2">
+                    <Clock size={36} class="opacity-20 text-slate-400" />
+                    <p class="text-xs font-medium">请输入有效的时间戳或日期字符串进行转换</p>
                 </div>
             {/if}
         </div>

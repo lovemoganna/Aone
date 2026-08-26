@@ -18,7 +18,7 @@
         Code2,
         Sparkles
     } from "lucide-svelte";
-    import { CodeBlock } from "$lib/components/ui";
+    import { CodeBlock, CodeEditor } from "$lib/components/ui";
     import { dataBridge } from "$lib/stores/dataBridge";
     import { toastStore } from "$lib/stores/toastStore.svelte";
 
@@ -275,12 +275,12 @@
                     <span>测试文本 (Test String)</span>
                     <span class="text-[10px] text-slate-400 font-mono">{text.length} 字符</span>
                 </div>
-                <textarea
-                    bind:value={text}
-                    class="flex-1 w-full p-2.5 font-mono text-xs bg-transparent resize-none focus:outline-none dark:text-slate-200 leading-relaxed"
-                    placeholder="在此输入需要测试匹配的文本..."
-                    spellcheck="false"
-                ></textarea>
+                <div class="flex-1 relative min-h-0 bg-white dark:bg-[#0A0A0A]">
+                    <CodeEditor
+                        bind:value={text}
+                        placeholder="在此输入需要测试匹配的文本..."
+                    />
+                </div>
             </div>
 
             <!-- Replaced Output Preview -->

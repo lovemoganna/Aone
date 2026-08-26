@@ -345,11 +345,15 @@
                     <button
                         type="button"
                         onclick={() => (settingsOpen = true)}
-                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition cursor-pointer"
-                        title="配置 API Key 与模型"
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 hover:border-indigo-400 dark:hover:border-indigo-600 transition cursor-pointer shadow-2xs group"
+                        title={`AI 引擎网关配置: ${settingsStore.currentProvider?.name || '未配置'} (${settingsStore.selectedModel || '未选择模型'})`}
                     >
-                        <Settings class="h-3.5 w-3.5 text-slate-500" />
+                        <Settings class="h-3.5 w-3.5 text-slate-500 group-hover:text-indigo-500 group-hover:rotate-45 transition-transform duration-200" />
                         <span>配置</span>
+                        <span class="inline-flex items-center gap-1 pl-1 border-l border-slate-200 dark:border-slate-700 font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                            <span class="w-1.5 h-1.5 rounded-full {settingsStore.isConfigured ? 'bg-emerald-500 shadow-xs' : 'bg-amber-500'}"></span>
+                            <span class="hidden md:inline truncate max-w-[80px]">{settingsStore.currentProvider?.name || '未配置'}</span>
+                        </span>
                     </button>
 
                     <div class="relative">

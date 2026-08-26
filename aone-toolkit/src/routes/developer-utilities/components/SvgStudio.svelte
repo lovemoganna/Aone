@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { Panel, Button, EmptyState } from "$lib/components/ui";
+    import { Panel, Button, EmptyState, CodeBlock, CodeEditor } from "$lib/components/ui";
     import { copyToClipboard } from "$lib/utils/clipboard";
     import { dataBridge } from "$lib/stores/dataBridge";
     import HandoffDropdown from "$lib/components/ui/HandoffDropdown.svelte";
@@ -578,19 +578,22 @@
     onchange={handleFileChange}
 />
 
-<div class="h-full flex-1 flex flex-col bg-slate-100 dark:bg-slate-950 p-2 gap-2 overflow-hidden">
+<div class="h-full flex flex-col gap-2.5 min-h-0">
     <!-- Top Command Toolbar -->
-    <div class="h-9 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-xs">
+    <div class="h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-2xs">
         <div class="flex items-center gap-2">
-            <span class="font-bold text-slate-800 dark:text-slate-200">SVG Studio</span>
+            <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 shrink-0">
+                <FileCode size={13} class="text-orange-500" />
+                SVG Studio
+            </span>
             {#if svgCode}
-                <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-orange-50 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-900">
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-orange-50 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-900">
                     {svgCode.length} 字符
                 </span>
             {/if}
         </div>
 
-        <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-1.5 shrink-0">
             <HandoffDropdown
                 sourceTool="SVG 工作室"
                 dataType="text"
@@ -600,7 +603,7 @@
             {#if svgCode}
                 <button
                     type="button"
-                    class="p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/20 text-slate-400 hover:text-rose-500 transition"
+                    class="p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/20 text-slate-400 hover:text-rose-500 transition cursor-pointer"
                     onclick={() => { svgCode = ""; activeTab = "preview"; expandedNodes = new Set(["root"]); }}
                     title="清空内容"
                 >
@@ -610,11 +613,11 @@
         </div>
     </div>
 
-    <div class="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-2 min-h-0 h-full w-full overflow-hidden">
+    <div class="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-3 min-h-0 h-full w-full overflow-hidden">
         <!-- ── 左侧：输入区 (xl:col-span-5) ───────────────────────────────── -->
-        <div class="xl:col-span-5 flex flex-col min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden shadow-xs">
+        <div class="xl:col-span-5 flex flex-col min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden shadow-2xs">
             <!-- 面板头 -->
-            <div class="h-8 px-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/80 shrink-0 text-xs">
+            <div class="h-9 px-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/80 shrink-0 text-xs">
                 <span class="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
                     <Upload size={13} class="text-orange-500" />
                     SVG 输入
@@ -645,12 +648,13 @@
                 role="region"
                 aria-label="SVG 粘贴和拖放区域"
             >
-                <textarea
-                    bind:value={svgCode}
-                    class="w-full h-full p-3 bg-transparent resize-none font-mono text-[11px] leading-relaxed text-slate-800 dark:text-slate-200 border-none outline-none focus:ring-0 placeholder:text-slate-400"
-                    placeholder="在此粘贴 SVG 源码...&#10;&#10;也可以将 .svg 文件拖拽到这里，或点击右上角「导入文件」。"
-                    spellcheck="false"
-                ></textarea>
+                <div class="w-full h-full relative bg-white dark:bg-[#0A0A0A] overflow-hidden">
+                    <CodeEditor
+                        bind:value={svgCode}
+                        language="html"
+                        placeholder="在此粘贴 SVG 源码..."
+                    />
+                </div>
 
                 {#if isDragging}
                     <div class="absolute inset-0 flex items-center justify-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border-2 border-dashed border-orange-500 m-1.5 rounded-lg z-10" transition:fade={{ duration: 100 }}>
@@ -813,12 +817,13 @@
                                 <RefreshCw size={11} /> 格式化
                             </button>
                         </div>
-                        <textarea
-                            bind:value={svgCode}
-                            class="flex-1 p-3 bg-transparent resize-none font-mono text-[11px] leading-relaxed text-slate-800 dark:text-slate-200 border-none outline-none focus:ring-0 scrollbar-thin"
-                            spellcheck="false"
-                            placeholder="SVG 源码将显示在这里，可直接编辑"
-                        ></textarea>
+                        <div class="flex-1 relative min-h-0 bg-white dark:bg-[#0A0A0A]">
+                            <CodeEditor
+                                bind:value={svgCode}
+                                language="html"
+                                placeholder="SVG 源码将显示在这里，可直接编辑"
+                            />
+                        </div>
                     </div>
 
                 <!-- 元素结构 -->
@@ -1137,8 +1142,18 @@
                                 {/if}
                             </button>
                         </div>
-                        <div class="flex-1 overflow-auto p-3 font-mono text-[10px] leading-relaxed text-slate-700 dark:text-slate-300 bg-slate-50/30 dark:bg-[#08080a] whitespace-pre scrollbar-thin min-h-0">
-                            {optimizedCode || "（尚无内容）"}
+                        <div class="flex-1 overflow-auto p-2 bg-slate-50/30 dark:bg-[#08080a] min-h-0 custom-scrollbar">
+                            {#if optimizedCode}
+                                <CodeBlock
+                                    code={optimizedCode}
+                                    language="html"
+                                    showHeader={false}
+                                    wrapLines={true}
+                                    class="!my-0 border-0 text-[10px]"
+                                />
+                            {:else}
+                                <span class="text-slate-400 text-xs italic">（尚无内容）</span>
+                            {/if}
                         </div>
                     </div>
 
@@ -1169,8 +1184,14 @@
                                     {/if}
                                 </button>
                             </div>
-                            <div class="p-3 font-mono text-[10px] leading-relaxed text-slate-700 dark:text-slate-300 bg-slate-50/30 dark:bg-[#08080a] max-h-40 overflow-y-auto whitespace-pre scrollbar-thin">
-                                {componentCode}
+                            <div class="p-2 bg-slate-50/30 dark:bg-[#08080a] max-h-40 overflow-y-auto custom-scrollbar">
+                                <CodeBlock
+                                    code={componentCode}
+                                    language={componentType === 'react' ? 'typescript' : 'html'}
+                                    showHeader={false}
+                                    wrapLines={true}
+                                    class="!my-0 border-0 text-[10px]"
+                                />
                             </div>
                         </div>
                     </div>

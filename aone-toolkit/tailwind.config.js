@@ -27,7 +27,7 @@ export default {
       },
       fontFamily: {
         sans: ['"Noto Sans SC"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', 'monospace']
+        mono: ['"JetBrains Mono"', '"Noto Sans SC"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
       },
       borderRadius: {
         DEFAULT: '8px',

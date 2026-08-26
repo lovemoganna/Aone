@@ -9,7 +9,7 @@
     } from "lucide-svelte";
     import { dataBridge } from "$lib/stores/dataBridge";
     import HandoffDropdown from "$lib/components/ui/HandoffDropdown.svelte";
-    import { CodeBlock } from "$lib/components/ui";
+    import { CodeBlock, CodeEditor } from "$lib/components/ui";
 
     let rawInput = $state("");
     let parsedData = $state<any>(null);
@@ -389,33 +389,36 @@
     <title>API 响应查看器 - Aone 工具箱</title>
 </svelte:head>
 
-<div class="h-full flex-1 flex flex-col bg-slate-100 dark:bg-slate-950 p-2 gap-2 overflow-hidden">
+<div class="h-full flex flex-col gap-2.5 min-h-0">
     <!-- Top Metadata Command Bar -->
-    <div class="h-9 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-xs">
-        <div class="flex items-center gap-2">
-            <span class="font-semibold text-slate-800 dark:text-slate-200">API 响应 Payload</span>
+    <div class="h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-2xs">
+        <div class="flex items-center gap-2 flex-wrap min-w-0">
+            <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 shrink-0">
+                <Database size={13} class="text-sky-500" />
+                API 响应 Payload 分析
+            </span>
             <div class="flex items-center gap-1 font-mono text-[11px]">
-                <span class="px-1.5 py-0.2 rounded font-bold {httpStatusCode >= 200 && httpStatusCode < 300 ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300' : 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'}">
+                <span class="px-2 py-0.5 rounded font-bold {httpStatusCode >= 200 && httpStatusCode < 300 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'}">
                     HTTP {httpStatusCode}
                 </span>
-                <span class="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center gap-0.5">
+                <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center gap-1 border border-slate-200 dark:border-slate-700">
                     <Clock size={10} /> {httpDurationMs}ms
                 </span>
                 {#if parsedData}
-                    <span class="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                         {rawInput.length.toLocaleString()} 字符
                     </span>
                 {/if}
             </div>
         </div>
 
-        <div class="flex items-center gap-1.5">
-            <div class="flex items-center gap-1 mr-2 border-r border-slate-200 dark:border-slate-800 pr-2">
-                <span class="text-[10px] text-slate-400">预设:</span>
+        <div class="flex items-center gap-1.5 shrink-0">
+            <div class="flex items-center gap-1 mr-1 border-r border-slate-200 dark:border-slate-800 pr-2">
+                <span class="text-[11px] text-slate-400 font-medium">预设:</span>
                 {#each SAMPLE_RESPONSES as sample}
                     <button
                         type="button"
-                        class="px-1.5 py-0.5 text-[11px] rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition"
+                        class="px-2 py-0.5 text-[11px] font-medium rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition cursor-pointer"
                         onclick={() => loadSample(sample)}
                     >
                         {sample.name.split(" ")[0]}
@@ -425,7 +428,7 @@
 
             <button
                 type="button"
-                class="px-2 py-1 text-[11px] font-medium rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition flex items-center gap-1"
+                class="px-2.5 py-1 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer shadow-2xs"
                 onclick={formatJson}
                 title="格式化 JSON (Ctrl+Enter)"
             >
@@ -433,7 +436,7 @@
             </button>
             <button
                 type="button"
-                class="px-2 py-1 text-[11px] font-medium rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition flex items-center gap-1"
+                class="px-2.5 py-1 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer shadow-2xs"
                 onclick={minifyJson}
                 title="压缩 JSON"
             >
@@ -458,18 +461,17 @@
     <!-- 2-Column Edge Workbench -->
     <div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-2 min-h-0">
         <!-- Left: Input Code Editor Area -->
-        <div class="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden shadow-xs min-h-0">
-            <div class="flex-1 p-0 overflow-hidden relative">
-                <textarea
+        <div class="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden shadow-xs min-h-0 relative">
+            <div class="flex-1 min-h-0 relative bg-white dark:bg-[#0A0A0A]">
+                <CodeEditor
                     bind:value={rawInput}
-                    class="w-full h-full p-3 font-mono text-xs bg-transparent resize-none focus:outline-none dark:text-slate-200 leading-relaxed"
-                    placeholder="在此粘贴 API 响应 JSON... (Ctrl+Enter 快捷格式化)"
-                    oninput={parseInput}
-                    onkeydown={onTextareaKeydown}
-                ></textarea>
+                    language="json"
+                    placeholder="在此粘贴 API 响应 JSON..."
+                    onChange={() => parseInput()}
+                />
 
                 {#if error && !parsedData}
-                    <div class="absolute bottom-3 left-3 right-3 p-2.5 bg-rose-50 dark:bg-rose-950/90 text-rose-600 dark:text-rose-300 text-xs rounded border border-rose-200 dark:border-rose-900 flex items-center gap-2 shadow-xs">
+                    <div class="absolute bottom-3 left-3 right-3 p-2.5 bg-rose-50 dark:bg-rose-950/90 text-rose-600 dark:text-rose-300 text-xs rounded border border-rose-200 dark:border-rose-900 flex items-center gap-2 shadow-xs z-10">
                         <Info size={14} class="shrink-0" />
                         <span class="truncate">{error}</span>
                     </div>

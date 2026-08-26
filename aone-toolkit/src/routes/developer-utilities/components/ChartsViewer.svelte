@@ -1,6 +1,6 @@
 <script lang="ts">
     import { untrack } from "svelte";
-    import { Button } from "$lib/components/ui";
+    import { Button, CodeEditor } from "$lib/components/ui";
     import ToolWorkspace from "$lib/components/layout/ToolWorkspace.svelte";
     import {
         BarChart,
@@ -1428,10 +1428,10 @@
     <title>数据图表工作区 - Aone Toolkit</title>
 </svelte:head>
 
-<div class="h-full flex-1 flex flex-col bg-slate-100 dark:bg-slate-950 p-2 gap-2 overflow-hidden">
-    <div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-2 h-full w-full min-h-0">
+<div class="h-full flex flex-col gap-2.5 min-h-0">
+    <div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-3 h-full w-full min-h-0">
         <!-- Input Section (Left Panel) -->
-        <div class="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col h-full shadow-xs min-h-0">
+        <div class="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col h-full shadow-2xs min-h-0">
             <div class="h-9 px-3 bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center gap-2 shrink-0 text-xs">
                 <div class="flex items-center gap-2">
                     <div class="flex p-0.5 bg-slate-200/70 dark:bg-slate-800 rounded-md">
@@ -1755,12 +1755,12 @@
                 </div>
             {:else}
                 <!-- Code Editor View -->
-                <div class="flex-1 p-3 flex flex-col min-h-[300px]">
-                    <textarea
+                <div class="flex-1 relative min-h-[300px] bg-white dark:bg-[#0A0A0A] overflow-hidden">
+                    <CodeEditor
                         bind:value={dataInput}
-                        class="w-full flex-1 p-3 textarea-editor font-mono text-xs leading-relaxed outline-none resize-none bg-slate-50/50 dark:bg-slate-900/50 rounded-sm border border-slate-200/50 dark:border-slate-800/50 text-slate-800 dark:text-slate-100"
+                        language="json"
                         placeholder="在此贴入 JSON 数组、CSV 或从 Excel 复制的内容..."
-                    ></textarea>
+                    />
                 </div>
             {/if}
 

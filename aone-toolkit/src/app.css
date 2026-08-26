@@ -52,8 +52,18 @@
 
 /* Base Styles */
 @layer base {
-  html {
+  *,
+  html,
+  body,
+  button,
+  input,
+  optgroup,
+  select,
+  textarea {
     font-family: 'Noto Sans SC', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  html {
     font-size: 14px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -79,8 +89,21 @@
 
   code,
   pre,
-  .font-mono {
-    font-family: 'JetBrains Mono', 'Fira Code', Monaco, Consolas, monospace;
+  pre code,
+  .font-mono,
+  .code-block,
+  .code-block-wrapper,
+  .code-container,
+  .textarea-editor,
+  .cm-editor,
+  .cm-content,
+  .cm-scroller,
+  .monaco-editor,
+  .monaco-editor .view-lines,
+  kbd,
+  samp,
+  var {
+    font-family: 'JetBrains Mono', 'Noto Sans SC', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
   }
 
   pre,
@@ -307,8 +330,10 @@
 .rich-markdown pre,
 .prose pre,
 .code-block-wrapper pre,
-pre code {
-  font-family: 'JetBrains Mono', 'Fira Code', Monaco, Consolas, monospace !important;
+.code-container pre,
+pre code,
+code {
+  font-family: 'JetBrains Mono', 'Noto Sans SC', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
   font-size: 12.5px !important;
   line-height: 1.6 !important;
 }

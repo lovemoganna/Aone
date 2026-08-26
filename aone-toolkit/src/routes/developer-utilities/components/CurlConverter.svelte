@@ -444,12 +444,12 @@
     <title>cURL 命令行转换器 - Aone 工具箱</title>
 </svelte:head>
 
-<div class="h-full flex-1 flex flex-col bg-slate-100 dark:bg-slate-950 p-2 gap-2 overflow-hidden">
+<div class="h-full flex flex-col gap-2.5 min-h-0">
     <!-- Top Command Toolbar -->
-    <div class="h-9 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-xs">
-        <div class="flex items-center gap-2">
+    <div class="h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-2xs">
+        <div class="flex items-center gap-2 flex-wrap min-w-0">
             <!-- Target Language Pills -->
-            <div class="flex p-0.5 bg-slate-200/70 dark:bg-slate-800 rounded-md">
+            <div class="flex p-0.5 bg-slate-100 dark:bg-slate-800 rounded-md">
                 {#each [
                     { id: 'fetch', label: 'Fetch' },
                     { id: 'axios', label: 'Axios' },
@@ -460,7 +460,8 @@
                     { id: 'csharp', label: 'C#' }
                 ] as lang}
                     <button
-                        class="px-2 py-0.5 text-xs font-semibold rounded-sm transition {targetLang === lang.id ? 'bg-white dark:bg-slate-900 shadow-2xs text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}"
+                        type="button"
+                        class="px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer {targetLang === lang.id ? 'bg-white dark:bg-slate-900 shadow-2xs text-sky-600 dark:text-sky-400 font-bold' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}"
                         onclick={() => (targetLang = lang.id as any)}
                     >
                         {lang.label}
@@ -474,7 +475,7 @@
                 <select
                     id="indent-select"
                     bind:value={indent}
-                    class="py-0.5 px-1.5 text-xs rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none"
+                    class="py-1 px-2 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
                 >
                     <option value={2}>2 空格</option>
                     <option value={4}>4 空格</option>
@@ -482,13 +483,13 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-1.5">
-            <div class="flex items-center gap-1 mr-2 border-r border-slate-200 dark:border-slate-800 pr-2">
-                <span class="text-[10px] text-slate-400">示例:</span>
+        <div class="flex items-center gap-1.5 shrink-0">
+            <div class="flex items-center gap-1 mr-1 border-r border-slate-200 dark:border-slate-800 pr-2">
+                <span class="text-[11px] text-slate-400 font-medium">示例:</span>
                 {#each EXAMPLES as ex}
                     <button
                         type="button"
-                        class="px-1.5 py-0.5 text-[10px] font-medium rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition"
+                        class="px-2 py-0.5 text-[11px] font-medium rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition cursor-pointer"
                         onclick={() => loadExample(ex.code)}
                     >
                         {ex.name.split(" ")[0]}
@@ -505,11 +506,12 @@
             {#if curlInput}
                 <button
                     type="button"
-                    class="p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/20 text-slate-400 hover:text-rose-500 transition"
+                    class="px-2 py-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/20 text-slate-400 hover:text-rose-500 transition flex items-center gap-1 cursor-pointer text-xs"
                     onclick={clearAll}
                     title="清空内容"
                 >
-                    <Trash2 size={13} />
+                    <Trash2 size={12} />
+                    <span>清空</span>
                 </button>
             {/if}
         </div>
@@ -517,14 +519,14 @@
 
     <!-- Sensitive Credentials warning banner -->
     {#if hasSensitiveCredentials && curlInput.trim() !== ""}
-        <div class="px-3 py-1.5 bg-amber-500/10 dark:bg-amber-950/20 border border-amber-500/20 rounded text-amber-600 dark:text-amber-400 text-xs flex items-center gap-2 select-none shrink-0">
+        <div class="px-3 py-1.5 bg-amber-500/10 dark:bg-amber-950/20 border border-amber-500/20 rounded-md text-amber-600 dark:text-amber-400 text-xs flex items-center gap-2 select-none shrink-0">
             <Lock size={12} class="shrink-0 text-amber-500" />
             <span>已自动遮蔽请求中的敏感凭据（如 Authorization / Cookie）。生成的集成代码仅供参考。</span>
         </div>
     {/if}
 
     <!-- Main Workspace Split Panel -->
-    <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-2 min-h-0">
+    <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3 min-h-0">
         
         <!-- Left Panel: Input & Parsed Structure Preview -->
         <div class="flex flex-col min-h-0 gap-4">
@@ -569,11 +571,13 @@
                     </div>
                 </div>
 
-                <textarea
-                    bind:value={curlInput}
-                    class="flex-1 p-3.5 textarea-editor font-mono text-xs leading-relaxed outline-none resize-none bg-transparent text-slate-800 dark:text-slate-100"
-                    placeholder={placeholderText}
-                ></textarea>
+                <div class="flex-1 relative min-h-0 bg-white dark:bg-[#0A0A0A]">
+                    <CodeEditor
+                        bind:value={curlInput}
+                        language="bash"
+                        placeholder={placeholderText}
+                    />
+                </div>
             </div>
 
             <!-- Left Panel: Preview Section -->

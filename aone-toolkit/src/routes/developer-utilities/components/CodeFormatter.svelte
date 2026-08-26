@@ -694,16 +694,17 @@
     <title>代码格式化 - Aone 工具箱</title>
 </svelte:head>
 
-<div class="h-full flex-1 flex flex-col bg-slate-100 dark:bg-slate-950 p-2 gap-2 overflow-hidden">
+<div class="h-full flex flex-col gap-2.5 min-h-0">
     <!-- Top Command Toolbar -->
-    <div class="h-9 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-xs">
-        <div class="flex items-center gap-2">
+    <div class="h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-2xs">
+        <div class="flex items-center gap-2 flex-wrap min-w-0">
             <!-- Language selection -->
-            <div class="flex p-0.5 bg-slate-200/70 dark:bg-slate-800 rounded-md">
+            <div class="flex p-0.5 bg-slate-100 dark:bg-slate-800 rounded-md">
                 {#each LANGUAGES as lang}
                     <button
-                        class="px-2 py-0.5 text-xs font-semibold rounded-sm transition-all whitespace-nowrap {language === lang.id
-                            ? 'bg-white dark:bg-slate-900 shadow-2xs text-blue-600 dark:text-blue-400 font-bold'
+                        type="button"
+                        class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all whitespace-nowrap cursor-pointer {language === lang.id
+                            ? 'bg-white dark:bg-slate-900 shadow-2xs text-sky-600 dark:text-sky-400 font-bold'
                             : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}"
                         onclick={() => {
                             language = lang.id;
@@ -719,14 +720,14 @@
             <!-- Auto-detect badge indicator -->
             {#if language === 'auto'}
                 {#if autoDetectedLanguage}
-                    <span class="badge badge-blue text-[10px] select-none font-semibold">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 border border-sky-200/60 dark:border-sky-800/60 select-none">
                         已检测: {autoDetectedLanguage.toUpperCase()}
                     </span>
                 {/if}
             {/if}
 
             {#if isFormatting}
-                <span class="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-semibold animate-pulse pl-1">
+                <span class="flex items-center gap-1 text-xs text-sky-600 dark:text-sky-400 font-semibold animate-pulse pl-1">
                     <Loader2 size={12} class="animate-spin" />
                     <span>格式化中...</span>
                 </span>
