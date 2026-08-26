@@ -231,12 +231,15 @@
     });
 
     let resizeObserver: ResizeObserver | null = null;
+    let isDestroyed = false;
 
     onMount(async () => {
         if (!editorElement) return;
 
         previousLang = language;
         const initialLangExt = await loadLanguageExtension(language);
+        if (isDestroyed || !editorElement) return;
+
         const currentTheme = $theme;
 
         const state = EditorState.create({
@@ -265,8 +268,8 @@
                 EditorView.theme({
                     "&": { 
                         height: "100%",
-                        fontSize: fontSize || "12px",
-                        fontFamily: "'Victor Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace"
+                        fontSize: fontSize || "12.5px",
+                        fontFamily: "'JetBrains Mono', ui-monospace, monospace"
                     },
                     ".cm-scroller": {
                         overflow: "auto",
@@ -281,23 +284,30 @@
             ],
         });
 
+        if (isDestroyed || !editorElement) return;
+
         view = new EditorView({
             state,
             parent: editorElement,
         });
 
         // Ensure editor view measures exact dimensions on mount and resize
-        resizeObserver = new ResizeObserver(() => {
-            if (view) {
-                view.requestMeasure();
-            }
-        });
-        resizeObserver.observe(editorElement);
+        if (typeof ResizeObserver !== "undefined" && editorElement instanceof Element) {
+            resizeObserver = new ResizeObserver(() => {
+                if (view) {
+                    view.requestMeasure();
+                }
+            });
+            resizeObserver.observe(editorElement);
+        }
     });
 
     onDestroy(() => {
+        isDestroyed = true;
         resizeObserver?.disconnect();
+        resizeObserver = null;
         view?.destroy();
+        view = null;
     });
 </script>
 
