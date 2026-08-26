@@ -68,7 +68,7 @@
                     "&": { height: "100%", fontSize: "12px" },
                     ".cm-scroller": {
                         overflow: "auto",
-                        fontFamily: "var(--font-mono, 'JetBrains Mono', 'Fira Code', Consolas, monospace)",
+                        fontFamily: "var(--font-mono, 'JetBrains Mono', 'Noto Sans SC', monospace)",
                         lineHeight: "1.55",
                     },
                     ".cm-gutters": {

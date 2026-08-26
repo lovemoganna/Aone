@@ -691,7 +691,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="h-full flex flex-col pt-2 max-w-[1600px] mx-auto">
+<div class="h-full w-full flex flex-col min-h-0 pt-1">
     <!-- View Switcher Tabs -->
     <div
         class="flex items-center space-x-1 border-b border-slate-200 dark:border-slate-800 mb-0 px-2"

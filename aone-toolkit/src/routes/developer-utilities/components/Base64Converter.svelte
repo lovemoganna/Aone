@@ -2,7 +2,7 @@
     import { copyToClipboard } from "$lib/utils/clipboard";
     import { toastStore } from "$lib/stores/toastStore.svelte";
     import { Copy, Trash2, ArrowRightLeft, Check, AlertCircle } from "lucide-svelte";
-    import { CodeBlock } from "$lib/components/ui";
+    import { CodeBlock, CodeEditor } from "$lib/components/ui";
 
     let input = $state("Hello 世界！Aone Toolkit 2026");
     let mode = $state<"encode" | "decode">("encode");
@@ -62,22 +62,22 @@
     }
 </script>
 
-<div class="h-full flex flex-col gap-2 min-h-0">
+<div class="h-full flex flex-col gap-2.5 min-h-0">
     <!-- Top Toolbar -->
-    <div class="h-9 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-xs">
+    <div class="h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-2xs">
         <div class="flex items-center gap-2">
             <span class="font-bold text-slate-800 dark:text-slate-200">Base64 转换器</span>
             <div class="flex p-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[11px]">
                 <button
                     type="button"
-                    class="px-2.5 py-0.5 rounded font-medium transition {mode === 'encode' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                    class="px-2.5 py-0.5 rounded font-medium transition cursor-pointer {mode === 'encode' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
                     onclick={() => mode = "encode"}
                 >
                     文本 → Base64 (Encode)
                 </button>
                 <button
                     type="button"
-                    class="px-2.5 py-0.5 rounded font-medium transition {mode === 'decode' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                    class="px-2.5 py-0.5 rounded font-medium transition cursor-pointer {mode === 'decode' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
                     onclick={() => mode = "decode"}
                 >
                     Base64 → 文本 (Decode)
@@ -85,16 +85,16 @@
             </div>
             {#if mode === "encode"}
                 <label class="flex items-center gap-1 text-[11px] text-slate-500 cursor-pointer select-none ml-2">
-                    <input type="checkbox" bind:checked={urlSafe} class="rounded text-slate-600 text-xs" />
+                    <input type="checkbox" bind:checked={urlSafe} class="rounded text-sky-600 text-xs" />
                     <span>URL-Safe 模式 (- / _)</span>
                 </label>
             {/if}
         </div>
 
-        <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-1.5 shrink-0">
             <button
                 type="button"
-                class="px-2 py-1 text-xs rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition flex items-center gap-1"
+                class="px-2.5 py-1 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer shadow-2xs"
                 onclick={swapInputOutput}
                 title="将输出作为输入并反转模式"
             >
@@ -102,7 +102,7 @@
             </button>
             <button
                 type="button"
-                class="p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/20 text-slate-400 hover:text-rose-500 transition"
+                class="p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/20 text-slate-400 hover:text-rose-500 transition cursor-pointer"
                 onclick={() => input = ""}
                 title="清空"
             >
@@ -119,12 +119,12 @@
                 <span>{mode === "encode" ? "输入源文本 (UTF-8)" : "输入 Base64 编码字符串"}</span>
                 <span class="text-[10px] text-slate-400 font-mono">{input.length} 字符</span>
             </div>
-            <textarea
-                bind:value={input}
-                class="flex-1 w-full p-2.5 font-mono text-xs bg-transparent resize-none focus:outline-none dark:text-slate-200 leading-relaxed"
-                placeholder={mode === "encode" ? "在此输入或粘贴需要编码为 Base64 的文本..." : "在此输入 Base64 字符串..."}
-                spellcheck="false"
-            ></textarea>
+            <div class="flex-1 relative min-h-0 bg-white dark:bg-[#0A0A0A]">
+                <CodeEditor
+                    bind:value={input}
+                    placeholder={mode === "encode" ? "在此输入或粘贴需要编码为 Base64 的文本..." : "在此输入 Base64 字符串..."}
+                />
+            </div>
         </div>
 
         <!-- Output -->

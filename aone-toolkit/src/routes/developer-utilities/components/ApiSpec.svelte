@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { toastStore } from "$lib/stores/toastStore.svelte";
-    import { CodeBlock } from "$lib/components/ui";
+    import { CodeBlock, CodeEditor } from "$lib/components/ui";
     import {
         Plus, Trash2, Copy, Check, Download, FileJson, FileText,
         AlertTriangle, AlertCircle, CheckCircle2,
@@ -576,11 +576,13 @@
             </div>
             <div class="p-4 space-y-3 flex-1 flex flex-col min-h-0">
                 <p class="text-xs text-slate-500">粘贴包含多个路径的完整 OpenAPI 3.0 JSON 文档，系统将提取所有路由端点：</p>
-                <textarea
-                    bind:value={importInput}
-                    class="flex-1 w-full p-2.5 font-mono text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded resize-none focus:outline-none focus:ring-1 focus:ring-slate-400"
-                    placeholder={'{"openapi": "3.0.0", "paths": { "/api/v1/users": { "get": {...}, "post": {...} } }}'}
-                ></textarea>
+                <div class="flex-1 min-h-[220px] relative border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
+                    <CodeEditor
+                        bind:value={importInput}
+                        language="json"
+                        placeholder={'{"openapi": "3.0.0", "paths": { "/api/v1/users": { "get": {...}, "post": {...} } }}'}
+                    />
+                </div>
             </div>
             <div class="flex items-center justify-end gap-2 px-4 py-3 border-t border-slate-200 dark:border-slate-800">
                 <button
@@ -600,44 +602,47 @@
     </div>
 {/if}
 
-<div class="h-full flex-1 flex flex-col bg-slate-100 dark:bg-slate-950 p-2 gap-2 overflow-hidden">
+<div class="h-full flex flex-col gap-2.5 min-h-0">
     <!-- Top Command Toolbar -->
-    <div class="h-9 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-xs">
-        <div class="flex items-center gap-2">
-            <span class="font-bold text-slate-800 dark:text-slate-200">API 规范工作台</span>
+    <div class="h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-2xs">
+        <div class="flex items-center gap-2 flex-wrap min-w-0">
+            <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 shrink-0">
+                <Code2 size={13} class="text-sky-500" />
+                API 规范与契约工作台
+            </span>
             <span class="text-slate-400 font-mono text-[11px]">({endpointList.length} 个端点)</span>
             {#if specDirty}
                 <span class="text-[10px] text-amber-500 font-medium">● 未保存变更</span>
             {/if}
         </div>
 
-        <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-1.5 shrink-0">
             <button
                 type="button"
-                class="px-2 py-1 text-xs font-medium rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition flex items-center gap-1"
+                class="px-2.5 py-1 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer shadow-2xs"
                 onclick={runValidation}
             >
-                <CheckCircle2 size={13} class="text-emerald-500" /> 校验完整性
+                <CheckCircle2 size={12} class="text-emerald-500" /> 校验完整性
             </button>
             <button
                 type="button"
-                class="px-2 py-1 text-xs font-medium rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition flex items-center gap-1"
+                class="px-2.5 py-1 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer shadow-2xs"
                 onclick={() => showImport = true}
             >
-                <Upload size={13} /> 导入 OpenAPI
+                <Upload size={12} /> 导入 OpenAPI
             </button>
             <button
                 type="button"
-                class="px-2.5 py-1 text-xs font-semibold rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 transition flex items-center gap-1 shadow-2xs"
+                class="px-2.5 py-1 text-xs font-semibold rounded-md bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 transition flex items-center gap-1 shadow-2xs cursor-pointer"
                 onclick={saveToLocal}
             >
-                <Check size={13} /> 保存草稿
+                <Check size={12} /> 保存草稿
             </button>
         </div>
     </div>
 
     <!-- 3-Pane Responsive Workbench -->
-    <div class="flex-1 grid grid-cols-1 md:grid-cols-[220px_1fr] lg:grid-cols-[220px_1fr_1fr] gap-2 min-h-0">
+    <div class="flex-1 grid grid-cols-1 md:grid-cols-[220px_1fr] lg:grid-cols-[220px_1fr_1fr] gap-3 min-h-0">
         
         <!-- Left: Endpoint Navigation Sidebar -->
         <div class="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden shadow-xs min-h-0">
@@ -843,15 +848,16 @@
                         {#if showInferPanel === activeTab}
                             <div class="p-2.5 rounded border border-amber-200 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 space-y-2">
                                 <div class="text-[11px] font-bold text-amber-800 dark:text-amber-300">粘贴 JSON 自动解析字段结构：</div>
-                                <textarea
-                                    bind:value={inferJsonText}
-                                    rows={4}
-                                    placeholder={'{"id": 1001, "name": "Alice", "active": true}'}
-                                    class="w-full p-2 font-mono text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
-                                ></textarea>
+                                <div class="h-28 relative border border-slate-200 dark:border-slate-700 rounded overflow-hidden bg-white dark:bg-slate-900">
+                                    <CodeEditor
+                                        bind:value={inferJsonText}
+                                        language="json"
+                                        placeholder={'{"id": 1001, "name": "Alice", "active": true}'}
+                                    />
+                                </div>
                                 <div class="flex justify-end gap-1.5">
-                                    <button onclick={() => showInferPanel = null} class="px-2 py-0.5 rounded text-[11px] text-slate-500">取消</button>
-                                    <button onclick={() => inferSchemaFromJson(targetProp)} class="px-2.5 py-0.5 rounded bg-amber-600 hover:bg-amber-700 text-white font-medium text-[11px]">执行推断</button>
+                                    <button onclick={() => showInferPanel = null} class="px-2 py-0.5 rounded text-[11px] text-slate-500 cursor-pointer">取消</button>
+                                    <button onclick={() => inferSchemaFromJson(targetProp)} class="px-2.5 py-0.5 rounded bg-amber-600 hover:bg-amber-700 text-white font-medium text-[11px] cursor-pointer">执行推断</button>
                                 </div>
                             </div>
                         {/if}
@@ -911,11 +917,23 @@
                     <div class="space-y-3 text-xs">
                         <div>
                             <label class="text-[10px] text-slate-400 mb-1 block">成功响应 JSON Payload 示例 (200 OK)</label>
-                            <textarea bind:value={currentSpec.successResponseExample} rows={5} placeholder={'{"code": 200, "data": {...}}'} class="w-full p-2 font-mono text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"></textarea>
+                            <div class="h-32 relative border border-slate-200 dark:border-slate-700 rounded overflow-hidden bg-white dark:bg-slate-900">
+                                <CodeEditor
+                                    bind:value={currentSpec.successResponseExample}
+                                    language="json"
+                                    placeholder={'{"code": 200, "data": {...}}'}
+                                />
+                            </div>
                         </div>
                         <div>
                             <label class="text-[10px] text-slate-400 mb-1 block">错误响应 JSON Payload 示例 (4xx / 5xx)</label>
-                            <textarea bind:value={currentSpec.errorResponseExample} rows={5} placeholder={'{"error": {"code": "INVALID_PARAM", "message": "..."}}'} class="w-full p-2 font-mono text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"></textarea>
+                            <div class="h-32 relative border border-slate-200 dark:border-slate-700 rounded overflow-hidden bg-white dark:bg-slate-900">
+                                <CodeEditor
+                                    bind:value={currentSpec.errorResponseExample}
+                                    language="json"
+                                    placeholder={'{"error": {"code": "INVALID_PARAM", "message": "..."}}'}
+                                />
+                            </div>
                         </div>
                     </div>
                 {/if}

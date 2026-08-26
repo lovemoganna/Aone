@@ -13,7 +13,7 @@
         Check
     } from "lucide-svelte";
     import { toastStore } from "$lib/stores/toastStore.svelte";
-    import { CodeBlock } from "$lib/components/ui";
+    import { CodeBlock, CodeEditor } from "$lib/components/ui";
 
     let activeTab = $state<"css-editor" | "layout" | "effects" | "components">("css-editor");
 
@@ -127,34 +127,34 @@
     <title>CSS Lab - Aone Toolkit</title>
 </svelte:head>
 
-<div class="h-full flex-1 flex flex-col bg-slate-100 dark:bg-slate-950 p-2 gap-2 overflow-hidden">
+<div class="h-full flex flex-col gap-2.5 min-h-0">
     <!-- Top Toolbar -->
-    <div class="h-10 px-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-xs">
-        <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded">
+    <div class="h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-2xs">
+        <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-md">
             <button
                 type="button"
-                class="px-2.5 py-1 rounded font-medium transition flex items-center gap-1.5 {activeTab === 'css-editor' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                class="px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1.5 cursor-pointer {activeTab === 'css-editor' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
                 onclick={() => activeTab = 'css-editor'}
             >
                 <Code2 size={13} /> CSS 编辑器
             </button>
             <button
                 type="button"
-                class="px-2.5 py-1 rounded font-medium transition flex items-center gap-1.5 {activeTab === 'layout' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                class="px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1.5 cursor-pointer {activeTab === 'layout' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
                 onclick={() => activeTab = 'layout'}
             >
                 <Layout size={13} /> 布局可视化
             </button>
             <button
                 type="button"
-                class="px-2.5 py-1 rounded font-medium transition flex items-center gap-1.5 {activeTab === 'effects' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                class="px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1.5 cursor-pointer {activeTab === 'effects' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
                 onclick={() => activeTab = 'effects'}
             >
                 <Sparkles size={13} /> 特效可视化
             </button>
             <button
                 type="button"
-                class="px-2.5 py-1 rounded font-medium transition flex items-center gap-1.5 {activeTab === 'components' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                class="px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1.5 cursor-pointer {activeTab === 'components' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
                 onclick={() => activeTab = 'components'}
             >
                 <Component size={13} /> 组件预览
@@ -167,19 +167,23 @@
         {#if activeTab === 'css-editor'}
             <div class="h-full grid grid-cols-1 lg:grid-cols-2 gap-2">
                 <div class="flex flex-col gap-2 min-h-0">
-                    <div class="flex-1 flex flex-col border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
-                        <div class="h-8 px-3 bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <div class="flex-1 flex flex-col border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-xs min-h-0">
+                        <div class="h-8 px-3 bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300 shrink-0">
                             CSS Code
                             <div class="flex gap-1">
-                                <button onclick={() => cssEditorText = ''} class="p-1 text-slate-400 hover:text-rose-500 transition"><Trash2 size={12} /></button>
-                                <button onclick={() => copyText(cssEditorText, 'CSS 代码')} class="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition"><Copy size={12} /></button>
+                                <button onclick={() => cssEditorText = ''} class="p-1 text-slate-400 hover:text-rose-500 transition cursor-pointer"><Trash2 size={12} /></button>
+                                <button onclick={() => copyText(cssEditorText, 'CSS 代码')} class="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"><Copy size={12} /></button>
                             </div>
                         </div>
-                        <textarea bind:value={cssEditorText} class="flex-1 w-full p-3 font-mono text-xs bg-transparent resize-none focus:outline-none dark:text-slate-200" spellcheck="false"></textarea>
+                        <div class="flex-1 relative min-h-0 bg-white dark:bg-[#0A0A0A]">
+                            <CodeEditor bind:value={cssEditorText} language="css" placeholder="在此输入 CSS 代码..." />
+                        </div>
                     </div>
-                    <div class="h-1/3 flex flex-col border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
-                        <div class="h-8 px-3 bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 flex items-center text-xs font-semibold text-slate-700 dark:text-slate-300">HTML Code</div>
-                        <textarea bind:value={cssEditorHtml} class="flex-1 w-full p-3 font-mono text-xs bg-transparent resize-none focus:outline-none dark:text-slate-200" spellcheck="false"></textarea>
+                    <div class="h-1/3 flex flex-col border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-xs min-h-0">
+                        <div class="h-8 px-3 bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 flex items-center text-xs font-semibold text-slate-700 dark:text-slate-300 shrink-0">HTML Code</div>
+                        <div class="flex-1 relative min-h-0 bg-white dark:bg-[#0A0A0A]">
+                            <CodeEditor bind:value={cssEditorHtml} language="html" placeholder="在此输入 HTML 代码..." />
+                        </div>
                     </div>
                 </div>
                 <div class="flex flex-col border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
@@ -344,7 +348,9 @@
                                 <button onclick={() => copyText(compHtml, 'HTML 代码')} class="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition"><Copy size={12} /></button>
                             </div>
                         </div>
-                        <textarea bind:value={compHtml} class="flex-1 w-full p-3 font-mono text-xs bg-transparent resize-none focus:outline-none dark:text-slate-200" spellcheck="false"></textarea>
+                        <div class="flex-1 relative min-h-0 bg-white dark:bg-[#0A0A0A]">
+                            <CodeEditor bind:value={compHtml} language="html" placeholder="在此编辑组件 HTML 代码..." />
+                        </div>
                     </div>
                 </div>
                 <div class="flex flex-col border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-xs">

@@ -17,7 +17,7 @@
     import { dataBridge } from "$lib/stores/dataBridge";
     import HandoffDropdown from "$lib/components/ui/HandoffDropdown.svelte";
     import { toastStore } from "$lib/stores/toastStore.svelte";
-    import { CodeBlock } from "$lib/components/ui";
+    import { CodeBlock, CodeEditor } from "$lib/components/ui";
 
     let { textA = "", textB = "" } = $props<{
         textA?: string;
@@ -234,17 +234,21 @@
     <title>差异对比与合并 - Aone Toolkit</title>
 </svelte:head>
 
-<div class="h-full flex-1 flex flex-col bg-slate-100 dark:bg-slate-950 p-2 gap-2 overflow-hidden">
+<div class="h-full flex flex-col gap-2.5 min-h-0">
     <!-- Top Command Toolbar -->
-    <div class="h-9 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-xs">
-        <div class="flex items-center gap-2">
-            <span class="font-bold text-slate-800 dark:text-slate-200">文本差异与补丁</span>
+    <div class="h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-2xs">
+        <div class="flex items-center gap-2 flex-wrap min-w-0">
+            <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 shrink-0">
+                <Split size={13} class="text-indigo-500" />
+                差异对比与补丁
+            </span>
+            <span class="text-slate-300 dark:text-slate-700">|</span>
             <div class="flex items-center gap-1">
-                <span class="text-[10px] text-slate-400">示例:</span>
+                <span class="text-[11px] text-slate-400 font-medium">示例:</span>
                 {#each PRESETS as p}
                     <button
                         type="button"
-                        class="px-1.5 py-0.5 text-[11px] rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition"
+                        class="px-2 py-0.5 text-[11px] font-medium rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition cursor-pointer"
                         onclick={() => loadPreset(p)}
                     >
                         {p.name}
@@ -253,26 +257,26 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-1.5 shrink-0">
             <!-- Mode switch -->
-            <div class="flex p-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[11px]">
+            <div class="flex p-0.5 bg-slate-100 dark:bg-slate-800 rounded-md text-[11px]">
                 <button
                     type="button"
-                    class="px-2 py-0.5 rounded font-medium transition {mode === 'lines' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                    class="px-2 py-0.5 rounded font-medium transition cursor-pointer {mode === 'lines' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
                     onclick={() => { mode = 'lines'; compare(); }}
                 >
                     按行
                 </button>
                 <button
                     type="button"
-                    class="px-2 py-0.5 rounded font-medium transition {mode === 'words' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                    class="px-2 py-0.5 rounded font-medium transition cursor-pointer {mode === 'words' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
                     onclick={() => { mode = 'words'; compare(); }}
                 >
                     按词
                 </button>
                 <button
                     type="button"
-                    class="px-2 py-0.5 rounded font-medium transition {mode === 'chars' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                    class="px-2 py-0.5 rounded font-medium transition cursor-pointer {mode === 'chars' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
                     onclick={() => { mode = 'chars'; compare(); }}
                 >
                     按字符
@@ -280,24 +284,24 @@
             </div>
 
             <!-- View layout switch -->
-            <div class="flex p-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[11px]">
+            <div class="flex p-0.5 bg-slate-100 dark:bg-slate-800 rounded-md text-[11px]">
                 <button
                     type="button"
-                    class="px-2 py-0.5 rounded font-medium transition {viewLayout === 'unified' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                    class="px-2 py-0.5 rounded font-medium transition cursor-pointer {viewLayout === 'unified' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
                     onclick={() => viewLayout = 'unified'}
                 >
                     <AlignLeft size={11} class="inline mr-1" /> 统一
                 </button>
                 <button
                     type="button"
-                    class="px-2 py-0.5 rounded font-medium transition {viewLayout === 'split' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                    class="px-2 py-0.5 rounded font-medium transition cursor-pointer {viewLayout === 'split' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
                     onclick={() => viewLayout = 'split'}
                 >
                     <Columns size={11} class="inline mr-1" /> 分栏
                 </button>
                 <button
                     type="button"
-                    class="px-2 py-0.5 rounded font-medium transition {viewLayout === 'patch' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
+                    class="px-2 py-0.5 rounded font-medium transition cursor-pointer {viewLayout === 'patch' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-2xs' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}"
                     onclick={() => viewLayout = 'patch'}
                 >
                     <FileCode size={11} class="inline mr-1" /> Patch
@@ -359,12 +363,13 @@
                     <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span> 原始内容 (Old / Original)</span>
                     <span class="text-[10px] text-slate-400 font-mono">{oldText.length} 字符</span>
                 </div>
-                <textarea
-                    bind:value={oldText}
-                    oninput={debouncedCompare}
-                    class="flex-1 w-full p-2.5 font-mono text-xs bg-transparent resize-none focus:outline-none dark:text-slate-200 leading-relaxed"
-                    placeholder="粘贴原始版本文本..."
-                ></textarea>
+                <div class="flex-1 relative min-h-0 bg-white dark:bg-[#0A0A0A]">
+                    <CodeEditor
+                        bind:value={oldText}
+                        onChange={() => debouncedCompare()}
+                        placeholder="粘贴原始版本文本..."
+                    />
+                </div>
             </div>
 
             <!-- Modified Text -->
@@ -373,12 +378,13 @@
                     <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> 修改版本 (New / Modified)</span>
                     <span class="text-[10px] text-slate-400 font-mono">{newText.length} 字符</span>
                 </div>
-                <textarea
-                    bind:value={newText}
-                    oninput={debouncedCompare}
-                    class="flex-1 w-full p-2.5 font-mono text-xs bg-transparent resize-none focus:outline-none dark:text-slate-200 leading-relaxed"
-                    placeholder="粘贴修改后版本文本..."
-                ></textarea>
+                <div class="flex-1 relative min-h-0 bg-white dark:bg-[#0A0A0A]">
+                    <CodeEditor
+                        bind:value={newText}
+                        onChange={() => debouncedCompare()}
+                        placeholder="粘贴修改后版本文本..."
+                    />
+                </div>
             </div>
         </div>
 
@@ -418,11 +424,12 @@
                             </button>
                         </div>
                     </div>
-                    <textarea
-                        bind:value={mergedDraft}
-                        rows={3}
-                        class="w-full rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 font-mono text-xs text-slate-800 dark:text-slate-100 outline-none focus:ring-1 focus:ring-slate-400"
-                    ></textarea>
+                    <div class="h-28 relative border border-slate-200 dark:border-slate-700 rounded overflow-hidden bg-white dark:bg-[#0A0A0A]">
+                        <CodeEditor
+                            bind:value={mergedDraft}
+                            placeholder="在此编辑合并后的最终内容..."
+                        />
+                    </div>
                 </div>
             {/if}
 

@@ -1,7 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { Panel, Button, EmptyState, CodeEditor, CodeBlock } from "$lib/components/ui";
-    import ToolWorkspace from "$lib/components/layout/ToolWorkspace.svelte";
     import { copyToClipboard } from "$lib/utils/clipboard";
     import { toastStore } from "$lib/stores/toastStore.svelte";
     import { dataBridge } from "$lib/stores/dataBridge";
@@ -1062,61 +1061,63 @@ services:
     <title>敏感信息扫描器 - Aone Toolkit</title>
 </svelte:head>
 
-<ToolWorkspace class="max-w-none w-full !px-2 !py-1">
-    {#snippet header()}
-        <div class="flex items-center justify-between w-full select-none text-xs">
-            <div class="flex items-center gap-2">
-                <div
-                    class="w-6 h-6 rounded {findings.length > 0
-                        ? 'bg-red-500/10 text-red-600 border-red-200 dark:border-red-900/50'
-                        : 'bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-900/50'} flex items-center justify-center border"
-                >
-                    {#if pendingFindings.length > 0}
-                        <ShieldAlert size={14} />
-                    {:else}
-                        <ShieldCheck size={14} />
-                    {/if}
-                </div>
-                <span class="font-bold text-slate-900 dark:text-white">敏感信息本地扫描</span>
-                {#if findings.length > 0}
-                    <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold {pendingFindings.length > 0 ? 'bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400' : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'}">
-                        {pendingFindings.length} 处待治理 / {findings.length} 处发现
-                    </span>
+<div class="h-full flex flex-col gap-2.5 min-h-0">
+    <!-- Top Command Toolbar -->
+    <div class="h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between shrink-0 text-xs shadow-2xs">
+        <div class="flex items-center gap-2">
+            <div
+                class="w-6 h-6 rounded-md {findings.length > 0
+                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/50'
+                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50'} flex items-center justify-center border"
+            >
+                {#if pendingFindings.length > 0}
+                    <ShieldAlert size={14} />
+                {:else}
+                    <ShieldCheck size={14} />
                 {/if}
             </div>
+            <span class="font-bold text-slate-900 dark:text-white">敏感信息本地扫描</span>
+            {#if findings.length > 0}
+                <span class="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold {pendingFindings.length > 0 ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400' : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'}">
+                    {pendingFindings.length} 处待治理 / {findings.length} 处发现
+                </span>
+            {/if}
+        </div>
 
-            <div class="flex items-center gap-1.5 flex-wrap">
-                {#if findings.length > 0}
-                    <button
-                        type="button"
-                        class="px-2.5 py-1 text-xs font-semibold rounded bg-emerald-600 hover:bg-emerald-700 text-white transition flex items-center gap-1"
-                        onclick={() => redactAllSecrets("mask")}
-                        title="将所有检测到的敏感凭据替换为脱敏星号"
-                    >
-                        <ShieldCheck size={12} /> 一键脱敏
-                    </button>
-                {/if}
-
-                <HandoffDropdown
-                    sourceTool="敏感信息扫描器"
-                    dataType="text"
-                    getData={() => input}
-                />
-
+        <div class="flex items-center gap-1.5 flex-wrap">
+            {#if findings.length > 0}
                 <button
                     type="button"
-                    class="p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/20 text-slate-400 hover:text-rose-500 transition"
-                    onclick={handleClear}
-                    title="清空内容"
+                    class="px-2.5 py-1 text-xs font-semibold rounded-md bg-emerald-600 hover:bg-emerald-700 text-white transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                    onclick={() => redactAllSecrets("mask")}
+                    title="将所有检测到的敏感凭据替换为脱敏星号"
                 >
-                    <Trash2 size={13} />
+                    <ShieldCheck size={12} /> 一键脱敏
                 </button>
-            </div>
-        </div>
-    {/snippet}
+            {/if}
 
-    {#snippet sidebar()}
-        <div class="flex-1 flex flex-col overflow-hidden border-r border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/20">
+            <HandoffDropdown
+                sourceTool="敏感信息扫描器"
+                dataType="text"
+                getData={() => input}
+            />
+
+            <button
+                type="button"
+                class="px-2 py-1 text-xs rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/20 text-slate-400 hover:text-rose-500 transition flex items-center gap-1 cursor-pointer"
+                onclick={handleClear}
+                title="清空内容"
+            >
+                <Trash2 size={12} />
+                <span>清空</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Workspace Container -->
+    <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0 overflow-hidden">
+        <!-- Sidebar HUD & Rules (lg:col-span-3) -->
+        <div class="lg:col-span-3 flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50/50 dark:bg-slate-900/40 shadow-2xs">
             <!-- HUD Panel: Always visible at the top of the sidebar -->
             <div class="p-3 bg-slate-900 text-white rounded-sm space-y-2.5 border border-slate-800 shadow-inner select-none shrink-0 m-3 mb-1">
                 <div class="flex items-center justify-between">
@@ -1490,17 +1491,14 @@ jobs:
             </div>
 
             <!-- compliance promise -->
-            <div class="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/30 text-[10px] text-slate-400/80 leading-normal">
+            <div class="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/30 text-[10px] text-slate-400/80 leading-normal shrink-0">
                 🔒 <strong>隐私承诺</strong>：扫描均在本地沙箱进行，无网络请求数据更安全。
             </div>
         </div>
-    {/snippet}
 
-    <!-- Content Workspace -->
-    <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 h-full w-full p-4 overflow-hidden bg-slate-50/10 dark:bg-slate-900/10 animate-in fade-in duration-200">
-        <!-- Left Panel: Input -->
+        <!-- Center Panel: Input Code (lg:col-span-5) -->
         <div 
-            class="flex flex-col h-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0A0A0A] overflow-hidden relative rounded-sm"
+            class="lg:col-span-5 flex flex-col h-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden relative rounded-lg shadow-2xs min-h-0"
             class:border-blue-500={isDragging}
             ondragover={handleDragOver}
             ondragleave={handleDragLeave}
@@ -1614,8 +1612,8 @@ jobs:
             </div>
         </div>
 
-        <!-- Right Panel: Results & Remediation Workflows -->
-        <div class="flex flex-col h-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0A0A0A] overflow-hidden rounded-sm">
+        <!-- Right Panel: Results & Remediation Workflows (lg:col-span-4) -->
+        <div class="lg:col-span-4 flex flex-col h-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden rounded-lg shadow-2xs min-h-0">
             <!-- Header bar with search and filtering controls -->
             <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex flex-col gap-2 shrink-0 select-none">
                 <div class="flex items-center justify-between w-full">
@@ -1932,7 +1930,7 @@ jobs:
             </div>
         </div>
     </div>
-</ToolWorkspace>
+</div>
 
 <!-- Modal: Confirm Reveal Warning -->
 {#if showConfirmReveal}

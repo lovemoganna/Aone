@@ -1013,11 +1013,11 @@
     {/snippet}
 
     <!-- Main Workspace Content -->
-    <main class="flex-1 flex flex-col min-h-0 relative z-10 overflow-hidden bg-slate-50/30 dark:bg-slate-950/30">
-        <div class="flex-1 overflow-y-auto p-3 sm:p-5 custom-scrollbar">
-            <div class="max-w-[1500px] mx-auto w-full h-full">
+    <main class="flex-1 flex flex-col min-h-0 relative z-10 overflow-hidden bg-slate-50/40 dark:bg-slate-950/40">
+        <div class="flex-1 flex flex-col min-h-0 p-2.5 sm:p-3.5 overflow-hidden">
+            <div class="w-full h-full flex flex-col min-h-0">
                 {#key activeTab}
-                    <div in:fade={{ duration: 120 }} class="h-full">
+                    <div in:fade={{ duration: 120 }} class="h-full w-full flex flex-col min-h-0">
                         {#if componentMap[activeTab]}
                             {@const ActiveComponent = componentMap[activeTab]}
                             <ActiveComponent />

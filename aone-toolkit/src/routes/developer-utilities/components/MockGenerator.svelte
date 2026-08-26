@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Panel, Button } from "$lib/components/ui";
+    import { Panel, Button, CodeEditor } from "$lib/components/ui";
     import type { TableData } from "../../table-editor/lib/types";
     import { onMount } from "svelte";
     import type {
@@ -610,17 +610,13 @@
     <title>Mock 数据生成器 - Aone Toolkit</title>
 </svelte:head>
 
-<div class="h-full p-2 sm:p-3 overflow-hidden max-w-[1600px] mx-auto flex flex-col space-y-3">
+<div class="h-full flex flex-col gap-2.5 min-h-0">
     <!-- Purpose statement & header banner -->
-    <div class="bg-slate-50/70 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-2xs">
-        <div>
-            <div class="flex items-center gap-2">
-                <Sparkles size={16} class="text-slate-700 dark:text-slate-300" />
-                <h1 class="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">Mock 数据生成工作台</h1>
-            </div>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                用于快速生成开发联调、测试用例和演示所需的 mock 数据。支持配置字段细节、生成语言选择、固定种子、多格式导出以及从 JSON/DDL 导入架构。
-            </p>
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 flex flex-col md:flex-row md:items-center justify-between gap-2 shadow-2xs shrink-0">
+        <div class="flex items-center gap-2">
+            <Sparkles size={14} class="text-sky-500" />
+            <h1 class="text-xs font-bold tracking-tight text-slate-900 dark:text-slate-100">Mock 数据与契约实体生成器</h1>
+            <span class="text-slate-400 font-mono text-[11px]">({fields.length} 个字段)</span>
         </div>
         <div class="flex flex-wrap gap-1.5 shrink-0">
             <Button variant="outline" size="sm" class="text-xs py-1 px-2.5" onclick={() => (showImportModal = true)}>
@@ -1154,15 +1150,15 @@
 
                 <div class="space-y-1">
                     <label for="import-schema-textarea" class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider">在下方输入或粘贴 Schema 内容：</label>
-                    <textarea
-                        id="import-schema-textarea"
-                        bind:value={importText}
-                        rows="8"
-                        class="w-full text-xs font-mono p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-400 text-slate-800 dark:text-slate-200"
-                        placeholder={importFormat === 'json'
-                            ? '{\n  "id": 1,\n  "name": "张三",\n  "email": "zhangsan@example.com",\n  "created_at": "2026-06-27"\n}'
-                            : 'CREATE TABLE users (\n  id INT PRIMARY KEY,\n  username VARCHAR(50) NOT NULL,\n  email VARCHAR(100) UNIQUE,\n  created_at DATE\n);'}
-                    ></textarea>
+                    <div class="h-48 relative border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden bg-white dark:bg-[#0A0A0A]">
+                        <CodeEditor
+                            bind:value={importText}
+                            language={importFormat === "json" ? "json" : "sql"}
+                            placeholder={importFormat === 'json'
+                                ? '{\n  "id": 1,\n  "name": "张三",\n  "email": "zhangsan@example.com",\n  "created_at": "2026-06-27"\n}'
+                                : 'CREATE TABLE users (\n  id INT PRIMARY KEY,\n  username VARCHAR(50) NOT NULL,\n  email VARCHAR(100) UNIQUE,\n  created_at DATE\n);'}
+                        />
+                    </div>
                 </div>
 
                 {#if importError}
@@ -1247,13 +1243,13 @@
             <div class="p-4 flex-1 overflow-y-auto space-y-3.5">
                 <div class="space-y-1">
                     <label for="bulk-json-textarea" class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider">在下方修改字段数组配置 JSON：</label>
-                    <textarea
-                        id="bulk-json-textarea"
-                        bind:value={bulkFieldsJson}
-                        rows="12"
-                        class="w-full text-xs font-mono p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-400 text-slate-800 dark:text-slate-200"
-                        placeholder={'[\n  {\n    "name": "id",\n    "type": "string_uuid",\n    "isRequired": true\n  }\n]'}
-                    ></textarea>
+                    <div class="h-64 relative border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden bg-white dark:bg-[#0A0A0A]">
+                        <CodeEditor
+                            bind:value={bulkFieldsJson}
+                            language="json"
+                            placeholder={'[\n  {\n    "name": "id",\n    "type": "string_uuid",\n    "isRequired": true\n  }\n]'}
+                        />
+                    </div>
                 </div>
 
                 {#if bulkEditorError}
