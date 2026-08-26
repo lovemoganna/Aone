@@ -352,21 +352,54 @@
                                 <Timer class="w-3 h-3" />
                                 单步延迟 (Delay)
                             </label>
-                            <input
-                                type="number"
-                                min="0"
-                                max="30"
-                                value={settingsStore.stageDelay}
-                                oninput={(e) =>
-                                    settingsStore.setStageDelay(
-                                        parseInt(
-                                            (e.target as HTMLInputElement)
-                                                .value,
-                                        ) || 0,
-                                    )}
-                                class="w-12 text-center text-xs font-mono bg-transparent border-none focus:outline-none text-cyan-600 dark:text-cyan-400"
-                            />
-                            <span class="text-xs text-slate-400">s</span>
+                            <div class="flex items-center gap-1">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="30"
+                                    value={settingsStore.stageDelay}
+                                    oninput={(e) =>
+                                        settingsStore.setStageDelay(
+                                            parseInt(
+                                                (e.target as HTMLInputElement)
+                                                    .value,
+                                            ) || 0,
+                                        )}
+                                    class="w-12 text-center text-xs font-mono bg-transparent border-none focus:outline-none text-indigo-600 dark:text-indigo-400"
+                                />
+                                <span class="text-xs text-slate-400">s</span>
+                            </div>
+                        </div>
+
+                        <!-- Request Timeout -->
+                        <div
+                            class="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                        >
+                            <label
+                                class="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1"
+                            >
+                                <Timer class="w-3 h-3 text-amber-500" />
+                                请求超时限制 (Timeout)
+                            </label>
+                            <div class="flex items-center gap-1">
+                                <select
+                                    value={settingsStore.requestTimeout}
+                                    onchange={(e) =>
+                                        settingsStore.setRequestTimeout(
+                                            parseInt(
+                                                (e.target as HTMLSelectElement)
+                                                    .value,
+                                            ) || 180,
+                                        )}
+                                    class="text-xs font-mono bg-transparent border-none focus:outline-none text-indigo-600 dark:text-indigo-400 cursor-pointer font-bold"
+                                >
+                                    <option value="60">60s (快速)</option>
+                                    <option value="120">120s (标准)</option>
+                                    <option value="180">180s (推荐·本地)</option>
+                                    <option value="300">300s (5分钟·复杂)</option>
+                                    <option value="600">600s (10分钟·极慢)</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </section>

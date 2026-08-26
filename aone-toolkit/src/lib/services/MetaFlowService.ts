@@ -220,8 +220,9 @@ export class MetaFlowService {
      * Call AI using the configured provider via AIBridge.
      * Falls back to mock if provider is not configured.
      */
-    static async callAI(prompt: string, onChunk?: (chunk: string) => void, signal?: AbortSignal, timeoutMs = 60000): Promise<string> {
+    static async callAI(prompt: string, onChunk?: (chunk: string) => void, signal?: AbortSignal, timeoutMs?: number): Promise<string> {
         let fullResponse = "";
+        const effectiveTimeout = timeoutMs ?? (settingsStore.requestTimeout * 1000);
 
         // When unconfigured, use sandbox simulator for realistic streaming demo
         if (!settingsStore.isConfigured) {
@@ -245,20 +246,20 @@ export class MetaFlowService {
             },
             () => { },
             signal,
-            timeoutMs
+            effectiveTimeout
         );
         return fullResponse;
     }
 
     /**
-     * Stream AI response with dedicated callbacks and timeout watchdog.
+     * Stream AI response with dedicated callbacks and activity-aware timeout watchdog.
      */
     static async streamAI(
         prompt: string,
         onChunk: (chunk: string) => void,
         onComplete: () => void,
         signal?: AbortSignal,
-        timeoutMs = 60000
+        timeoutMs?: number
     ): Promise<void> {
         if (!settingsStore.isConfigured) {
             const unconfiguredMsg = this.getUnconfiguredNotice();
@@ -267,12 +268,41 @@ export class MetaFlowService {
             return;
         }
 
+        const effectiveTimeout = timeoutMs ?? (settingsStore.requestTimeout * 1000);
         const timeoutController = new AbortController();
-        const timeoutId = setTimeout(() => {
-            timeoutController.abort(new Error(`AI Request Timeout after ${timeoutMs / 1000}s`));
-        }, timeoutMs);
+        const startTime = Date.now();
+        let lastActivity = Date.now();
+        let streamHasStarted = false;
+        let watchdogTimer: any = null;
 
-        // Merge signal
+        const maxTotalTimeout = Math.max(30000, effectiveTimeout);
+        const idleChunkTimeout = Math.min(60000, maxTotalTimeout); // 60s without any token after stream starts
+
+        const scheduleWatchdog = () => {
+            if (watchdogTimer) clearTimeout(watchdogTimer);
+            
+            const totalElapsed = Date.now() - startTime;
+            if (totalElapsed >= maxTotalTimeout) {
+                timeoutController.abort(new Error(`AI 请求总耗时已超限 (${Math.round(maxTotalTimeout / 1000)}s)`));
+                return;
+            }
+
+            const nextInterval = streamHasStarted ? idleChunkTimeout : (maxTotalTimeout - totalElapsed);
+            watchdogTimer = setTimeout(() => {
+                const timeSinceLast = Date.now() - lastActivity;
+                if (streamHasStarted && timeSinceLast >= idleChunkTimeout) {
+                    timeoutController.abort(new Error(`AI 流式输出卡顿中断 (超过 ${Math.round(idleChunkTimeout / 1000)}s 未收到新响应数据)`));
+                } else if (Date.now() - startTime >= maxTotalTimeout) {
+                    timeoutController.abort(new Error(`AI 请求响应超时 (等待超过 ${Math.round(maxTotalTimeout / 1000)}s)`));
+                } else {
+                    scheduleWatchdog();
+                }
+            }, Math.max(1000, Math.min(nextInterval, maxTotalTimeout - totalElapsed)));
+        };
+
+        scheduleWatchdog();
+
+        // Merge external signal
         let activeSignal = timeoutController.signal;
         if (signal) {
             signal.addEventListener('abort', () => timeoutController.abort(signal.reason));
@@ -281,20 +311,28 @@ export class MetaFlowService {
         try {
             const options = settingsStore.getCallOptions({
                 stream: true,
-                onChunk,
-                signal: activeSignal
+                onChunk: (chunk: string) => {
+                    lastActivity = Date.now();
+                    streamHasStarted = true;
+                    scheduleWatchdog();
+                    onChunk(chunk);
+                },
+                signal: activeSignal,
+                timeoutMs: effectiveTimeout
             });
             await AIBridge.callAI(prompt, options);
-            clearTimeout(timeoutId);
+            if (watchdogTimer) clearTimeout(watchdogTimer);
             onComplete();
         } catch (e: any) {
-            clearTimeout(timeoutId);
+            if (watchdogTimer) clearTimeout(watchdogTimer);
             console.error('AI stream failed:', e);
-            if (e.name === 'AbortError' || e.message?.includes('Timeout')) {
-                const timeoutError = new Error(e.message?.includes('Timeout') ? e.message : 'AI request was aborted.');
-                throw timeoutError;
+            if (e.name === 'AbortError' || e.message?.includes('超时') || e.message?.includes('Timeout')) {
+                const timeoutReason = e.message?.includes('超时') || e.message?.includes('Timeout')
+                    ? e.message
+                    : 'AI 请求已被取消或超时';
+                throw new Error(`${timeoutReason}。建议在右上角「设置」中调大超时时间，或选用较小模型/云端大模型。`);
             }
-            const errorMsg = `[ERROR] AI Call Failed: ${e.message || 'Unknown network error'}. Please check model configuration.`;
+            const errorMsg = `[ERROR] AI 调用失败: ${e.message || '网络或接口异常'}。请检查模型与服务配置。`;
             onChunk(errorMsg);
             onComplete();
         }

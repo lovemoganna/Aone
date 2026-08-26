@@ -27,6 +27,7 @@ export interface SettingsState {
     maxTokens: number;
     stream: boolean;
     stageDelay: number; // seconds between pipeline stages
+    requestTimeout: number; // seconds for AI request timeout watchdog
     enableOutputRestraint: boolean;
     restraintLevel: RestraintLevel;
     customRestraintRule: string;
@@ -42,6 +43,7 @@ const DEFAULT_SETTINGS: SettingsState = {
     maxTokens: 4096,
     stream: true,
     stageDelay: 3,
+    requestTimeout: 180, // Default 180s for local models and complex prompts
     enableOutputRestraint: true,
     restraintLevel: 'standard',
     customRestraintRule: DEFAULT_AI_RESTRAINT_RULE
@@ -69,6 +71,7 @@ function saveToStorage(state: SettingsState) {
             maxTokens: state.maxTokens,
             stream: state.stream,
             stageDelay: state.stageDelay,
+            requestTimeout: state.requestTimeout,
             enableOutputRestraint: state.enableOutputRestraint,
             restraintLevel: state.restraintLevel,
             customRestraintRule: state.customRestraintRule
@@ -96,6 +99,7 @@ class SettingsStore {
     get maxTokens() { return this._state.maxTokens; }
     get stream() { return this._state.stream; }
     get stageDelay() { return this._state.stageDelay; }
+    get requestTimeout() { return this._state.requestTimeout ?? 180; }
     get enableOutputRestraint() { return this._state.enableOutputRestraint ?? true; }
     get restraintLevel() { return this._state.restraintLevel ?? 'standard'; }
     get customRestraintRule() { return this._state.customRestraintRule ?? DEFAULT_AI_RESTRAINT_RULE; }
@@ -188,6 +192,11 @@ class SettingsStore {
         this.persist();
     }
 
+    setRequestTimeout(seconds: number) {
+        this._state.requestTimeout = Math.max(10, Math.min(600, seconds));
+        this.persist();
+    }
+
     setEnableOutputRestraint(enabled: boolean) {
         this._state.enableOutputRestraint = enabled;
         this.persist();
@@ -260,7 +269,7 @@ class SettingsStore {
     }
 
     /** Build AICallOptions from current settings */
-    getCallOptions(overrides?: Partial<{ stream: boolean; onChunk: (c: string) => void; signal: AbortSignal }>) {
+    getCallOptions(overrides?: Partial<{ stream: boolean; onChunk: (c: string) => void; signal: AbortSignal; timeoutMs?: number }>) {
         return {
             providerKey: this._state.provider,
             apiKey: this._state.apiKey,
@@ -270,7 +279,8 @@ class SettingsStore {
             maxTokens: this._state.maxTokens,
             stream: overrides?.stream ?? this._state.stream,
             onChunk: overrides?.onChunk,
-            signal: overrides?.signal
+            signal: overrides?.signal,
+            timeoutMs: overrides?.timeoutMs ?? (this.requestTimeout * 1000)
         };
     }
 
