@@ -34,11 +34,11 @@ export interface SettingsState {
 }
 
 const DEFAULT_SETTINGS: SettingsState = {
-    provider: 'ollama',
+    provider: 'demo',
     apiKey: '',
     customBaseUrl: '',
-    selectedModel: '',
-    availableModels: [],
+    selectedModel: 'aone-sandbox-v2',
+    availableModels: PROVIDERS.demo?.defaultModels || [],
     temperature: 0.7,
     maxTokens: 4096,
     stream: true,
@@ -53,7 +53,13 @@ function loadFromStorage(): Partial<SettingsState> {
     if (typeof window === 'undefined') return {};
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? JSON.parse(raw) : {};
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        // Ensure valid provider
+        if (parsed.provider && !PROVIDERS[parsed.provider]) {
+            parsed.provider = 'demo';
+        }
+        return parsed;
     } catch {
         return {};
     }
@@ -135,6 +141,7 @@ class SettingsStore {
     get isConfigured(): boolean {
         const p = this.currentProvider;
         if (!p) return false;
+        if (this._state.provider === 'demo') return true;
         if (p.needsApiKey && !this._state.apiKey) return false;
         if (p.needsCustomUrl && !this._state.customBaseUrl) return false;
         if (!this._state.selectedModel) return false;

@@ -23,6 +23,7 @@ import {
 import { warfareEngine } from "./warfareEngine.svelte";
 import { squadEngine } from "./squadEngine.svelte";
 import { auditEventBus } from "./auditEventBus.svelte";
+import { toastStore } from "./toastStore.svelte";
 import { AGENT_DISPLAY_MAP, getAgentDisplayName, estimateTokenCount } from "$lib/constants/agentConstants";
 
 export interface Agent {
@@ -1542,7 +1543,21 @@ ${recentMessages}
                     });
 
                     const startTime = Date.now();
-                    const result = await AIBridge.callAI(prompt, options);
+                    let result = '';
+                    try {
+                        result = await AIBridge.callAI(prompt, options);
+                    } catch (netErr: any) {
+                        if (netErr.name === 'AbortError') throw netErr;
+                        console.warn('Real AI chat failed, falling back to sandbox simulator:', netErr.message);
+                        toastStore.warning(`⚠️ 模型连接失败 (${netErr.message?.slice(0, 40) || '网络异常'})，已转由沙盒专家引擎响应。`);
+                        accumulated = '';
+                        await MetaFlowService.simulateSandboxStream(prompt, (chunk) => {
+                            accumulated += chunk;
+                            this.updateMessage(msgId, accumulated);
+                        }, () => {}, controller.signal);
+                        result = accumulated;
+                    }
+
                     if (!settingsStore.stream) {
                         this.updateMessage(msgId, result);
                     }

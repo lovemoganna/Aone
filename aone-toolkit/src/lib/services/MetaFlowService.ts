@@ -1,5 +1,6 @@
 import { AIBridge } from './AIBridge';
 import { settingsStore } from '../stores/settingsStore.svelte';
+import { toastStore } from '../stores/toastStore.svelte';
 
 export type PipelineStage = 'idle' | 'intent' | 'scene' | 'strategy' | 'decompose' | 'prompt' | 'execute' | 'aggregate';
 
@@ -326,15 +327,19 @@ export class MetaFlowService {
         } catch (e: any) {
             if (watchdogTimer) clearTimeout(watchdogTimer);
             console.error('AI stream failed:', e);
-            if (e.name === 'AbortError' || e.message?.includes('超时') || e.message?.includes('Timeout')) {
-                const timeoutReason = e.message?.includes('超时') || e.message?.includes('Timeout')
-                    ? e.message
-                    : 'AI 请求已被取消或超时';
+            if (e.name === 'AbortError') {
+                throw e;
+            }
+            if (e.message?.includes('超时') || e.message?.includes('Timeout')) {
+                const timeoutReason = e.message;
                 throw new Error(`${timeoutReason}。建议在右上角「设置」中调大超时时间，或选用较小模型/云端大模型。`);
             }
-            const errorMsg = `[ERROR] AI 调用失败: ${e.message || '网络或接口异常'}。请检查模型与服务配置。`;
-            onChunk(errorMsg);
-            onComplete();
+
+            // For network errors (Failed to fetch, CORS, offline, or invalid endpoint),
+            // gracefully notify and seamlessly fall back to sandbox simulator so the collaboration never breaks.
+            console.warn('Real AI call failed, gracefully falling back to sandbox simulator:', e.message);
+            toastStore.warning(`⚠️ 模型连接失败 (${e.message?.slice(0, 45) || 'Failed to fetch'})，已无缝切换至沙盒推演引擎继续推演。可在右上角配置云端 API Key。`);
+            await this.simulateSandboxStream(prompt, onChunk, onComplete, signal);
         }
     }
 
@@ -387,15 +392,83 @@ export class MetaFlowService {
                 skillId: "decompose",
                 instruction: "继续深入拆解当前问题结构"
             });
+        } else if (prompt.includes("1. 拆解建模") || prompt.includes("decompose")) {
+            mockResponse = `### 🔍 议题本质与核心瓶颈
+核心症结在于复杂目标在落地过程中缺乏清晰的解耦架构与优先级分层，导致执行资源分散。
+
+### 🌲 三维独立子问题树 (MECE)
+1. **[维度一：主干架构与业务链路闭环]** (紧急度: 极高 | 可控度: 完全)
+   - 依赖关系与破局抓手：优先固化最小可行链路 (MVP)，统一各模块契约协议。
+2. **[维度二：资源消耗与时间/性能成本]** (紧急度: 高 | 可控度: 部分)
+   - 依赖关系与衡量指标：精简单步交互开销，降低系统等待延迟至 300ms 以内。
+3. **[维度三：边界异常与外部风险防线]** (紧急度: 高 | 可控度: 部分)
+   - 边界约束与熔断底线：建立主动看门狗监控与离线自动保底机制。
+
+### ⚖️ 关键决策分水岭
+- **路线 A (激进突破)**：一步到位重构全链路，预期收益高但初期工期长；
+- **路线 B (稳健演进)**：聚焦主轴增量迭代，步步为营且具备即时可用性。`;
+        } else if (prompt.includes("2. 量化分析") || prompt.includes("decision_matrix")) {
+            mockResponse = `### 📊 候选方案量化评估矩阵
+| 方案路线 | 核心逻辑 | 预期 ROI 提效 | 实施周期与代价 | 风险系数 (1-10) | 推荐指数 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **路线 A: 激进重构** | 一步到位，全自动化矩阵 | 提效约 60% | 需约 2-3 周集中攻坚 | 7.5 | ★★★★☆ |
+| **路线 B: 稳健演进 (推荐)** | 主链路优先，分步增量闭环 | 提效约 45% (首期即达) | 首期 2-4 天即可落地 | 2.2 | ★★★★★ |
+
+### 💰 隐性代价与机会成本清单
+1. **跨团队协作心智成本**：大拆大建会导致前期协同摩擦耗损 20% 以上的有效工时。
+2. **技术债与回归返工代价**：缺乏测试保护的激进方案容易在边缘场景产生隐藏缺陷。
+
+### 🎯 投入产出比最优解建议
+建议采纳【路线 B: 稳健演进】：以最小试错成本实现高确定性交付，快速验证商业与工程闭环。`;
+        } else if (prompt.includes("3. 极限证伪") || prompt.includes("stress_test")) {
+            mockResponse = `### ⚠️ 致命前提假设证伪清单
+1. **脆弱假设 1**：假设外部网络与第三方服务始终 100% 保持稳定可用。
+   - *证伪依据*：弱网、CORS 限制或服务端限流会导致未受保护的请求直接中断。
+2. **脆弱假设 2**：假设用户均在完全理想的环境下进行操作。
+   - *证伪依据*：现实中常存在未配置 API Key 或本地模型离线等边界情况。
+
+### 💣 极端崩塌链推演 (Worst-Case Scenario)
+- **崩塌路径**：网络调用失败 ➔ 异常未被平滑隔离 ➔ 协同工作流假死挂起 ➔ 用户体验归零。
+- **最坏损失估算**：任务流失，信任度下降。
+
+### 🛡️ 刚性止损线与防御熔断阈值
+- **熔断指标**：单次 AI 请求若超过时限或发生网络中断，立刻触发自动熔断降级。
+- **兜底后备底牌**：无缝激活沙盒仿真引擎，确保全流程推演在任何环境下 100% 顺畅完备。`;
+        } else if (prompt.includes("4. 收敛仲裁") || prompt.includes("consensus_synthesis")) {
+            mockResponse = `### ⚖️ 终审裁决与路线选定
+- **终审采纳路线**：【稳健增量演进 + 自动弹性降级保底】路线
+- **置信度**：96%
+
+### 🚫 明确否决项与淘汰路径
+- **否决路径 1**：否决无降级保底的纯外部强依赖方案；
+- **否决路径 2**：否决周期过长、无法快速自证价值的庞杂方案。
+
+### 🧭 核心执行原则
+1. 结论优先，拒绝空泛概念堆叠；
+2. 架构具备自愈能力，遇到网络异常自动保底推进。`;
+        } else if (prompt.includes("5. 落地交付") || prompt.includes("action_list")) {
+            mockResponse = `### 📋 落地交付行动清单 (Action List & WBS)
+1. **阶段 1：核心主链路校验与环境就绪 (Day 1)**
+   - [x] 梳理关键输入参数与契约规范
+   - [ ] 完成第一阶段联调与状态流转
+2. **阶段 2：韧性防护与异常熔断建设 (Day 2-3)**
+   - [ ] 接入看门狗超时监控与错误降级链路
+   - [ ] 验证弱网与断网环境下的自愈表现
+3. **阶段 3：全景交付与持续度量 (Day 4)**
+   - [ ] 执行全套功能验证与生产构建验证
+
+### ✅ 验收标准 (Definition of Done)
+- **指标 1**：端到端协同零异常挂起，任何网络扰动均能平滑自愈；
+- **指标 2**：全流程交付清单颗粒度清晰，具备直接可执行性。`;
         } else {
-            mockResponse = `【实时协同推演结论】\n\n针对当前问题，经过深度推演分析：\n1. **核心认知**：把模糊的焦虑转化为可量化的具体指标；\n2. **关键行动**：优先锁定第一阶段的验证闭环，避免资源过度分散；\n3. **落地路径**：按照协同小队制定的清晰清单分步落地。`;
+            mockResponse = `【专家视角协同分析】\n\n针对当前议题，经过认知推演评估：\n1. **核心认知**：把模糊的诉求转化为可量化、可验证的明确目标；\n2. **关键动作**：优先打通最小闭环验证，避免过早过度设计；\n3. **推进策略**：以渐进式演进为主轴，并在关键节点建立安全防御边界。`;
         }
 
         const chunks = mockResponse.split(/(.{12})/g).filter(Boolean);
         for (const chunk of chunks) {
             if (signal?.aborted) return;
             onChunk(chunk);
-            await new Promise(r => setTimeout(r, 20));
+            await new Promise(r => setTimeout(r, 18));
         }
         onComplete();
     }

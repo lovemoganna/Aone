@@ -32,6 +32,20 @@ export class AIBridge {
             stream: options.stream ?? false
         };
 
+        // Demo Sandbox mode (Zero network latency & No API key required)
+        if (options.providerKey === 'demo' || baseUrl.startsWith('sandbox://')) {
+            const demoResponse = `【Aone 专家仿真引擎】针对当前任务已完成深度推演分析：\n1. 核心目标：明确关键指标与约束边界；\n2. 推进路线：以最小闭环 MVP 验证为主轴；\n3. 风险防线：建立主动异常监控与自愈降级机制。`;
+            if (config.stream && options.onChunk) {
+                const chunks = demoResponse.split(/(.{10})/g).filter(Boolean);
+                for (const chunk of chunks) {
+                    if (options.signal?.aborted) return '';
+                    options.onChunk(chunk);
+                    await new Promise(r => setTimeout(r, 18));
+                }
+            }
+            return demoResponse;
+        }
+
         const endpoint = provider.chatEndpoint(baseUrl, options.model, options.apiKey, config.stream);
         const body = provider.formatRequest(prompt, options.model, config);
 
@@ -193,6 +207,15 @@ export class AIBridge {
         if (!provider) return { success: false, message: `未知提供商: ${providerKey}` };
 
         const baseUrl = customBaseUrl || provider.baseUrl;
+
+        if (providerKey === 'demo' || baseUrl.startsWith('sandbox://')) {
+            return {
+                success: true,
+                message: '沙盒推演引擎已就绪 (无需网络与 API Key，零延迟演示)。',
+                models: provider.defaultModels
+            };
+        }
+
         const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
         const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || providerKey === 'ollama';
 
@@ -250,6 +273,20 @@ export class AIBridge {
             maxTokens: options.maxTokens ?? 4096,
             stream: options.stream ?? false
         };
+
+        if (options.providerKey === 'demo' || baseUrl.startsWith('sandbox://')) {
+            const lastMsg = messages[messages.length - 1]?.content || '你好';
+            const demoResponse = `【Aone 仿真智能体】已接收到您的指令：“${lastMsg.slice(0, 30)}...”。\n建议遵循【结论先行 > 拆解建模 > 方案精算 > 极限证伪 > 落地交付】的协同闭环推进。如需接入真实云端大模型，可在右上角设置中配置 API Key。`;
+            if (config.stream && options.onChunk) {
+                const chunks = demoResponse.split(/(.{10})/g).filter(Boolean);
+                for (const chunk of chunks) {
+                    if (options.signal?.aborted) return '';
+                    options.onChunk(chunk);
+                    await new Promise(r => setTimeout(r, 18));
+                }
+            }
+            return demoResponse;
+        }
 
         const endpoint = provider.chatEndpoint(baseUrl, options.model, options.apiKey, config.stream);
 

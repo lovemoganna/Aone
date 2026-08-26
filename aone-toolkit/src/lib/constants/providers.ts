@@ -58,6 +58,24 @@ function openAIRequestFormatter(prompt: string, model: string, config: ProviderC
 }
 
 export const PROVIDERS: Record<string, Provider> = {
+    demo: {
+        name: '沙盒推演 (无需配置)',
+        icon: '✨',
+        baseUrl: 'sandbox://metaflow',
+        needsApiKey: false,
+        needsCustomUrl: false,
+        defaultModels: [
+            { id: 'aone-sandbox-v2', name: 'Aone 专家仿真引擎 (零网络依赖)' },
+            { id: 'aone-rapid-demo', name: '极速推演沙盒 (快速演示)' },
+        ],
+        getModelsEndpoint: () => null,
+        parseModels: () => [],
+        chatEndpoint: () => 'sandbox://metaflow/chat',
+        formatRequest: openAIRequestFormatter,
+        parseResponse: () => '',
+        parseStreamChunk: () => ''
+    },
+
     ollama: {
         name: 'Ollama',
         icon: '🦙',
